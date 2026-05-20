@@ -1,0 +1,217 @@
+/* Home1Bool 首屏样式 — 移植自 new-api/web/default/src/features/home-1bool/styles.css
+   作用域：.home1bool-root 包裹整页，避免污染 sub2api 主站 Tailwind 体系。
+   当前迁移范围：仅 Hero 首屏。后续 sections（tools / openclaw / ...）追加同一文件即可。 */
+
+.home1bool-root {
+  --hero-bg-0:    #07080F;
+  --hero-bg-1:    #0B0D1A;
+  --hero-text-h:  #ffffff;
+  --hero-text-m:  rgba(255, 255, 255, 0.55);
+  --hero-text-l:  rgba(255, 255, 255, 0.40);
+  --hero-border:  rgba(255, 255, 255, 0.09);
+  --hero-surface: rgba(255, 255, 255, 0.04);
+
+  color: var(--hero-text-h);
+  background: var(--hero-bg-1);
+  color-scheme: dark;
+}
+
+/* ========== Hero (deep space, always dark) ========== */
+.home1bool-root .hero {
+  position: relative;
+  min-height: 100vh;
+  /* 给 fixed TopNav (≈60px) 让位 */
+  padding-top: calc(60px + 3rem);
+  padding-bottom: 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 35%, rgba(129,140,248,0.20) 0%, transparent 60%),
+    radial-gradient(circle at 15% 85%, rgba(52,211,153,0.08) 0%, transparent 40%),
+    linear-gradient(180deg, #07080F 0%, #0B0D1A 100%);
+  color: #fff;
+}
+
+.home1bool-root .hero-deco {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.home1bool-root .hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 30%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 30%, transparent 80%);
+}
+
+.home1bool-root .hero-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  will-change: transform;
+}
+
+.home1bool-root .hero-orb--indigo {
+  width: 400px; height: 400px;
+  top: -80px; left: -80px;
+  background: radial-gradient(circle, rgba(129,140,248,0.40) 0%, transparent 70%);
+  animation: hero-orb-a 14s ease-in-out infinite;
+}
+
+.home1bool-root .hero-orb--blue {
+  width: 340px; height: 340px;
+  bottom: -80px; right: -60px;
+  background: radial-gradient(circle, rgba(107,142,242,0.25) 0%, transparent 70%);
+  animation: hero-orb-b 16s ease-in-out infinite;
+}
+
+@keyframes hero-orb-a {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(40px, 20px) scale(1.06); }
+}
+@keyframes hero-orb-b {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-30px, -15px) scale(1.04); }
+}
+
+.home1bool-root .hero-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  text-align: center;
+}
+
+.home1bool-root .hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(8px);
+  margin-bottom: 28px;
+}
+
+.home1bool-root .hero-pill-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #34D399;
+  box-shadow: 0 0 8px #34D399;
+  animation: hero-pulse 2s ease-in-out infinite;
+}
+
+@keyframes hero-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 8px #34D399; }
+  50% { opacity: 0.55; box-shadow: 0 0 16px #34D399; }
+}
+
+.home1bool-root .hero-h1 {
+  font-size: clamp(40px, 6vw, 58px);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin: 0 0 20px;
+}
+
+.home1bool-root .hero-h1-line {
+  display: block;
+  background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.home1bool-root .hero-h1-accent {
+  background: linear-gradient(90deg, #a5b4fc 0%, #818CF8 50%, #6B8EF2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.home1bool-root .hero-sub {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 17px;
+  line-height: 1.6;
+  margin: 0 0 32px;
+}
+
+.home1bool-root .hero-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 44px;
+  flex-wrap: wrap;
+}
+
+.home1bool-root .hero-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 11px 26px;
+  border-radius: 8px;
+  background: #fff;
+  color: #0B0D1A;
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.home1bool-root .hero-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.15);
+}
+
+.home1bool-root .hero-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  padding: 11px 26px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 500;
+  font-size: 14px;
+  text-decoration: none;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.home1bool-root .hero-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.home1bool-root .hero-logos {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 44px;
+  color: rgba(255, 255, 255, 0.40);
+  font-size: 14px;
+  font-weight: 500;
+}
+.home1bool-root .hero-logos-sep {
+  width: 1px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 640px) {
+  .home1bool-root .hero-h1 { font-size: clamp(32px, 8vw, 44px); }
+  .home1bool-root .hero-sub { font-size: 15px; }
+  .home1bool-root .hero-actions { flex-direction: column; align-items: stretch; }
+  .home1bool-root .hero-btn-primary,
+  .home1bool-root .hero-btn-secondary { justify-content: center; }
+  .home1bool-root .hero-logos { gap: 24px; font-size: 12px; }
+}

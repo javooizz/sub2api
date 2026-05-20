@@ -38,6 +38,16 @@ const routes: RouteRecordRaw[] = [
       title: 'Home'
     }
   },
+  // _fork: 自定义首页（迁移自 1bool.com Hero 首屏）
+  {
+    path: '/home-1bool',
+    name: 'Home1Bool',
+    component: () => import('@/_fork/home/Home1Bool.vue'),
+    meta: {
+      requiresAuth: false,
+      title: '1Bool API'
+    }
+  },
   {
     path: '/login',
     name: 'Login',
@@ -178,7 +188,7 @@ const routes: RouteRecordRaw[] = [
   // ==================== User Routes ====================
   {
     path: '/',
-    redirect: '/home'
+    redirect: '/home-1bool'
   },
   {
     path: '/dashboard',
@@ -262,6 +272,19 @@ const routes: RouteRecordRaw[] = [
       title: 'Profile',
       titleKey: 'profile.title',
       descriptionKey: 'profile.description'
+    }
+  },
+  // _fork: 交流群（QQ + Telegram）
+  {
+    path: '/community',
+    name: 'Community',
+    component: () => import('@/_fork/community/CommunityView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Community',
+      titleKey: 'nav.community',
+      descriptionKey: 'community.description'
     }
   },
   {

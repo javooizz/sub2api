@@ -388,6 +388,7 @@ export default {
     channelMonitor: 'Channel Monitor',
     channelStatus: 'Channel Status',
     riskControl: 'Risk Control',
+    community: 'Community',
   },
 
   // Auth
@@ -958,6 +959,37 @@ export default {
     relativeMinutesAgo: '{n}m ago',
     relativeHoursAgo: '{n}h ago',
     relativeDaysAgo: '{n}d ago'
+  },
+
+  // Community (QQ + Telegram groups)
+  community: {
+    title: 'Join the Community',
+    description: 'Hop into our chat groups for support, feedback and the latest product updates.',
+    qq: {
+      title: 'QQ Group',
+      subtitle: 'Scan the QR code or search the group ID',
+      cta: 'Scan to join the QQ group',
+      hint: 'Open QQ to scan the QR above, or copy the group ID and search',
+      groupNumberLabel: 'Group ID',
+      copyTooltip: 'Click to copy the group ID',
+      copyButton: 'Copy group ID',
+      copied: 'Copied',
+      copySuccess: 'Group ID copied',
+    },
+    telegram: {
+      title: 'Telegram Group',
+      subtitle: 'One click to join the channel',
+      cta: 'Join our Telegram group',
+      hint: 'Chat with developers and overseas users in real time',
+      linkLabel: 'Invite link',
+      copyTooltip: 'Click to copy the link',
+      copySuccess: 'Link copied',
+      joinButton: 'Open Telegram',
+    },
+    note: {
+      title: 'Group rules',
+      body: 'No ads, external links, or off-topic posts. When reporting bugs, please attach screenshots and reproduction steps — we will get back to you as soon as possible.',
+    },
   },
 
   // Channel Status (user-facing read-only view)

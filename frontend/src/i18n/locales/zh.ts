@@ -388,6 +388,7 @@ export default {
     channelMonitor: '渠道监控',
     channelStatus: '渠道状态',
     riskControl: '风控中心',
+    community: '交流群',
   },
 
   // Auth
@@ -962,6 +963,37 @@ export default {
     relativeMinutesAgo: '{n} 分钟前',
     relativeHoursAgo: '{n} 小时前',
     relativeDaysAgo: '{n} 天前'
+  },
+
+  // Community (QQ + Telegram groups)
+  community: {
+    title: '加入交流群 / 联系我',
+    description: '欢迎加入我们的社群，遇到问题可以在群内反馈，也会同步最新更新与活动',
+    qq: {
+      title: 'QQ 群',
+      subtitle: '扫码或搜索群号加入',
+      cta: '扫码加入 QQ 群',
+      hint: '使用 QQ 扫一扫上方二维码，或复制群号搜索添加',
+      groupNumberLabel: '群号',
+      copyTooltip: '点击复制群号',
+      copyButton: '复制群号',
+      copied: '已复制',
+      copySuccess: '群号已复制',
+    },
+    telegram: {
+      title: 'Telegram 群',
+      subtitle: '点击下方按钮一键加入',
+      cta: '加入 Telegram 群组',
+      hint: '与海外用户、开发者实时交流',
+      linkLabel: '邀请链接',
+      copyTooltip: '点击复制链接',
+      copySuccess: '链接已复制',
+      joinButton: '前往加入',
+    },
+    note: {
+      title: '温馨提示',
+      body: '群内禁止发布广告、外链与无关内容。如需反馈 Bug 或建议，请尽量附带截图与复现步骤，我们会尽快响应。',
+    },
   },
 
   // Channel Status (user-facing read-only view)

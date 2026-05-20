@@ -7,6 +7,10 @@ data/
 postgres_data/
 redis_data/
 
+# Dev deps (docker-compose.deps.yml)
+deps_postgres_data/
+deps_redis_data/
+
 # Environment configuration (contains sensitive information)
 .env
 

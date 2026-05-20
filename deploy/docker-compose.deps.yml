@@ -1,0 +1,67 @@
+# =============================================================================
+# Sub2API Docker Compose - Dev Dependencies Only (Postgres + Redis)
+# =============================================================================
+# 只起后端依赖（postgres + redis），将端口暴露到本机，方便 `go run` 直连。
+# 与 docker-compose.dev.yml 互不干扰：使用独立的 deps_*_data 目录与独立容器名。
+#
+# 使用：
+#   cd deploy
+#   docker compose -f docker-compose.deps.yml up -d        # 启动
+#   docker compose -f docker-compose.deps.yml down         # 停止（保留数据）
+#   docker compose -f docker-compose.deps.yml down -v      # 停止并清空数据
+#
+# 后端 (go run) 连接：
+#   DATABASE_HOST=127.0.0.1  DATABASE_PORT=5432
+#   REDIS_HOST=127.0.0.1     REDIS_PORT=6379
+#
+# 默认凭据（仅本地开发，可通过 deploy/.env 覆盖）：
+#   POSTGRES_USER=sub2api  POSTGRES_PASSWORD=sub2api  POSTGRES_DB=sub2api
+#   REDIS_PASSWORD=（空，无密码）
+# =============================================================================
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: sub2api-postgres-deps
+    restart: unless-stopped
+    ports:
+      - "${DEPS_POSTGRES_HOST:-127.0.0.1}:${DEPS_POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ./deps_postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-sub2api}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-sub2api}
+      - POSTGRES_DB=${POSTGRES_DB:-sub2api}
+      - PGDATA=/var/lib/postgresql/data
+      - TZ=${TZ:-Asia/Shanghai}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sub2api} -d ${POSTGRES_DB:-sub2api}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:8-alpine
+    container_name: sub2api-redis-deps
+    restart: unless-stopped
+    ports:
+      - "${DEPS_REDIS_HOST:-127.0.0.1}:${DEPS_REDIS_PORT:-6379}:6379"
+    volumes:
+      - ./deps_redis_data:/data
+    command: >
+      sh -c '
+        redis-server
+        --save 60 1
+        --appendonly yes
+        --appendfsync everysec
+        ${REDIS_PASSWORD:+--requirepass "$REDIS_PASSWORD"}'
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+      - REDISCLI_AUTH=${REDIS_PASSWORD:-}
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
