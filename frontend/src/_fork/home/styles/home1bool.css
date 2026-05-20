@@ -1,26 +1,116 @@
-/* Home1Bool 首屏样式 — 移植自 new-api/web/default/src/features/home-1bool/styles.css
+/* Home1Bool 首屏样式 — 支持深/浅双主题
    作用域：.home1bool-root 包裹整页，避免污染 sub2api 主站 Tailwind 体系。
-   当前迁移范围：仅 Hero 首屏。后续 sections（tools / openclaw / ...）追加同一文件即可。 */
+   主题切换：跟随 <html.dark>（Tailwind class 策略）。 */
 
+/* ===== 默认（浅色模式）===== */
 .home1bool-root {
-  --hero-bg-0:    #07080F;
-  --hero-bg-1:    #0B0D1A;
-  --hero-text-h:  #ffffff;
-  --hero-text-m:  rgba(255, 255, 255, 0.55);
-  --hero-text-l:  rgba(255, 255, 255, 0.40);
-  --hero-border:  rgba(255, 255, 255, 0.09);
-  --hero-surface: rgba(255, 255, 255, 0.04);
+  /* 背景层 */
+  --hero-bg-top:        #f8fafc;
+  --hero-bg-bot:        #eef2ff;
+  --hero-grid-line:     rgba(15, 23, 42, 0.05);
+
+  /* Orb / 装饰 */
+  --hero-orb-a:         rgba(45, 212, 191, 0.28);   /* teal-400 */
+  --hero-orb-b:         rgba(99, 102, 241, 0.18);   /* indigo-500 */
+  --hero-radial-a:      rgba(20, 184, 166, 0.14);   /* primary */
+  --hero-radial-b:      rgba(99, 102, 241, 0.08);
+
+  /* 文字 */
+  --hero-text-h:        #0f172a;                    /* slate-900 */
+  --hero-text-m:        rgba(15, 23, 42, 0.68);
+  --hero-text-l:        rgba(15, 23, 42, 0.50);
+
+  /* H1 渐变 */
+  --hero-h1-line-from:  #0f172a;
+  --hero-h1-line-to:    #334155;
+  --hero-h1-accent-a:   #0d9488;                    /* teal-600 */
+  --hero-h1-accent-b:   #14b8a6;                    /* teal-500 */
+  --hero-h1-accent-c:   #6366f1;                    /* indigo-500 */
+
+  /* 表面 / 边框 */
+  --hero-surface:       rgba(15, 23, 42, 0.04);
+  --hero-surface-2:     rgba(15, 23, 42, 0.08);
+  --hero-border:        rgba(15, 23, 42, 0.10);
+  --hero-border-strong: rgba(15, 23, 42, 0.18);
+
+  /* 按钮 */
+  --hero-btn-primary-bg:    #0f172a;
+  --hero-btn-primary-text:  #ffffff;
+  --hero-btn-primary-shadow: 0 6px 20px rgba(15, 23, 42, 0.18);
+
+  /* 状态点 */
+  --hero-dot:           #14b8a6;
+  --hero-dot-glow:      #14b8a6;
+
+  /* TopNav */
+  --nav-bg:             rgba(255, 255, 255, 0.72);
+  --nav-border:         rgba(15, 23, 42, 0.08);
+  --nav-text:           rgba(15, 23, 42, 0.85);
+  --nav-text-strong:    #0f172a;
+  --nav-text-muted:     rgba(15, 23, 42, 0.65);
+  --nav-icon-hover-bg:  rgba(15, 23, 42, 0.06);
+  --nav-cta-bg:         #0f172a;
+  --nav-cta-text:       #ffffff;
+  --nav-console-bg:     rgba(15, 23, 42, 0.05);
+  --nav-console-border: rgba(15, 23, 42, 0.10);
 
   color: var(--hero-text-h);
-  background: var(--hero-bg-1);
+  background: var(--hero-bg-bot);
+  color-scheme: light;
+}
+
+/* ===== 深色模式（html.dark 触发）===== */
+html.dark .home1bool-root {
+  --hero-bg-top:        #07080F;
+  --hero-bg-bot:        #0B0D1A;
+  --hero-grid-line:     rgba(255, 255, 255, 0.03);
+
+  --hero-orb-a:         rgba(129, 140, 248, 0.40);  /* indigo-400 */
+  --hero-orb-b:         rgba(107, 142, 242, 0.25);
+  --hero-radial-a:      rgba(129, 140, 248, 0.20);
+  --hero-radial-b:      rgba(52, 211, 153, 0.08);
+
+  --hero-text-h:        #ffffff;
+  --hero-text-m:        rgba(255, 255, 255, 0.65);
+  --hero-text-l:        rgba(255, 255, 255, 0.40);
+
+  --hero-h1-line-from:  #ffffff;
+  --hero-h1-line-to:    #cbd5e1;
+  --hero-h1-accent-a:   #a5b4fc;
+  --hero-h1-accent-b:   #818CF8;
+  --hero-h1-accent-c:   #6B8EF2;
+
+  --hero-surface:       rgba(255, 255, 255, 0.04);
+  --hero-surface-2:     rgba(255, 255, 255, 0.06);
+  --hero-border:        rgba(255, 255, 255, 0.09);
+  --hero-border-strong: rgba(255, 255, 255, 0.18);
+
+  --hero-btn-primary-bg:    #ffffff;
+  --hero-btn-primary-text:  #0B0D1A;
+  --hero-btn-primary-shadow: 0 6px 20px rgba(255, 255, 255, 0.15);
+
+  --hero-dot:           #34D399;
+  --hero-dot-glow:      #34D399;
+
+  --nav-bg:             rgba(7, 8, 15, 0.55);
+  --nav-border:         rgba(255, 255, 255, 0.06);
+  --nav-text:           rgba(255, 255, 255, 0.85);
+  --nav-text-strong:    #ffffff;
+  --nav-text-muted:     rgba(255, 255, 255, 0.75);
+  --nav-icon-hover-bg:  rgba(255, 255, 255, 0.08);
+  --nav-cta-bg:         #ffffff;
+  --nav-cta-text:       #0B0D1A;
+  --nav-console-bg:     rgba(255, 255, 255, 0.08);
+  --nav-console-border: rgba(255, 255, 255, 0.12);
+
+  background: var(--hero-bg-bot);
   color-scheme: dark;
 }
 
-/* ========== Hero (deep space, always dark) ========== */
+/* ========== Hero ========== */
 .home1bool-root .hero {
   position: relative;
   min-height: 100vh;
-  /* 给 fixed TopNav (≈60px) 让位 */
   padding-top: calc(60px + 3rem);
   padding-bottom: 4rem;
   display: flex;
@@ -28,10 +118,11 @@
   justify-content: center;
   overflow: hidden;
   background:
-    radial-gradient(ellipse 80% 60% at 50% 35%, rgba(129,140,248,0.20) 0%, transparent 60%),
-    radial-gradient(circle at 15% 85%, rgba(52,211,153,0.08) 0%, transparent 40%),
-    linear-gradient(180deg, #07080F 0%, #0B0D1A 100%);
-  color: #fff;
+    radial-gradient(ellipse 80% 60% at 50% 35%, var(--hero-radial-a) 0%, transparent 60%),
+    radial-gradient(circle at 15% 85%, var(--hero-radial-b) 0%, transparent 40%),
+    linear-gradient(180deg, var(--hero-bg-top) 0%, var(--hero-bg-bot) 100%);
+  color: var(--hero-text-h);
+  transition: background-color 0.3s ease;
 }
 
 .home1bool-root .hero-deco {
@@ -45,8 +136,8 @@
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    linear-gradient(var(--hero-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--hero-grid-line) 1px, transparent 1px);
   background-size: 56px 56px;
   mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 30%, transparent 80%);
   -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 30%, transparent 80%);
@@ -62,14 +153,14 @@
 .home1bool-root .hero-orb--indigo {
   width: 400px; height: 400px;
   top: -80px; left: -80px;
-  background: radial-gradient(circle, rgba(129,140,248,0.40) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--hero-orb-a) 0%, transparent 70%);
   animation: hero-orb-a 14s ease-in-out infinite;
 }
 
 .home1bool-root .hero-orb--blue {
   width: 340px; height: 340px;
   bottom: -80px; right: -60px;
-  background: radial-gradient(circle, rgba(107,142,242,0.25) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--hero-orb-b) 0%, transparent 70%);
   animation: hero-orb-b 16s ease-in-out infinite;
 }
 
@@ -98,9 +189,9 @@
   padding: 5px 14px;
   border-radius: 999px;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.65);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: var(--hero-text-m);
+  background: var(--hero-surface);
+  border: 1px solid var(--hero-border);
   backdrop-filter: blur(8px);
   margin-bottom: 28px;
 }
@@ -108,14 +199,14 @@
 .home1bool-root .hero-pill-dot {
   width: 6px; height: 6px;
   border-radius: 50%;
-  background: #34D399;
-  box-shadow: 0 0 8px #34D399;
+  background: var(--hero-dot);
+  box-shadow: 0 0 8px var(--hero-dot-glow);
   animation: hero-pulse 2s ease-in-out infinite;
 }
 
 @keyframes hero-pulse {
-  0%, 100% { opacity: 1; box-shadow: 0 0 8px #34D399; }
-  50% { opacity: 0.55; box-shadow: 0 0 16px #34D399; }
+  0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--hero-dot-glow); }
+  50% { opacity: 0.55; box-shadow: 0 0 16px var(--hero-dot-glow); }
 }
 
 .home1bool-root .hero-h1 {
@@ -128,21 +219,21 @@
 
 .home1bool-root .hero-h1-line {
   display: block;
-  background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+  background: linear-gradient(180deg, var(--hero-h1-line-from) 0%, var(--hero-h1-line-to) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .home1bool-root .hero-h1-accent {
-  background: linear-gradient(90deg, #a5b4fc 0%, #818CF8 50%, #6B8EF2 100%);
+  background: linear-gradient(90deg, var(--hero-h1-accent-a) 0%, var(--hero-h1-accent-b) 50%, var(--hero-h1-accent-c) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .home1bool-root .hero-sub {
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--hero-text-m);
   font-size: 17px;
   line-height: 1.6;
   margin: 0 0 32px;
@@ -162,16 +253,21 @@
   gap: 6px;
   padding: 11px 26px;
   border-radius: 8px;
-  background: #fff;
-  color: #0B0D1A;
+  background: var(--hero-btn-primary-bg);
+  color: var(--hero-btn-primary-text);
   font-weight: 600;
   font-size: 14px;
   text-decoration: none;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 .home1bool-root .hero-btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.15);
+  box-shadow: var(--hero-btn-primary-shadow);
+}
+.home1bool-root .hero-btn-primary:focus-visible {
+  outline: 2px solid var(--hero-h1-accent-b);
+  outline-offset: 3px;
 }
 
 .home1bool-root .hero-btn-secondary {
@@ -180,16 +276,17 @@
   padding: 11px 26px;
   border-radius: 8px;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--hero-border-strong);
+  color: var(--hero-text-h);
   font-weight: 500;
   font-size: 14px;
   text-decoration: none;
+  cursor: pointer;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 .home1bool-root .hero-btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--hero-surface-2);
+  border-color: var(--hero-border-strong);
 }
 
 .home1bool-root .hero-logos {
@@ -197,14 +294,14 @@
   justify-content: center;
   align-items: center;
   gap: 44px;
-  color: rgba(255, 255, 255, 0.40);
+  color: var(--hero-text-l);
   font-size: 14px;
   font-weight: 500;
 }
 .home1bool-root .hero-logos-sep {
   width: 1px;
   height: 14px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--hero-border);
 }
 
 @media (max-width: 640px) {
@@ -214,4 +311,9 @@
   .home1bool-root .hero-btn-primary,
   .home1bool-root .hero-btn-secondary { justify-content: center; }
   .home1bool-root .hero-logos { gap: 24px; font-size: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home1bool-root .hero-orb,
+  .home1bool-root .hero-pill-dot { animation: none; }
 }

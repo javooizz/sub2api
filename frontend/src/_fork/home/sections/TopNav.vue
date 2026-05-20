@@ -24,7 +24,9 @@ const userInitial = computed(() => {
   return email ? email.charAt(0).toUpperCase() : 'U'
 })
 
-const isDark = ref(true)
+const isDark = ref(
+  typeof document !== 'undefined' && document.documentElement.classList.contains('dark'),
+)
 
 function toggleTheme() {
   isDark.value = !isDark.value
@@ -85,16 +87,19 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* TopNav 使用 home1bool.css 中按主题切换的 --nav-* 变量。
+   注意：本组件位于 .home1bool-root 内，变量会自动级联生效。 */
 .fork-topnav {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   z-index: 50;
-  background: rgba(7, 8, 15, 0.55);
+  background: var(--nav-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--nav-border);
+  transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 .fork-topnav-inner {
@@ -117,14 +122,14 @@ onMounted(() => {
   height: 36px;
   border-radius: 50%;
   object-fit: cover;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 1px var(--nav-border);
 }
 
 .fork-topnav-actions {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--nav-text);
 }
 
 .fork-topnav-icon-btn {
@@ -136,26 +141,30 @@ onMounted(() => {
   border-radius: 10px;
   background: transparent;
   border: 0;
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--nav-text-muted);
   cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease;
 }
 .fork-topnav-icon-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: var(--nav-icon-hover-bg);
+  color: var(--nav-text-strong);
+}
+.fork-topnav-icon-btn:focus-visible {
+  outline: 2px solid var(--hero-h1-accent-b);
+  outline-offset: 2px;
 }
 
 .fork-topnav-login {
   padding: 7px 14px;
   font-size: 13px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--nav-text);
   text-decoration: none;
   border-radius: 999px;
   transition: color 0.2s ease;
 }
 .fork-topnav-login:hover {
-  color: #fff;
+  color: var(--nav-text-strong);
 }
 
 .fork-topnav-register {
@@ -164,15 +173,15 @@ onMounted(() => {
   padding: 7px 16px;
   font-size: 13px;
   font-weight: 600;
-  color: #0B0D1A;
-  background: #fff;
+  color: var(--nav-cta-text);
+  background: var(--nav-cta-bg);
   border-radius: 999px;
   text-decoration: none;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .fork-topnav-register:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(255, 255, 255, 0.18);
+  box-shadow: 0 6px 16px var(--nav-border);
 }
 
 .fork-topnav-console {
@@ -181,17 +190,17 @@ onMounted(() => {
   gap: 8px;
   padding: 4px 12px 4px 4px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--nav-console-bg);
+  border: 1px solid var(--nav-console-border);
   text-decoration: none;
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--nav-text);
   font-size: 13px;
   font-weight: 500;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 .fork-topnav-console:hover {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.22);
+  background: var(--nav-icon-hover-bg);
+  border-color: var(--hero-border-strong);
 }
 
 .fork-topnav-console-avatar {
@@ -201,8 +210,8 @@ onMounted(() => {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #a5b4fc 0%, #6B8EF2 100%);
-  color: #0B0D1A;
+  background: linear-gradient(135deg, var(--hero-h1-accent-a) 0%, var(--hero-h1-accent-c) 100%);
+  color: #ffffff;
   font-size: 11px;
   font-weight: 700;
 }
