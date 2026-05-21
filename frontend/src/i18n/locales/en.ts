@@ -389,6 +389,14 @@ export default {
     channelStatus: 'Channel Status',
     riskControl: 'Risk Control',
     community: 'Community',
+    imageGen: 'Image Generator',
+  },
+
+  imageGen: {
+    title: 'Image Generator',
+    loading: 'Loading your API key...',
+    noKey: 'No active API key found. Please create one on the Keys page first.',
+    noBaseUrl: 'API base URL is not configured. Please contact the administrator.',
   },
 
   // Auth

@@ -287,6 +287,18 @@ const routes: RouteRecordRaw[] = [
       descriptionKey: 'community.description'
     }
   },
+  // 出图助手（嵌入 onebool-flow iframe,key 通过 postMessage 注入）
+  {
+    path: '/image-gen',
+    name: 'ImageGen',
+    component: () => import('@/views/user/ImageGenView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Image Generator',
+      titleKey: 'nav.imageGen'
+    }
+  },
   {
     path: '/subscriptions',
     name: 'Subscriptions',

@@ -389,6 +389,14 @@ export default {
     channelStatus: '渠道状态',
     riskControl: '风控中心',
     community: '交流群',
+    imageGen: '出图助手',
+  },
+
+  imageGen: {
+    title: '出图助手',
+    loading: '正在加载你的 API Key…',
+    noKey: '没有可用的 API Key,请先去 密钥 页面创建一个 active key',
+    noBaseUrl: '后端尚未配置 API Base URL,请联系管理员',
   },
 
   // Auth
