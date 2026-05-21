@@ -389,11 +389,21 @@ export default {
     channelStatus: 'Channel Status',
     riskControl: 'Risk Control',
     community: 'Community',
-    imageGen: 'Image Generator',
+    workbench: 'Workbench',
+    imageGen: 'Image',
+    chat: 'Chat',
+    extensionConfigs: 'Extension Configs',
   },
 
   imageGen: {
     title: 'Image Generator',
+    loading: 'Loading your API key...',
+    noKey: 'No active API key found. Please create one on the Keys page first.',
+    noBaseUrl: 'API base URL is not configured. Please contact the administrator.',
+  },
+
+  chat: {
+    title: 'Chat Assistant',
     loading: 'Loading your API key...',
     noKey: 'No active API key found. Please create one on the Keys page first.',
     noBaseUrl: 'API base URL is not configured. Please contact the administrator.',
@@ -1399,6 +1409,44 @@ export default {
 
   // Admin
   admin: {
+    // Extension configs (OneBoolFlow agents workbench)
+    extensionConfig: {
+      workbench: {
+        title: 'Extension Configs / Workbench',
+        description: 'Configure available endpoints, groups, and models per agent',
+        endpoints: 'API Endpoint Pool',
+        endpointsHint: 'Check the endpoints to enable, and pick one as default',
+        markDefault: 'Set as default',
+        enabledGroups: 'Enabled Groups',
+        groupModels: 'Models per Group',
+        modelPlaceholder: 'Type a model name and press Enter',
+        modelLimitReached: 'Up to 50 models per group',
+        defaultEndpointInvalid: 'Default endpoint must be enabled first',
+        noEndpoints: 'No API endpoints configured yet — add them in System Settings first',
+        noGroups: 'No groups created',
+        noEnabledGroup: 'Enable at least one group above',
+        saved: 'Configuration saved',
+        loadFailed: 'Failed to load workbench config',
+        saveFailed: 'Failed to save',
+        oneboolOrigin: 'OneBoolFlow Deployment URL',
+        oneboolOriginHint: 'URL of the onebool-flow site (e.g. https://image.sub2api.com or http://localhost:5173). sub2api uses it to build iframe src and postMessage target. Leave blank to fall back to VITE_ONEBOOL_ORIGIN env.',
+        oneboolOriginInvalid: 'Invalid onebool-flow URL — must be like https://example.com (no trailing slash)',
+        tabs: {
+          general: 'General',
+          imageGen: 'Image Generator',
+        },
+        oneboolOriginDescription: 'Shared by all agent iframe embeds and postMessage targets',
+        endpointsDescription: 'Pick available endpoints and mark one as the frontend default',
+        enabledGroupsDescription: 'Groups users can switch among in the assistant',
+        groupModelsDescription: 'Models exposed to users under each enabled group',
+        markAsDefaultButton: 'Set as default',
+        isDefault: 'Default',
+        unsavedChanges: 'Unsaved changes',
+        discardChanges: 'Discard',
+        discardConfirm: 'Discard unsaved changes?',
+        discarded: 'Reverted to last saved configuration',
+      },
+    },
     // Dashboard
     dashboard: {
       title: 'Admin Dashboard',

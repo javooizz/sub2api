@@ -389,11 +389,21 @@ export default {
     channelStatus: '渠道状态',
     riskControl: '风控中心',
     community: '交流群',
-    imageGen: '出图助手',
+    workbench: '工作台',
+    imageGen: '生图',
+    chat: '聊天',
+    extensionConfigs: '扩展配置',
   },
 
   imageGen: {
     title: '出图助手',
+    loading: '正在加载你的 API Key…',
+    noKey: '没有可用的 API Key,请先去 密钥 页面创建一个 active key',
+    noBaseUrl: '后端尚未配置 API Base URL,请联系管理员',
+  },
+
+  chat: {
+    title: '聊天助手',
     loading: '正在加载你的 API Key…',
     noKey: '没有可用的 API Key,请先去 密钥 页面创建一个 active key',
     noBaseUrl: '后端尚未配置 API Base URL,请联系管理员',
@@ -1403,6 +1413,44 @@ export default {
 
   // Admin
   admin: {
+    // 扩展配置（OneBoolFlow agents 工作台）
+    extensionConfig: {
+      workbench: {
+        title: '扩展配置 / 工作台',
+        description: '配置各智能体可用的 API 端点、分组和模型',
+        endpoints: 'API 端点池',
+        endpointsHint: '勾选可用端点，并选一个作为默认',
+        markDefault: '设为默认',
+        enabledGroups: '启用的分组',
+        groupModels: '分组下的模型',
+        modelPlaceholder: '输入模型名后回车',
+        modelLimitReached: '每个分组最多 50 个模型',
+        defaultEndpointInvalid: '默认端点必须先勾选',
+        noEndpoints: '尚未配置任何 API 端点，请先到"系统设置 → 站点设置"添加',
+        noGroups: '尚未创建分组',
+        noEnabledGroup: '请先在上方勾选启用分组',
+        saved: '配置已保存',
+        loadFailed: '加载工作台配置失败',
+        saveFailed: '保存失败',
+        oneboolOrigin: 'OneBoolFlow 部署地址',
+        oneboolOriginHint: 'onebool-flow 站点 URL（如 https://image.sub2api.com 或 http://localhost:5173）。sub2api 用它构造 iframe src 和 postMessage 目标。留空则前端回退到环境变量 VITE_ONEBOOL_ORIGIN。',
+        oneboolOriginInvalid: 'OneBoolFlow 地址格式无效，必须形如 https://example.com（无尾斜杠）',
+        tabs: {
+          general: '通用',
+          imageGen: '出图助手',
+        },
+        oneboolOriginDescription: '各 agent 的 iframe 嵌入与 postMessage 共用此地址',
+        endpointsDescription: '勾选可用端点，并指定一个作为前端默认',
+        enabledGroupsDescription: '勾选可在出图助手中切换的分组',
+        groupModelsDescription: '维护每个分组下展示给用户的模型列表',
+        markAsDefaultButton: '设为默认',
+        isDefault: '默认',
+        unsavedChanges: '有未保存修改',
+        discardChanges: '取消',
+        discardConfirm: '放弃未保存的修改？',
+        discarded: '已恢复到上次保存的配置',
+      },
+    },
     // Dashboard
     dashboard: {
       title: '管理控制台',
