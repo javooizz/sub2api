@@ -5,9 +5,14 @@
  * 通过 postMessage 把当前用户的 default API key + sub2api 的 api_base_url
  * 推送给 iframe(onebool-flow embedded 模式)。
  *
+ * ⚠ 协议规范单一真相源:
+ *   ../../../../../onebool-flow/docs/integration-protocol.md
+ *   (FlowConfig 字段 / postMessage 消息流 / 安全要点 / 协议变更 checklist)
+ * 改本文件 postMessage 相关代码前,先读上述文档。
+ *
  * onebool-flow 部署位置:
  * - Dev:http://localhost:5173 (本地 pnpm dev)
- * - Prod:https://image.sub2api.com (按 docs/deploy.md 部署)
+ * - Prod:https://image.sub2api.com (按 onebool-flow/docs/deploy.md 部署)
  */
 
 import { computed, onMounted, onUnmounted, ref } from 'vue'
