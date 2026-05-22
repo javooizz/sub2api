@@ -17,6 +17,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitorhistory"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitorrequesttemplate"
 	"github.com/Wei-Shaw/sub2api/ent/errorpassthroughrule"
+	"github.com/Wei-Shaw/sub2api/ent/extensionconfig"
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/idempotencyrecord"
 	"github.com/Wei-Shaw/sub2api/ent/identityadoptiondecision"
@@ -748,6 +749,43 @@ func init() {
 	errorpassthroughruleDescSkipMonitoring := errorpassthroughruleFields[11].Descriptor()
 	// errorpassthroughrule.DefaultSkipMonitoring holds the default value on creation for the skip_monitoring field.
 	errorpassthroughrule.DefaultSkipMonitoring = errorpassthroughruleDescSkipMonitoring.Default.(bool)
+	extensionconfigMixin := schema.ExtensionConfig{}.Mixin()
+	extensionconfigMixinFields0 := extensionconfigMixin[0].Fields()
+	_ = extensionconfigMixinFields0
+	extensionconfigFields := schema.ExtensionConfig{}.Fields()
+	_ = extensionconfigFields
+	// extensionconfigDescCreatedAt is the schema descriptor for created_at field.
+	extensionconfigDescCreatedAt := extensionconfigMixinFields0[0].Descriptor()
+	// extensionconfig.DefaultCreatedAt holds the default value on creation for the created_at field.
+	extensionconfig.DefaultCreatedAt = extensionconfigDescCreatedAt.Default.(func() time.Time)
+	// extensionconfigDescUpdatedAt is the schema descriptor for updated_at field.
+	extensionconfigDescUpdatedAt := extensionconfigMixinFields0[1].Descriptor()
+	// extensionconfig.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	extensionconfig.DefaultUpdatedAt = extensionconfigDescUpdatedAt.Default.(func() time.Time)
+	// extensionconfig.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	extensionconfig.UpdateDefaultUpdatedAt = extensionconfigDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// extensionconfigDescAgentID is the schema descriptor for agent_id field.
+	extensionconfigDescAgentID := extensionconfigFields[0].Descriptor()
+	// extensionconfig.AgentIDValidator is a validator for the "agent_id" field. It is called by the builders before save.
+	extensionconfig.AgentIDValidator = func() func(string) error {
+		validators := extensionconfigDescAgentID.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(agent_id string) error {
+			for _, fn := range fns {
+				if err := fn(agent_id); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// extensionconfigDescPayload is the schema descriptor for payload field.
+	extensionconfigDescPayload := extensionconfigFields[1].Descriptor()
+	// extensionconfig.DefaultPayload holds the default value on creation for the payload field.
+	extensionconfig.DefaultPayload = extensionconfigDescPayload.Default.(domain.ExtensionConfigPayload)
 	groupMixin := schema.Group{}.Mixin()
 	groupMixinHooks1 := groupMixin[1].Hooks()
 	group.Hooks[0] = groupMixinHooks1[0]

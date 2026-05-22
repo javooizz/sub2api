@@ -1,0 +1,197 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - img [ref=e7]
+      - generic [ref=e9]:
+        - generic [ref=e10]: OneBoolFlow
+        - generic [ref=e11]: v0.0.1
+    - navigation [ref=e12]:
+      - link "首页" [ref=e13] [cursor=pointer]:
+        - /url: /
+        - img [ref=e14]
+        - generic [ref=e17]: 首页
+      - generic [ref=e18]: 智能体
+      - link "出图助手" [ref=e19] [cursor=pointer]:
+        - /url: /agents/image-gen
+        - img [ref=e20]
+        - generic [ref=e24]: 出图助手
+    - generic [ref=e25]:
+      - link "设置" [ref=e26] [cursor=pointer]:
+        - /url: /settings
+        - img [ref=e27]
+        - generic [ref=e30]: 设置
+      - button "折叠侧栏" [ref=e31] [cursor=pointer]:
+        - img [ref=e32]
+        - generic [ref=e34]: 折叠
+  - main [ref=e35]:
+    - generic [ref=e38]:
+      - navigation [ref=e40]:
+        - link "通用" [ref=e41] [cursor=pointer]:
+          - /url: /agents/image-gen/general
+          - img [ref=e42]
+          - text: 通用
+        - link "电商" [ref=e45] [cursor=pointer]:
+          - /url: /agents/image-gen/ecommerce
+          - img [ref=e46]
+          - text: 电商
+        - link "小红书" [ref=e49] [cursor=pointer]:
+          - /url: /agents/image-gen/xiaohongshu
+          - img [ref=e50]
+          - text: 小红书
+        - link "朋友圈" [ref=e52] [cursor=pointer]:
+          - /url: /agents/image-gen/wechat
+          - img [ref=e53]
+          - text: 朋友圈
+      - generic [ref=e56]:
+        - generic [ref=e57]:
+          - generic [ref=e58]:
+            - heading "通用出图" [level=2] [ref=e59]
+            - paragraph [ref=e60]: 文生图与图生图。可上传 1 张或多张参考图,描述你想要的修改或新画面。
+          - generic [ref=e61]:
+            - button "卡片模式" [pressed] [ref=e62] [cursor=pointer]:
+              - img [ref=e63]
+              - generic [ref=e68]: 卡片
+            - button "对话模式" [ref=e69] [cursor=pointer]:
+              - img [ref=e70]
+              - generic [ref=e72]: 对话
+        - generic [ref=e74]:
+          - heading "历史任务" [level=3] [ref=e75]
+          - generic [ref=e76]:
+            - generic [ref=e77] [cursor=pointer]:
+              - generic [ref=e79]: 图片不存在
+              - generic [ref=e80]:
+                - paragraph [ref=e81]: a red apple on a wooden table, photorealistic
+                - generic [ref=e82]:
+                  - generic [ref=e83]: gpt-image-2
+                  - generic [ref=e84]: 1024x1024
+                - generic [ref=e85]:
+                  - generic [ref=e86]: 1 分钟前
+                  - generic [ref=e88]:
+                    - button "重试" [ref=e89]:
+                      - img [ref=e90]
+                    - button "复用配置" [ref=e93]:
+                      - img [ref=e94]
+                    - button "编辑输出" [ref=e99]:
+                      - img [ref=e100]
+                    - button "详情" [active] [ref=e103]:
+                      - img [ref=e104]
+                    - button "删除" [ref=e106]:
+                      - img [ref=e107]
+            - generic [ref=e110] [cursor=pointer]:
+              - generic [ref=e112]:
+                - img [ref=e113]
+                - generic "Upstream service temporarily unavailable" [ref=e115]
+              - generic [ref=e116]:
+                - paragraph [ref=e117]: a red apple on a wooden table, photorealistic
+                - generic [ref=e118]:
+                  - generic [ref=e119]: gpt-image-2
+                  - generic [ref=e120]: 1024x1024
+                - generic [ref=e121]:
+                  - generic [ref=e122]: 2 分钟前
+                  - generic [ref=e124]:
+                    - button "重试" [ref=e125]:
+                      - img [ref=e126]
+                    - button "复用配置" [ref=e129]:
+                      - img [ref=e130]
+                    - button "编辑输出" [disabled] [ref=e135]:
+                      - img [ref=e136]
+                    - button "详情" [ref=e139]:
+                      - img [ref=e140]
+                    - button "删除" [ref=e142]:
+                      - img [ref=e143]
+        - generic [ref=e147]:
+          - textbox "描述你想要的画面,或上传图片后填写修改指令…" [ref=e148]
+          - generic [ref=e149]:
+            - generic [ref=e150]:
+              - button "设置图像尺寸" [ref=e151] [cursor=pointer]:
+                - img [ref=e152]
+                - generic [ref=e158]: 1024x1024
+              - generic [ref=e160]:
+                - generic [ref=e162]:
+                  - img [ref=e163]
+                  - text: 质量
+                - generic [ref=e165]:
+                  - combobox "质量" [ref=e166] [cursor=pointer]:
+                    - option "自动" [selected]
+                    - option "低"
+                    - option "中"
+                    - option "高"
+                  - img
+              - generic [ref=e168]:
+                - generic [ref=e170]:
+                  - img [ref=e171]
+                  - text: 格式
+                - generic [ref=e176]:
+                  - combobox "格式" [ref=e177] [cursor=pointer]:
+                    - option "PNG" [selected]
+                    - option "JPEG"
+                    - option "WebP"
+                  - img
+              - generic [ref=e179]:
+                - generic [ref=e181]:
+                  - img [ref=e182]
+                  - text: 数量
+                - generic [ref=e185]:
+                  - combobox "数量" [ref=e186] [cursor=pointer]:
+                    - option "1 张" [selected]
+                    - option "2 张"
+                    - option "3 张"
+                    - option "4 张"
+                  - img
+            - generic [ref=e187]:
+              - button "上传图片" [ref=e188] [cursor=pointer]:
+                - img [ref=e189]
+                - text: 上传图片
+              - button "生成" [ref=e193] [cursor=pointer]:
+                - img [ref=e194]
+                - text: 生成
+      - dialog "任务详情" [ref=e196]:
+        - generic [ref=e197]:
+          - generic [ref=e199]: 图片不存在
+          - generic [ref=e200]:
+            - generic [ref=e201]:
+              - heading "任务详情" [level=2] [ref=e202]
+              - button "关闭" [ref=e203] [cursor=pointer]:
+                - img [ref=e204]
+            - generic [ref=e207]:
+              - generic [ref=e208]:
+                - generic [ref=e209]:
+                  - generic [ref=e210]: 提示词
+                  - button [ref=e211] [cursor=pointer]:
+                    - img [ref=e212]
+                - paragraph [ref=e215]: a red apple on a wooden table, photorealistic
+              - generic [ref=e216]:
+                - generic [ref=e217]: API
+                - generic [ref=e218]:
+                  - generic [ref=e219]: Provider
+                  - generic [ref=e220]: openai
+                  - generic [ref=e221]: 模型
+                  - generic [ref=e222]: gpt-image-2
+                  - generic [ref=e223]: 创建
+                  - generic [ref=e224]: 2026/5/22 13:44:31
+                  - generic [ref=e225]: 耗时
+                  - generic [ref=e226]: 3.5s
+              - generic [ref=e227]:
+                - generic [ref=e228]: 参数
+                - generic [ref=e229]:
+                  - generic [ref=e230]:
+                    - generic [ref=e231]: 尺寸
+                    - generic [ref=e232]: 1024x1024
+                  - generic [ref=e233]:
+                    - generic [ref=e234]: 质量
+                    - generic [ref=e235]: auto
+                  - generic [ref=e236]:
+                    - generic [ref=e237]: 格式
+                    - generic [ref=e238]: png
+                  - generic [ref=e239]:
+                    - generic [ref=e240]: 数量
+                    - generic [ref=e241]: "1"
+            - generic [ref=e243]:
+              - button "重试" [ref=e244] [cursor=pointer]:
+                - img [ref=e245]
+              - button "复用配置" [ref=e248] [cursor=pointer]:
+                - img [ref=e249]
+              - button "编辑输出" [ref=e254] [cursor=pointer]:
+                - img [ref=e255]
+              - button "删除" [ref=e258] [cursor=pointer]:
+                - img [ref=e259]

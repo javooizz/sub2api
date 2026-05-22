@@ -1,0 +1,257 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e35]:
+    - complementary [ref=e36]:
+      - generic [ref=e37]:
+        - img "Logo" [ref=e39]
+        - generic [ref=e40]:
+          - generic [ref=e41]: Sub2API
+          - button "v0.1.129" [ref=e43] [cursor=pointer]:
+            - generic [ref=e44]: v0.1.129
+      - navigation [ref=e45]:
+        - generic [ref=e46]:
+          - link "仪表盘" [ref=e47] [cursor=pointer]:
+            - /url: /admin/dashboard
+            - img [ref=e48]
+            - generic [ref=e50]: 仪表盘
+          - link "运维监控" [ref=e51] [cursor=pointer]:
+            - /url: /admin/ops
+            - img [ref=e52]
+            - generic [ref=e54]: 运维监控
+          - link "用户管理" [ref=e55] [cursor=pointer]:
+            - /url: /admin/users
+            - img [ref=e56]
+            - generic [ref=e58]: 用户管理
+          - link "分组管理" [ref=e59] [cursor=pointer]:
+            - /url: /admin/groups
+            - img [ref=e60]
+            - generic [ref=e62]: 分组管理
+          - button "渠道管理" [ref=e63] [cursor=pointer]:
+            - img [ref=e64]
+            - generic [ref=e66]:
+              - generic [ref=e67]: 渠道管理
+              - img [ref=e68]
+          - link "订阅管理" [ref=e70] [cursor=pointer]:
+            - /url: /admin/subscriptions
+            - img [ref=e71]
+            - generic [ref=e73]: 订阅管理
+          - link "账号管理" [ref=e74] [cursor=pointer]:
+            - /url: /admin/accounts
+            - img [ref=e75]
+            - generic [ref=e77]: 账号管理
+          - link "公告" [ref=e78] [cursor=pointer]:
+            - /url: /admin/announcements
+            - img [ref=e79]
+            - generic [ref=e81]: 公告
+          - link "IP管理" [ref=e82] [cursor=pointer]:
+            - /url: /admin/proxies
+            - img [ref=e83]
+            - generic [ref=e85]: IP管理
+          - link "兑换码" [ref=e86] [cursor=pointer]:
+            - /url: /admin/redeem
+            - img [ref=e87]
+            - generic [ref=e89]: 兑换码
+          - link "优惠码" [ref=e90] [cursor=pointer]:
+            - /url: /admin/promo-codes
+            - img [ref=e91]
+            - generic [ref=e93]: 优惠码
+          - button "订单管理" [ref=e94] [cursor=pointer]:
+            - img [ref=e95]
+            - generic [ref=e97]:
+              - generic [ref=e98]: 订单管理
+              - img [ref=e99]
+          - link "使用记录" [ref=e101] [cursor=pointer]:
+            - /url: /admin/usage
+            - img [ref=e102]
+            - generic [ref=e104]: 使用记录
+          - link "系统设置" [ref=e105] [cursor=pointer]:
+            - /url: /admin/settings
+            - img [ref=e106]
+            - generic [ref=e109]: 系统设置
+          - button "扩展配置" [ref=e110] [cursor=pointer]:
+            - img [ref=e111]
+            - generic [ref=e113]:
+              - generic [ref=e114]: 扩展配置
+              - img [ref=e115]
+        - generic [ref=e117]:
+          - generic [ref=e119]: 我的账户
+          - button "工作台" [ref=e120] [cursor=pointer]:
+            - img [ref=e121]
+            - generic [ref=e123]:
+              - generic [ref=e124]: 工作台
+              - img [ref=e125]
+          - link "生图" [ref=e128] [cursor=pointer]:
+            - /url: /image-gen
+            - img [ref=e129]
+            - generic [ref=e131]: 生图
+          - link "API 密钥" [ref=e132] [cursor=pointer]:
+            - /url: /keys
+            - img [ref=e133]
+            - generic [ref=e135]: API 密钥
+          - link "使用记录" [ref=e136] [cursor=pointer]:
+            - /url: /usage
+            - img [ref=e137]
+            - generic [ref=e139]: 使用记录
+          - link "渠道状态" [ref=e140] [cursor=pointer]:
+            - /url: /monitor
+            - img [ref=e141]
+            - generic [ref=e143]: 渠道状态
+          - link "我的订阅" [ref=e144] [cursor=pointer]:
+            - /url: /subscriptions
+            - img [ref=e145]
+            - generic [ref=e147]: 我的订阅
+          - link "充值/订阅" [ref=e148] [cursor=pointer]:
+            - /url: /purchase
+            - img [ref=e149]
+            - generic [ref=e155]: 充值/订阅
+          - link "我的订单" [ref=e156] [cursor=pointer]:
+            - /url: /orders
+            - img [ref=e157]
+            - generic [ref=e159]: 我的订单
+          - link "兑换" [ref=e160] [cursor=pointer]:
+            - /url: /redeem
+            - img [ref=e161]
+            - generic [ref=e163]: 兑换
+          - link "交流群" [ref=e164] [cursor=pointer]:
+            - /url: /community
+            - img [ref=e165]
+            - generic [ref=e167]: 交流群
+          - link "个人资料" [ref=e168] [cursor=pointer]:
+            - /url: /profile
+            - img [ref=e169]
+            - generic [ref=e171]: 个人资料
+      - generic [ref=e172]:
+        - button "深色模式" [ref=e173] [cursor=pointer]:
+          - img [ref=e174]
+          - generic [ref=e176]: 深色模式
+        - button "收起" [ref=e177] [cursor=pointer]:
+          - img [ref=e178]
+          - generic [ref=e180]: 收起
+    - generic [ref=e181]:
+      - banner [ref=e182]:
+        - generic [ref=e183]:
+          - heading "生图" [level=1] [ref=e186]
+          - generic [ref=e187]:
+            - button "公告" [ref=e189] [cursor=pointer]:
+              - img [ref=e190]
+            - button "🇨🇳 ZH" [ref=e193] [cursor=pointer]:
+              - generic [ref=e194]: 🇨🇳
+              - generic [ref=e195]: ZH
+              - img [ref=e196]
+            - generic [ref=e198]:
+              - img [ref=e199]
+              - generic [ref=e201]: $9999999.52
+            - button "User Menu" [ref=e203] [cursor=pointer]:
+              - generic [ref=e205]: AD
+              - generic [ref=e206]:
+                - generic [ref=e207]: admin
+                - generic [ref=e208]: admin
+              - img [ref=e209]
+      - main [ref=e211]:
+        - iframe [ref=e213]:
+          - main [ref=f1e4]:
+            - generic [ref=f1e5]:
+              - navigation [ref=f1e7]:
+                - link "通用" [ref=f1e8] [cursor=pointer]:
+                  - /url: /agents/image-gen/general
+                  - img [ref=f1e9]
+                  - text: 通用
+                - link "电商" [ref=f1e12] [cursor=pointer]:
+                  - /url: /agents/image-gen/ecommerce
+                  - img [ref=f1e13]
+                  - text: 电商
+                - link "小红书" [ref=f1e16] [cursor=pointer]:
+                  - /url: /agents/image-gen/xiaohongshu
+                  - img [ref=f1e17]
+                  - text: 小红书
+                - link "朋友圈" [ref=f1e19] [cursor=pointer]:
+                  - /url: /agents/image-gen/wechat
+                  - img [ref=f1e20]
+                  - text: 朋友圈
+              - generic [ref=f1e22]:
+                - generic [ref=f1e24]:
+                  - generic [ref=f1e25]: 端点
+                  - generic [ref=f1e26]:
+                    - combobox "端点" [ref=f1e27] [cursor=pointer]:
+                      - option "直连 — http://localhost:3000" [selected]
+                      - option "主站 — http://localhost:3000"
+                    - img
+                - generic [ref=f1e29]:
+                  - generic [ref=f1e30]: 分组
+                  - generic [ref=f1e31]:
+                    - combobox "分组" [ref=f1e32] [cursor=pointer]:
+                      - option "gpt-image" [selected]
+                    - img
+                - generic [ref=f1e34]:
+                  - generic [ref=f1e35]: 模型
+                  - generic [ref=f1e36]:
+                    - combobox "模型" [ref=f1e37] [cursor=pointer]:
+                      - option "gpt-image-2" [selected]
+                    - img
+              - generic [ref=f1e39]:
+                - generic [ref=f1e40]:
+                  - generic [ref=f1e41]:
+                    - heading "通用出图" [level=2] [ref=f1e42]
+                    - paragraph [ref=f1e43]: 文生图与图生图。可上传 1 张或多张参考图,描述你想要的修改或新画面。
+                  - generic [ref=f1e44]:
+                    - button "卡片模式" [pressed] [ref=f1e45] [cursor=pointer]:
+                      - img [ref=f1e46]
+                      - generic [ref=f1e51]: 卡片
+                    - button "对话模式" [ref=f1e52] [cursor=pointer]:
+                      - img [ref=f1e53]
+                      - generic [ref=f1e55]: 对话
+                - generic [ref=f1e57]:
+                  - heading "历史任务" [level=3] [ref=f1e58]
+                  - generic [ref=f1e59]:
+                    - img [ref=f1e60]
+                    - paragraph [ref=f1e67]: 还没有任务,在上方输入提示词试试。
+                - generic [ref=f1e69]:
+                  - textbox "描述你想要的画面,或上传图片后填写修改指令…" [ref=f1e70]
+                  - generic [ref=f1e71]:
+                    - generic [ref=f1e72]:
+                      - button "设置图像尺寸" [ref=f1e73] [cursor=pointer]:
+                        - img [ref=f1e74]
+                        - generic [ref=f1e80]: 1024x1024
+                      - generic [ref=f1e82]:
+                        - generic [ref=f1e84]:
+                          - img [ref=f1e85]
+                          - text: 质量
+                        - generic [ref=f1e87]:
+                          - combobox "质量" [ref=f1e88] [cursor=pointer]:
+                            - option "自动" [selected]
+                            - option "低"
+                            - option "中"
+                            - option "高"
+                          - img
+                      - generic [ref=f1e90]:
+                        - generic [ref=f1e92]:
+                          - img [ref=f1e93]
+                          - text: 格式
+                        - generic [ref=f1e98]:
+                          - combobox "格式" [ref=f1e99] [cursor=pointer]:
+                            - option "PNG" [selected]
+                            - option "JPEG"
+                            - option "WebP"
+                          - img
+                      - generic [ref=f1e101]:
+                        - generic [ref=f1e103]:
+                          - img [ref=f1e104]
+                          - text: 数量
+                        - generic [ref=f1e107]:
+                          - combobox "数量" [ref=f1e108] [cursor=pointer]:
+                            - option "1 张" [selected]
+                            - option "2 张"
+                            - option "3 张"
+                            - option "4 张"
+                          - img
+                    - generic [ref=f1e109]:
+                      - button "上传图片" [ref=f1e110] [cursor=pointer]:
+                        - img [ref=f1e111]
+                        - text: 上传图片
+                      - button "生成" [ref=f1e115] [cursor=pointer]:
+                        - img [ref=f1e116]
+                        - text: 生成
+  - generic [ref=e216]:
+    - img [ref=e218]
+    - paragraph [ref=e221]: 登录成功！欢迎回来。
+    - button "Close notification" [ref=e222] [cursor=pointer]:
+      - img [ref=e223]

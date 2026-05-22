@@ -97,6 +97,20 @@ func RegisterAdminRoutes(
 
 		// 邀请返利（专属用户管理）
 		registerAffiliateRoutes(admin, h)
+
+		// 扩展配置（OneBoolFlow agents 工作台）
+		registerExtensionConfigRoutes(admin, h)
+	}
+}
+
+// registerExtensionConfigRoutes 注册"扩展配置/工作台"的管理员路由。
+// 配套 onebool-flow iframe 的 workbench 协议（docs/integration-protocol.md §9）。
+func registerExtensionConfigRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
+	cfg := admin.Group("/extension-configs")
+	{
+		cfg.GET("/:agent_id", h.Admin.ExtensionConfig.Get)
+		cfg.PUT("/:agent_id", h.Admin.ExtensionConfig.Upsert)
+		cfg.DELETE("/:agent_id", h.Admin.ExtensionConfig.Delete)
 	}
 }
 

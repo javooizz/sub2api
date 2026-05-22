@@ -119,5 +119,12 @@ func RegisterUserRoutes(
 			monitors.GET("", h.ChannelMonitor.List)
 			monitors.GET("/:id/status", h.ChannelMonitor.GetStatus)
 		}
+
+		// 扩展配置（用户视角，按 user_allowed_groups 过滤；含 ensure-key）
+		extCfg := authenticated.Group("/extension-configs")
+		{
+			extCfg.GET("/:agent_id", h.ExtensionConfig.Get)
+			extCfg.POST("/:agent_id/ensure-key", h.ExtensionConfig.EnsureKey)
+		}
 	}
 }

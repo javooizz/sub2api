@@ -287,7 +287,7 @@ const routes: RouteRecordRaw[] = [
       descriptionKey: 'community.description'
     }
   },
-  // 出图助手（嵌入 onebool-flow iframe,key 通过 postMessage 注入）
+  // 工作台 - 出图助手（嵌入 onebool-flow iframe，key 通过 postMessage 注入）
   {
     path: '/image-gen',
     name: 'ImageGen',
@@ -297,6 +297,18 @@ const routes: RouteRecordRaw[] = [
       requiresAdmin: false,
       title: 'Image Generator',
       titleKey: 'nav.imageGen'
+    }
+  },
+  // 工作台 - 聊天助手（嵌入 onebool-flow iframe，agent=chat）
+  {
+    path: '/chat',
+    name: 'Chat',
+    component: () => import('@/views/user/ChatView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Chat',
+      titleKey: 'nav.chat'
     }
   },
   {
@@ -581,6 +593,22 @@ const routes: RouteRecordRaw[] = [
       title: 'System Settings',
       titleKey: 'admin.settings.title',
       descriptionKey: 'admin.settings.description'
+    }
+  },
+  {
+    path: '/admin/extension-configs',
+    redirect: '/admin/extension-configs/workbench'
+  },
+  {
+    path: '/admin/extension-configs/workbench',
+    name: 'AdminExtensionConfigWorkbench',
+    component: () => import('@/views/admin/ExtensionConfigWorkbenchView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Extension Configs Workbench',
+      titleKey: 'admin.extensionConfig.workbench.title',
+      descriptionKey: 'admin.extensionConfig.workbench.description'
     }
   },
   {

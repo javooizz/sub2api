@@ -633,6 +633,21 @@ var (
 			},
 		},
 	}
+	// ExtensionConfigsColumns holds the columns for the "extension_configs" table.
+	ExtensionConfigsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "agent_id", Type: field.TypeString, Unique: true, Size: 64},
+		{Name: "payload", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "updated_by", Type: field.TypeInt64, Nullable: true},
+	}
+	// ExtensionConfigsTable holds the schema information for the "extension_configs" table.
+	ExtensionConfigsTable = &schema.Table{
+		Name:       "extension_configs",
+		Columns:    ExtensionConfigsColumns,
+		PrimaryKey: []*schema.Column{ExtensionConfigsColumns[0]},
+	}
 	// GroupsColumns holds the columns for the "groups" table.
 	GroupsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
@@ -1715,6 +1730,7 @@ var (
 		ChannelMonitorHistoriesTable,
 		ChannelMonitorRequestTemplatesTable,
 		ErrorPassthroughRulesTable,
+		ExtensionConfigsTable,
 		GroupsTable,
 		IdempotencyRecordsTable,
 		IdentityAdoptionDecisionsTable,
@@ -1788,6 +1804,9 @@ func init() {
 	}
 	ErrorPassthroughRulesTable.Annotation = &entsql.Annotation{
 		Table: "error_passthrough_rules",
+	}
+	ExtensionConfigsTable.Annotation = &entsql.Annotation{
+		Table: "extension_configs",
 	}
 	GroupsTable.Annotation = &entsql.Annotation{
 		Table: "groups",
