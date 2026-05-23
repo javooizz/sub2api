@@ -73,7 +73,13 @@ run_mode: "standard"
 cors:
   # Allowed origins list. Leave empty to disable cross-origin requests.
   # 允许的来源列表。留空则禁用跨域请求。
-  allowed_origins: []
+  # 支持完全匹配与通配子域两种格式:
+  #   - 完全匹配: "https://example.com"
+  #   - 通配子域: "*.example.com" (匹配 scheme=https 的所有子域,裸根域不命中)
+  #     注意: *.com 等顶级通配与 *.*.foo.com 多重通配在解析时会被忽略。
+  allowed_origins:
+    # 通配子域示例(请替换为部署所需的域名,或删除本行):
+    - "*.onebool.com"
   # Allow credentials (cookies/authorization headers). Cannot be used with "*".
   # 允许携带凭证（cookies/授权头）。不能与 "*" 通配符同时使用。
   allow_credentials: true

@@ -306,3 +306,83 @@ func TestNormalizeOrigins(t *testing.T) {
 		})
 	}
 }
+
+// --- Task 2.1: 通配子域匹配 ---
+
+func runCORSRequest(t *testing.T, cfg config.CORSConfig, method, origin string) *httptest.ResponseRecorder {
+	t.Helper()
+	middleware := CORS(cfg)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(method, "/", nil)
+	if origin != "" {
+		c.Request.Header.Set("Origin", origin)
+	}
+	middleware(c)
+	return w
+}
+
+func TestCORS_WildcardSubdomain_AllowsSubdomain(t *testing.T) {
+	cfg := config.CORSConfig{AllowedOrigins: []string{"*.onebool.com"}}
+	w := runCORSRequest(t, cfg, http.MethodOptions, "https://flow.onebool.com")
+	assert.Equal(t, "https://flow.onebool.com", w.Header().Get("Access-Control-Allow-Origin"))
+	assert.Equal(t, "Origin", w.Header().Get("Vary"))
+}
+
+func TestCORS_WildcardSubdomain_AllowsMultiLevelSubdomain(t *testing.T) {
+	cfg := config.CORSConfig{AllowedOrigins: []string{"*.onebool.com"}}
+	w := runCORSRequest(t, cfg, http.MethodOptions, "https://a.b.onebool.com")
+	assert.Equal(t, "https://a.b.onebool.com", w.Header().Get("Access-Control-Allow-Origin"))
+}
+
+func TestCORS_WildcardSubdomain_RejectsBareRoot(t *testing.T) {
+	cfg := config.CORSConfig{AllowedOrigins: []string{"*.onebool.com"}}
+	w := runCORSRequest(t, cfg, http.MethodOptions, "https://onebool.com")
+	assert.Empty(t, w.Header().Get("Access-Control-Allow-Origin"))
+}
+
+func TestCORS_WildcardSubdomain_RejectsTrailingAttack(t *testing.T) {
+	cfg := config.CORSConfig{AllowedOrigins: []string{"*.onebool.com"}}
+	w := runCORSRequest(t, cfg, http.MethodOptions, "https://flow.onebool.com.attacker.com")
+	assert.Empty(t, w.Header().Get("Access-Control-Allow-Origin"))
+}
+
+func TestCORS_WildcardSubdomain_RejectsLookalikeRoot(t *testing.T) {
+	cfg := config.CORSConfig{AllowedOrigins: []string{"*.onebool.com"}}
+	w := runCORSRequest(t, cfg, http.MethodOptions, "https://evil-onebool.com")
+	assert.Empty(t, w.Header().Get("Access-Control-Allow-Origin"))
+}
+
+func TestCORS_WildcardSubdomain_RejectsHttpScheme(t *testing.T) {
+	cfg := config.CORSConfig{AllowedOrigins: []string{"*.onebool.com"}}
+	w := runCORSRequest(t, cfg, http.MethodOptions, "http://flow.onebool.com")
+	assert.Empty(t, w.Header().Get("Access-Control-Allow-Origin"))
+}
+
+func TestCORS_WildcardSubdomain_RejectsTopLevelWildcard(t *testing.T) {
+	// 解析时拒绝 *.com / *.net 等顶级通配
+	cfg := config.CORSConfig{AllowedOrigins: []string{"*.com"}}
+	w := runCORSRequest(t, cfg, http.MethodOptions, "https://foo.com")
+	assert.Empty(t, w.Header().Get("Access-Control-Allow-Origin"))
+}
+
+func TestCORS_WildcardSubdomain_RejectsMultiWildcard(t *testing.T) {
+	// 解析时拒绝 *.*.foo.com
+	cfg := config.CORSConfig{AllowedOrigins: []string{"*.*.onebool.com"}}
+	w := runCORSRequest(t, cfg, http.MethodOptions, "https://a.b.onebool.com")
+	assert.Empty(t, w.Header().Get("Access-Control-Allow-Origin"))
+}
+
+func TestCORS_WildcardCoexistsWithExact(t *testing.T) {
+	cfg := config.CORSConfig{AllowedOrigins: []string{"https://example.com", "*.onebool.com"}}
+	wExact := runCORSRequest(t, cfg, http.MethodOptions, "https://example.com")
+	assert.Equal(t, "https://example.com", wExact.Header().Get("Access-Control-Allow-Origin"))
+	wWildcard := runCORSRequest(t, cfg, http.MethodOptions, "https://flow.onebool.com")
+	assert.Equal(t, "https://flow.onebool.com", wWildcard.Header().Get("Access-Control-Allow-Origin"))
+}
+
+func TestCORS_AllowAllOverridesWildcard(t *testing.T) {
+	cfg := config.CORSConfig{AllowedOrigins: []string{"*", "*.onebool.com"}}
+	w := runCORSRequest(t, cfg, http.MethodOptions, "https://anywhere.example.com")
+	assert.Equal(t, "*", w.Header().Get("Access-Control-Allow-Origin"))
+}

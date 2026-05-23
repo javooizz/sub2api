@@ -3,6 +3,7 @@ package middleware
 import (
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 
@@ -44,8 +45,13 @@ func CORS(cfg config.CORSConfig) gin.HandlerFunc {
 	}
 
 	allowedSet := make(map[string]struct{}, len(allowedOrigins))
+	var wildcardSuffixes []string
 	for _, origin := range allowedOrigins {
 		if origin == "" || origin == "*" {
+			continue
+		}
+		if suffix, ok := parseWildcardSuffix(origin); ok {
+			wildcardSuffixes = append(wildcardSuffixes, suffix)
 			continue
 		}
 		allowedSet[origin] = struct{}{}
@@ -68,7 +74,11 @@ func CORS(cfg config.CORSConfig) gin.HandlerFunc {
 		origin := strings.TrimSpace(c.GetHeader("Origin"))
 		originAllowed := allowAll
 		if origin != "" && !allowAll {
-			_, originAllowed = allowedSet[origin]
+			if _, ok := allowedSet[origin]; ok {
+				originAllowed = true
+			} else if originMatchesWildcard(origin, wildcardSuffixes) {
+				originAllowed = true
+			}
 		}
 
 		if originAllowed {
@@ -113,4 +123,40 @@ func normalizeOrigins(values []string) []string {
 		normalized = append(normalized, trimmed)
 	}
 	return normalized
+}
+
+// parseWildcardSuffix 把配置项中的 "*.<suffix>" 解析为 suffix,失败返回 ("", false)。
+// 拒绝顶级通配(suffix 必须含至少一个 ".")与多重通配(suffix 自身不能含 "*")。
+func parseWildcardSuffix(origin string) (string, bool) {
+	const prefix = "*."
+	if !strings.HasPrefix(origin, prefix) {
+		return "", false
+	}
+	suffix := strings.TrimPrefix(origin, prefix)
+	if suffix == "" || strings.Contains(suffix, "*") || !strings.Contains(suffix, ".") {
+		return "", false
+	}
+	return suffix, true
+}
+
+// originMatchesWildcard 检查 origin 是否匹配任何一个 *.suffix 模式。
+// 要求:scheme 为 https;host 不等于 suffix(裸根域不算命中);host 以 ".suffix" 结尾。
+func originMatchesWildcard(origin string, suffixes []string) bool {
+	if len(suffixes) == 0 {
+		return false
+	}
+	u, err := url.Parse(origin)
+	if err != nil || u.Scheme != "https" || u.Host == "" {
+		return false
+	}
+	host := u.Hostname() // 去端口
+	for _, suffix := range suffixes {
+		if host == suffix {
+			continue
+		}
+		if strings.HasSuffix(host, "."+suffix) {
+			return true
+		}
+	}
+	return false
 }
