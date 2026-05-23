@@ -96,6 +96,20 @@ func (r *extensionConfigRepository) Delete(ctx context.Context, agentID string) 
 	return nil
 }
 
+// ListAll 返回所有 extension_config 记录,供 CSP frame-src 注入使用。
+func (r *extensionConfigRepository) ListAll(ctx context.Context) ([]*service.ExtensionConfigRecord, error) {
+	client := clientFromContext(ctx, r.client)
+	rows, err := client.ExtensionConfig.Query().All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*service.ExtensionConfigRecord, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, extensionConfigEntToRecord(row))
+	}
+	return out, nil
+}
+
 func extensionConfigEntToRecord(e *dbent.ExtensionConfig) *service.ExtensionConfigRecord {
 	if e == nil {
 		return nil

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -85,6 +86,7 @@ type ExtensionConfigRepository interface {
 	GetByAgentID(ctx context.Context, agentID string) (*ExtensionConfigRecord, error)
 	Upsert(ctx context.Context, agentID string, payload domain.ExtensionConfigPayload, updatedBy *int64) (*ExtensionConfigRecord, error)
 	Delete(ctx context.Context, agentID string) error
+	ListAll(ctx context.Context) ([]*ExtensionConfigRecord, error)
 }
 
 // UserAllowedGroupLister 抽象出查询用户授权 group 的接口。
@@ -103,6 +105,7 @@ type ExtensionConfigService struct {
 	apiKeyRepo        APIKeyRepository
 	apiKeyService     *APIKeyService
 	userAllowedLister UserAllowedGroupLister
+	onUpdate          func() // CSP frame-src 缓存失效回调
 }
 
 // NewExtensionConfigService 构造（wire 注入）。
@@ -156,7 +159,14 @@ func (s *ExtensionConfigService) Upsert(
 	if err := s.validatePayload(ctx, agentID, &payload); err != nil {
 		return nil, err
 	}
-	return s.repo.Upsert(ctx, agentID, payload, updatedBy)
+	rec, err := s.repo.Upsert(ctx, agentID, payload, updatedBy)
+	if err != nil {
+		return nil, err
+	}
+	if s.onUpdate != nil {
+		s.onUpdate()
+	}
+	return rec, nil
 }
 
 // Delete 清空配置（删除整行）。
@@ -164,7 +174,49 @@ func (s *ExtensionConfigService) Delete(ctx context.Context, agentID string) err
 	if strings.TrimSpace(agentID) == "" {
 		return ErrExtensionConfigAgentRequired
 	}
-	return s.repo.Delete(ctx, agentID)
+	if err := s.repo.Delete(ctx, agentID); err != nil {
+		return err
+	}
+	if s.onUpdate != nil {
+		s.onUpdate()
+	}
+	return nil
+}
+
+// SetOnUpdateCallback 注册当 extension_config 发生 upsert/delete 时触发的回调，
+// 用于失效依赖 extension_config 数据的缓存（目前是 router 层 CSP frame-src 缓存）。
+// 与 SettingService.SetOnUpdateCallback 同模式；启动期单次设置，运行期只读。
+func (s *ExtensionConfigService) SetOnUpdateCallback(cb func()) {
+	s.onUpdate = cb
+}
+
+// ListAllOneboolOrigins 返回所有 extension_config 记录的 onebool_origin 去重列表。
+// 用于动态注入 CSP frame-src。无效 origin（非 http(s) 或含 path/query）会被跳过。
+func (s *ExtensionConfigService) ListAllOneboolOrigins(ctx context.Context) ([]string, error) {
+	records, err := s.repo.ListAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+	seen := make(map[string]struct{})
+	out := make([]string, 0)
+	for _, rec := range records {
+		raw := rec.Payload.OneboolOrigin
+		if raw == "" {
+			continue
+		}
+		// extractOriginFromURL 只取 scheme+host,会清洗存量含 path/query 的旧数据;
+		// validateOneboolOrigin 在写入路径上做严格校验,二者是"宽进严出"的有意配合。
+		origin := extractOriginFromURL(raw)
+		if origin == "" {
+			continue
+		}
+		if _, ok := seen[origin]; ok {
+			continue
+		}
+		seen[origin] = struct{}{}
+		out = append(out, origin)
+	}
+	return out, nil
 }
 
 // ====== User: GetForUser / EnsureKey ======
@@ -346,11 +398,36 @@ func (s *ExtensionConfigService) EnsureKey(
 
 // ====== Helpers ======
 
+// validateOneboolOrigin 校验 OneboolOrigin 字段必须为 http(s) origin（无 path/query/fragment）。
+func (s *ExtensionConfigService) validateOneboolOrigin(p *domain.ExtensionConfigPayload) error {
+	raw := p.OneboolOrigin
+	if raw == "" {
+		return nil
+	}
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" {
+		return fmt.Errorf("%w: onebool_origin must be a valid URL", ErrExtensionConfigInvalidPayload)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("%w: onebool_origin scheme must be http or https", ErrExtensionConfigInvalidPayload)
+	}
+	if u.Path != "" && u.Path != "/" {
+		return fmt.Errorf("%w: onebool_origin must not contain path", ErrExtensionConfigInvalidPayload)
+	}
+	if u.RawQuery != "" || u.Fragment != "" {
+		return fmt.Errorf("%w: onebool_origin must not contain query or fragment", ErrExtensionConfigInvalidPayload)
+	}
+	return nil
+}
+
 func (s *ExtensionConfigService) validatePayload(
 	ctx context.Context,
 	agentID string,
 	p *domain.ExtensionConfigPayload,
 ) error {
+	if err := s.validateOneboolOrigin(p); err != nil {
+		return err
+	}
 	// 仅 image-gen 详细校验。其他 agent 后续扩展时同步加。
 	if agentID == AgentIDImageGen && p.ImageGen != nil {
 		cfg := p.ImageGen

@@ -30,6 +30,7 @@ func SetupRouter(
 	subscriptionService *service.SubscriptionService,
 	opsService *service.OpsService,
 	settingService *service.SettingService,
+	extensionConfigService *service.ExtensionConfigService,
 	cfg *config.Config,
 	redisClient *redis.Client,
 ) *gin.Engine {
@@ -41,14 +42,24 @@ func SetupRouter(
 	refreshFrameOrigins := func() {
 		ctx, cancel := context.WithTimeout(context.Background(), frameSrcRefreshTimeout)
 		defer cancel()
-		origins, err := settingService.GetFrameSrcOrigins(ctx)
+
+		settingsOrigins, err := settingService.GetFrameSrcOrigins(ctx)
 		if err != nil {
-			// 获取失败时保留已有缓存，避免 frame-src 被意外清空
+			// settings 获取失败时保留已有缓存,避免 frame-src 被意外清空
 			return
 		}
-		cachedFrameOrigins.Store(&origins)
+		extOrigins, extErr := extensionConfigService.ListAllOneboolOrigins(ctx)
+		if extErr != nil {
+			// ext 失败时 settings origins 仍可用,只跳过 ext 部分
+			log.Printf("[refreshFrameOrigins] list extension_config origins failed: %v", extErr)
+			extOrigins = nil
+		}
+
+		merged := dedupOrigins(settingsOrigins, extOrigins)
+		cachedFrameOrigins.Store(&merged)
 	}
 	refreshFrameOrigins() // 启动时初始化
+	extensionConfigService.SetOnUpdateCallback(refreshFrameOrigins)
 
 	// 应用中间件
 	r.Use(middleware2.RequestLogger())
@@ -84,6 +95,26 @@ func SetupRouter(
 	registerRoutes(r, handlers, jwtAuth, adminAuth, apiKeyAuth, apiKeyService, subscriptionService, opsService, settingService, cfg, redisClient)
 
 	return r
+}
+
+// dedupOrigins 合并多个 origin slice 并按首次出现顺序保留唯一项。
+// router 内部用于把 settings 来源 origins 与 extension_config.onebool_origin 合并。
+func dedupOrigins(slices ...[]string) []string {
+	seen := make(map[string]struct{})
+	out := make([]string, 0)
+	for _, s := range slices {
+		for _, o := range s {
+			if o == "" {
+				continue
+			}
+			if _, ok := seen[o]; ok {
+				continue
+			}
+			seen[o] = struct{}{}
+			out = append(out, o)
+		}
+	}
+	return out
 }
 
 // registerRoutes 注册所有 HTTP 路由
