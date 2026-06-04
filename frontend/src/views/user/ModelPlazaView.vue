@@ -16,6 +16,7 @@
               :total-count="models.length"
               :user-rates="userRates"
               @reset="reset"
+              @update="Object.assign(filters, $event)"
             />
           </div>
         </details>
@@ -28,6 +29,7 @@
             :total-count="models.length"
             :user-rates="userRates"
             @reset="reset"
+            @update="Object.assign(filters, $event)"
           />
         </div>
       </div>

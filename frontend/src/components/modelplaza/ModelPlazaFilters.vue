@@ -23,7 +23,7 @@
           type="button"
           class="filter-option"
           :class="{ 'filter-option-active': filters.platform === null }"
-          @click="filters.platform = null"
+          @click="emit('update', { platform: null })"
         >
           <span>{{ t('modelPlaza.filters.allProviders') }}</span>
           <span class="filter-count">{{ totalCount }}</span>
@@ -34,7 +34,7 @@
           type="button"
           class="filter-option"
           :class="{ 'filter-option-active': filters.platform === opt.value }"
-          @click="filters.platform = filters.platform === opt.value ? null : opt.value"
+          @click="emit('update', { platform: filters.platform === opt.value ? null : opt.value })"
         >
           <span class="flex items-center gap-2">
             <ModelIcon :model="iconHintFor(opt.value)" size="16px" />
@@ -55,7 +55,7 @@
           type="button"
           class="filter-option"
           :class="{ 'filter-option-active': filters.groupId === null }"
-          @click="filters.groupId = null"
+          @click="emit('update', { groupId: null })"
         >
           <span>{{ t('modelPlaza.filters.allGroups') }}</span>
         </button>
@@ -68,7 +68,7 @@
             'filter-option-active': filters.groupId === grp.id,
             'filter-option-subscription': grp.subscription_type === 'subscription',
           }"
-          @click="filters.groupId = filters.groupId === grp.id ? null : grp.id"
+          @click="emit('update', { groupId: filters.groupId === grp.id ? null : grp.id })"
         >
           <span class="truncate">{{ grp.name }}</span>
           <span class="flex shrink-0 items-center gap-1">
@@ -94,7 +94,7 @@
           type="button"
           class="filter-option"
           :class="{ 'filter-option-active': filters.billingMode === null }"
-          @click="filters.billingMode = null"
+          @click="emit('update', { billingMode: null })"
         >
           <span>{{ t('modelPlaza.filters.allBillingTypes') }}</span>
           <span class="filter-count">{{ totalCount }}</span>
@@ -105,7 +105,7 @@
           type="button"
           class="filter-option"
           :class="{ 'filter-option-active': filters.billingMode === opt.value }"
-          @click="filters.billingMode = filters.billingMode === opt.value ? null : opt.value"
+          @click="emit('update', { billingMode: filters.billingMode === opt.value ? null : opt.value })"
         >
           <span>{{ t(`modelPlaza.billingMode.${opt.value}`, opt.value) }}</span>
           <span class="filter-count">{{ opt.count }}</span>
@@ -131,7 +131,7 @@ const props = defineProps<{
   userRates: Record<number, number>
 }>()
 
-const emit = defineEmits<{ reset: [] }>()
+const emit = defineEmits<{ reset: []; update: [patch: Partial<PlazaFilterState>] }>()
 const { t } = useI18n()
 
 /** platform → ModelIcon 的提示词（ModelIcon 按模型名猜图标，平台名直接映射代表模型）。 */
@@ -173,14 +173,18 @@ function multiplierLabel(grp: PlazaGroup): string {
 .dark .filter-option:hover {
   background-color: rgb(31 41 55);
 }
+.filter-option:focus-visible {
+  outline: 2px solid rgb(13 148 136);
+  outline-offset: 1px;
+}
 .filter-option-active {
-  background-color: rgb(239 246 255);
-  color: rgb(29 78 216);
+  background-color: rgb(240 253 250);
+  color: rgb(15 118 110);
   font-weight: 500;
 }
 .dark .filter-option-active {
-  background-color: rgb(30 58 138 / 0.3);
-  color: rgb(147 197 253);
+  background-color: rgb(19 78 74 / 0.3);
+  color: rgb(94 234 212);
 }
 .filter-option-subscription {
   font-weight: 500;

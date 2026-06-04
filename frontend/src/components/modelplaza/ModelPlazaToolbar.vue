@@ -84,12 +84,16 @@ const { t } = useI18n()
   color: rgb(156 163 175);
 }
 .view-toggle-active {
-  background-color: rgb(239 246 255);
-  color: rgb(29 78 216);
+  background-color: rgb(240 253 250);
+  color: rgb(15 118 110);
   font-weight: 500;
 }
 .dark .view-toggle-active {
-  background-color: rgb(30 58 138 / 0.3);
-  color: rgb(147 197 253);
+  background-color: rgb(19 78 74 / 0.3);
+  color: rgb(94 234 212);
+}
+.view-toggle:focus-visible {
+  outline: 2px solid rgb(13 148 136);
+  outline-offset: 1px;
 }
 </style>
