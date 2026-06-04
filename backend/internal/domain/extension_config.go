@@ -55,6 +55,8 @@ type ModelPlazaExtensionConfig struct {
 	ExcludedGroupIDs []int64 `json:"excluded_group_ids,omitempty"`
 
 	// ModelDescriptions 模型名 → 展示描述。key 长度 1-100 字节，value ≤500 字符（rune）。
+	// 无条目数上限（不同于 image-gen GroupModels 的 ≤50）：admin-only 输入、单 jsonb 行，
+	// 失败模式只是行变大，刻意不设 cap。
 	ModelDescriptions map[string]string `json:"model_descriptions,omitempty"`
 
 	// Announcement 广场顶部公告（Markdown，≤2000 字符 rune）。
