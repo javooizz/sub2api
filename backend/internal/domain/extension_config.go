@@ -17,6 +17,9 @@ type ExtensionConfigPayload struct {
 	// ImageGen 当 agent_id == "image-gen" 时生效。
 	ImageGen *ImageGenExtensionConfig `json:"image_gen,omitempty"`
 
+	// ModelPlaza 当 agent_id == "model-plaza" 时生效。
+	ModelPlaza *ModelPlazaExtensionConfig `json:"model_plaza,omitempty"`
+
 	// 未来扩展其他智能体时在此追加同级字段，例如：
 	// PPTGen *PPTGenExtensionConfig `json:"ppt_gen,omitempty"`
 }
@@ -39,4 +42,21 @@ type ImageGenExtensionConfig struct {
 	// GroupModels 每个分组下暴露给用户的模型字符串列表。
 	// key 是字符串化 group_id（json 不支持 int key），value 元素长度 1-100，数组长度 ≤ 50。
 	GroupModels map[string][]string `json:"group_models,omitempty"`
+}
+
+// ModelPlazaExtensionConfig 模型广场展示配置。
+// 只影响广场展示，不影响绑定/计费权限（绑定权限由 GetAvailableGroups 把关）。
+type ModelPlazaExtensionConfig struct {
+	// ExcludedChannelIDs 不在广场展示的渠道 ID 黑名单。
+	// 仅校验为正整数，不校验存在性——渠道删除后黑名单残留无害（聚合时自然失配跳过）。
+	ExcludedChannelIDs []int64 `json:"excluded_channel_ids,omitempty"`
+
+	// ExcludedGroupIDs 不在广场展示的分组 ID 黑名单。同上仅校验正整数。
+	ExcludedGroupIDs []int64 `json:"excluded_group_ids,omitempty"`
+
+	// ModelDescriptions 模型名 → 展示描述。key 长度 1-100 字节，value ≤500 字符（rune）。
+	ModelDescriptions map[string]string `json:"model_descriptions,omitempty"`
+
+	// Announcement 广场顶部公告（Markdown，≤2000 字符 rune）。
+	Announcement string `json:"announcement,omitempty"`
 }

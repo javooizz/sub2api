@@ -19,6 +19,9 @@ import (
 // 与 onebool-flow 的 src/agents/image-gen/manifest.ts id 保持一致。
 const AgentIDImageGen = "image-gen"
 
+// AgentIDModelPlaza 是模型广场扩展配置的 agent slug（黑名单/模型描述/公告）。
+const AgentIDModelPlaza = "model-plaza"
+
 // ====== Domain Types ======
 
 // ExtensionConfigRecord 是 ext config 表行的 service 层表示。
@@ -475,6 +478,31 @@ func (s *ExtensionConfigService) validatePayload(
 				if l := len(m); l == 0 || l > 100 {
 					return fmt.Errorf("%w: group_models[%d] contains invalid model name length=%d", ErrExtensionConfigInvalidPayload, gid, l)
 				}
+			}
+		}
+	}
+	// model-plaza 详细校验：长度上限 + ID 正整数。
+	if agentID == AgentIDModelPlaza && p.ModelPlaza != nil {
+		cfg := p.ModelPlaza
+		if l := len([]rune(cfg.Announcement)); l > 2000 {
+			return fmt.Errorf("%w: announcement exceeds 2000 chars (len=%d)", ErrExtensionConfigInvalidPayload, l)
+		}
+		for _, id := range cfg.ExcludedChannelIDs {
+			if id <= 0 {
+				return fmt.Errorf("%w: excluded_channel_ids contains non-positive id %d", ErrExtensionConfigInvalidPayload, id)
+			}
+		}
+		for _, id := range cfg.ExcludedGroupIDs {
+			if id <= 0 {
+				return fmt.Errorf("%w: excluded_group_ids contains non-positive id %d", ErrExtensionConfigInvalidPayload, id)
+			}
+		}
+		for name, desc := range cfg.ModelDescriptions {
+			if l := len(name); l == 0 || l > 100 {
+				return fmt.Errorf("%w: model_descriptions contains invalid model name length=%d", ErrExtensionConfigInvalidPayload, l)
+			}
+			if l := len([]rune(desc)); l > 500 {
+				return fmt.Errorf("%w: model_descriptions[%s] exceeds 500 chars", ErrExtensionConfigInvalidPayload, name)
 			}
 		}
 	}

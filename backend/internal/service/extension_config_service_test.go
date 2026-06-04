@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/Wei-Shaw/sub2api/internal/domain"
@@ -155,4 +156,49 @@ func TestValidatePayload_OneboolOriginAcceptsEmpty(t *testing.T) {
 	svc := &ExtensionConfigService{}
 	p := &domain.ExtensionConfigPayload{OneboolOrigin: ""}
 	assert.NoError(t, svc.validateOneboolOrigin(p))
+}
+
+func TestValidatePayload_ModelPlaza(t *testing.T) {
+	// model-plaza 分支不触达 repo/groupRepo，可用零值 service。
+	s := &ExtensionConfigService{}
+	ctx := context.Background()
+
+	valid := domain.ExtensionConfigPayload{ModelPlaza: &domain.ModelPlazaExtensionConfig{
+		ExcludedChannelIDs: []int64{1, 2},
+		ExcludedGroupIDs:   []int64{3},
+		ModelDescriptions:  map[string]string{"claude-sonnet-4-6": "旗舰对话模型"},
+		Announcement:       "## 公告\n按量计费",
+	}}
+	require.NoError(t, s.validatePayload(ctx, AgentIDModelPlaza, &valid))
+
+	tooLongAnnouncement := domain.ExtensionConfigPayload{ModelPlaza: &domain.ModelPlazaExtensionConfig{
+		Announcement: strings.Repeat("公", 2001),
+	}}
+	require.Error(t, s.validatePayload(ctx, AgentIDModelPlaza, &tooLongAnnouncement))
+
+	badChannelID := domain.ExtensionConfigPayload{ModelPlaza: &domain.ModelPlazaExtensionConfig{
+		ExcludedChannelIDs: []int64{0},
+	}}
+	require.Error(t, s.validatePayload(ctx, AgentIDModelPlaza, &badChannelID))
+
+	badGroupID := domain.ExtensionConfigPayload{ModelPlaza: &domain.ModelPlazaExtensionConfig{
+		ExcludedGroupIDs: []int64{-1},
+	}}
+	require.Error(t, s.validatePayload(ctx, AgentIDModelPlaza, &badGroupID))
+
+	emptyModelName := domain.ExtensionConfigPayload{ModelPlaza: &domain.ModelPlazaExtensionConfig{
+		ModelDescriptions: map[string]string{"": "x"},
+	}}
+	require.Error(t, s.validatePayload(ctx, AgentIDModelPlaza, &emptyModelName))
+
+	tooLongDesc := domain.ExtensionConfigPayload{ModelPlaza: &domain.ModelPlazaExtensionConfig{
+		ModelDescriptions: map[string]string{"m": strings.Repeat("描", 501)},
+	}}
+	require.Error(t, s.validatePayload(ctx, AgentIDModelPlaza, &tooLongDesc))
+
+	// 其他 agent 的 payload 带 ModelPlaza 字段不触发本分支校验
+	otherAgent := domain.ExtensionConfigPayload{ModelPlaza: &domain.ModelPlazaExtensionConfig{
+		Announcement: strings.Repeat("公", 2001),
+	}}
+	require.NoError(t, s.validatePayload(ctx, AgentIDImageGen, &otherAgent))
 }
