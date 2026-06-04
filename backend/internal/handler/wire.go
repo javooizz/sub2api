@@ -40,6 +40,7 @@ func ProvideAdminHandlers(
 	paymentHandler *admin.PaymentHandler,
 	affiliateHandler *admin.AffiliateHandler,
 	extensionConfigHandler *admin.ExtensionConfigHandler,
+	modelPlazaHandler *admin.ModelPlazaHandler,
 ) *AdminHandlers {
 	return &AdminHandlers{
 		Dashboard:              dashboardHandler,
@@ -73,6 +74,7 @@ func ProvideAdminHandlers(
 		Payment:                paymentHandler,
 		Affiliate:              affiliateHandler,
 		ExtensionConfig:        extensionConfigHandler,
+		ModelPlaza:             modelPlazaHandler,
 	}
 }
 
@@ -114,6 +116,7 @@ func ProvideHandlers(
 	paymentWebhookHandler *PaymentWebhookHandler,
 	availableChannelHandler *AvailableChannelHandler,
 	extensionConfigHandler *ExtensionConfigHandler,
+	modelPlazaHandler *ModelPlazaHandler,
 	_ *service.IdempotencyCoordinator,
 	_ *service.IdempotencyCleanupService,
 ) *Handlers {
@@ -135,11 +138,15 @@ func ProvideHandlers(
 		PaymentWebhook:   paymentWebhookHandler,
 		AvailableChannel: availableChannelHandler,
 		ExtensionConfig:  extensionConfigHandler,
+		ModelPlaza:       modelPlazaHandler,
 	}
 }
 
 // ProviderSet is the Wire provider set for all handlers
 var ProviderSet = wire.NewSet(
+	// fork 专属 Provider 集中在 ForkProviderSet（见 wire_fork.go），与上游隔离。
+	ForkProviderSet,
+
 	// Top-level handlers
 	NewAuthHandler,
 	NewUserHandler,

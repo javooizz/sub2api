@@ -100,6 +100,9 @@ func RegisterAdminRoutes(
 
 		// 扩展配置（OneBoolFlow agents 工作台）
 		registerExtensionConfigRoutes(admin, h)
+
+		// 模型广场（模型清单聚合端点）
+		registerModelPlazaRoutes(admin, h)
 	}
 }
 
@@ -111,6 +114,15 @@ func registerExtensionConfigRoutes(admin *gin.RouterGroup, h *handler.Handlers) 
 		cfg.GET("/:agent_id", h.Admin.ExtensionConfig.Get)
 		cfg.PUT("/:agent_id", h.Admin.ExtensionConfig.Upsert)
 		cfg.DELETE("/:agent_id", h.Admin.ExtensionConfig.Delete)
+	}
+}
+
+// registerModelPlazaRoutes 注册"模型广场"管理员路由（模型清单聚合，
+// 供扩展配置页"模型描述"编辑器使用）。开关端点在 adminSettings 组（/settings/model-plaza）。
+func registerModelPlazaRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
+	mp := admin.Group("/model-plaza")
+	{
+		mp.GET("/models", h.Admin.ModelPlaza.ListModels)
 	}
 }
 

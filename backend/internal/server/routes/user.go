@@ -127,5 +127,8 @@ func RegisterUserRoutes(
 			extCfg.GET("/:agent_id", h.ExtensionConfig.Get)
 			extCfg.POST("/:agent_id/ensure-key", h.ExtensionConfig.EnsureKey)
 		}
+
+		// 模型广场（用户视角：以模型为中心的定价目录；开关关闭时返回 enabled=false）
+		authenticated.GET("/model-plaza", h.ModelPlaza.Get)
 	}
 }
