@@ -361,6 +361,15 @@ const (
 	// sidebar entry is hidden. Defaults to false (opt-in feature).
 	SettingKeyAvailableChannelsEnabled = "available_channels_enabled"
 
+	// SettingKeyModelPlazaEnabled is a DB-backed soft switch for the "Model Plaza"
+	// user-facing model catalog view. When false: the user endpoint returns
+	// enabled=false with an empty list and the sidebar entry is hidden.
+	// Defaults to false (opt-in feature).
+	//
+	// NOTE: 该 key 故意不进 SystemSettings/UpdateSettings 全量链路；
+	// 专项端点 PUT /admin/settings/model-plaza 是唯一写入口。
+	SettingKeyModelPlazaEnabled = "model_plaza_enabled"
+
 	// =========================
 	// Overload Cooldown (529)
 	// =========================

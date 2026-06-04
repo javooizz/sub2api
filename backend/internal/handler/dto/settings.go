@@ -313,6 +313,9 @@ type PublicSettings struct {
 
 	AvailableChannelsEnabled bool `json:"available_channels_enabled"`
 
+	// Model Plaza feature switch (user-facing model catalog)
+	ModelPlazaEnabled bool `json:"model_plaza_enabled"`
+
 	AffiliateEnabled bool `json:"affiliate_enabled"`
 
 	RiskControlEnabled bool `json:"risk_control_enabled"`

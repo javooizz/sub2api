@@ -759,6 +759,7 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		SettingKeyChannelMonitorEnabled,
 		SettingKeyChannelMonitorDefaultIntervalSeconds,
 		SettingKeyAvailableChannelsEnabled,
+		SettingKeyModelPlazaEnabled,
 		SettingKeyAffiliateEnabled,
 		SettingKeyRiskControlEnabled,
 	}
@@ -870,6 +871,8 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 
 		AvailableChannelsEnabled: settings[SettingKeyAvailableChannelsEnabled] == "true",
 
+		ModelPlazaEnabled: settings[SettingKeyModelPlazaEnabled] == "true",
+
 		AffiliateEnabled: settings[SettingKeyAffiliateEnabled] == "true",
 
 		RiskControlEnabled: settings[SettingKeyRiskControlEnabled] == "true",
@@ -948,6 +951,32 @@ func (s *SettingService) GetAvailableChannelsRuntime(ctx context.Context) Availa
 	return AvailableChannelsRuntime{
 		Enabled: vals[SettingKeyAvailableChannelsEnabled] == "true",
 	}
+}
+
+// ModelPlazaRuntime is the lightweight view of the model-plaza feature switch
+// consumed by the user-facing handler.
+type ModelPlazaRuntime struct {
+	Enabled bool
+}
+
+// GetModelPlazaRuntime reads the model-plaza feature switch directly from the
+// settings store. Fail-closed: on error returns Enabled=false, matching the
+// opt-in default (unknown ↔ disabled).
+func (s *SettingService) GetModelPlazaRuntime(ctx context.Context) ModelPlazaRuntime {
+	vals, err := s.settingRepo.GetMultiple(ctx, []string{SettingKeyModelPlazaEnabled})
+	if err != nil {
+		return ModelPlazaRuntime{Enabled: false}
+	}
+	return ModelPlazaRuntime{
+		Enabled: vals[SettingKeyModelPlazaEnabled] == "true",
+	}
+}
+
+// SetModelPlazaEnabled persists the model-plaza feature switch.
+// 专项端点（PUT /admin/settings/model-plaza）是唯一写入口——该 key 故意不进
+// SystemSettings/UpdateSettings 全量链路，避免被系统设置页全量保存意外覆盖。
+func (s *SettingService) SetModelPlazaEnabled(ctx context.Context, enabled bool) error {
+	return s.settingRepo.Set(ctx, SettingKeyModelPlazaEnabled, strconv.FormatBool(enabled))
 }
 
 // GetAntigravityUserAgentVersion 返回 Antigravity 上游请求使用的版本号。
@@ -1173,6 +1202,7 @@ type PublicSettingsInjectionPayload struct {
 	ChannelMonitorEnabled                bool `json:"channel_monitor_enabled"`
 	ChannelMonitorDefaultIntervalSeconds int  `json:"channel_monitor_default_interval_seconds"`
 	AvailableChannelsEnabled             bool `json:"available_channels_enabled"`
+	ModelPlazaEnabled                    bool `json:"model_plaza_enabled"`
 	AffiliateEnabled                     bool `json:"affiliate_enabled"`
 	RiskControlEnabled                   bool `json:"risk_control_enabled"`
 }
@@ -1235,6 +1265,7 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 		ChannelMonitorEnabled:                settings.ChannelMonitorEnabled,
 		ChannelMonitorDefaultIntervalSeconds: settings.ChannelMonitorDefaultIntervalSeconds,
 		AvailableChannelsEnabled:             settings.AvailableChannelsEnabled,
+		ModelPlazaEnabled:                    settings.ModelPlazaEnabled,
 		AffiliateEnabled:                     settings.AffiliateEnabled,
 		RiskControlEnabled:                   settings.RiskControlEnabled,
 	}, nil
@@ -2794,6 +2825,9 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 
 		// Available channels feature (default disabled; opt-in)
 		SettingKeyAvailableChannelsEnabled: "false",
+
+		// Model Plaza feature (default disabled; opt-in)
+		SettingKeyModelPlazaEnabled: "false",
 
 		// Affiliate (邀请返利) feature (default disabled; opt-in)
 		SettingKeyAffiliateEnabled: "false",
