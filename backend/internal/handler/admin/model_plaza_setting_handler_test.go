@@ -27,3 +27,20 @@ func TestUpdateModelPlazaSettings_InvalidJSON400(t *testing.T) {
 
 	require.Equal(t, http.StatusBadRequest, w.Code)
 }
+
+// 完全缺 enabled 字段（{}）→ binding:"required" 校验失败 → 400。
+// 与 InvalidJSON400 区分：这条命中的是 required 校验而非 json 解码错误，
+// 锁住"缺字段不得被静默当 false 写库"的设计点。
+func TestUpdateModelPlazaSettings_MissingEnabled400(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	h := &SettingHandler{}
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodPut, "/api/v1/admin/settings/model-plaza",
+		strings.NewReader(`{}`))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	h.UpdateModelPlazaSettings(c)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+}
