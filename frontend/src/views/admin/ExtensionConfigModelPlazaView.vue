@@ -1,6 +1,10 @@
 <template>
   <AppLayout>
     <div class="mx-auto max-w-4xl space-y-5 pb-24">
+      <div v-if="loading" class="space-y-5">
+        <div v-for="i in 4" :key="i" class="card h-36 animate-pulse bg-gray-100 dark:bg-gray-800" />
+      </div>
+      <template v-else>
       <!-- 功能开关 -->
       <section class="card p-5">
         <h2 class="mb-1 text-base font-semibold text-gray-900 dark:text-gray-100">
@@ -95,6 +99,7 @@
           v-model="modelSearch"
           type="text"
           class="input mb-3 w-full sm:w-64"
+          :aria-label="t('admin.extensionConfig.modelPlaza.searchModels')"
           :placeholder="t('admin.extensionConfig.modelPlaza.searchModels')"
         />
         <div class="max-h-96 space-y-2 overflow-y-auto">
@@ -115,6 +120,7 @@
               type="text"
               maxlength="500"
               class="input flex-1 text-sm"
+              :aria-label="m.name"
               :placeholder="t('admin.extensionConfig.modelPlaza.descriptionPlaceholder')"
               @input="setDescription(m.name, ($event.target as HTMLInputElement).value)"
             />
@@ -140,14 +146,16 @@
           rows="4"
           maxlength="2000"
           class="input w-full font-mono text-sm"
+          :aria-label="t('admin.extensionConfig.modelPlaza.announcementSection')"
           :placeholder="t('admin.extensionConfig.modelPlaza.announcementPlaceholder')"
         />
         <p class="mt-1 text-right text-xs text-gray-400">{{ form.announcement.length }} / 2000</p>
       </section>
+      </template>
 
       <!-- sticky 保存条 -->
       <div
-        v-if="isDirty"
+        v-if="!loading && isDirty"
         class="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur dark:border-gray-700 dark:bg-gray-900/95"
         role="region"
         aria-live="polite"
