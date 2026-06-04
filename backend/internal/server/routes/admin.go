@@ -461,6 +461,9 @@ func registerSettingsRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 		// Beta 策略配置
 		adminSettings.GET("/beta-policy", h.Admin.Setting.GetBetaPolicySettings)
 		adminSettings.PUT("/beta-policy", h.Admin.Setting.UpdateBetaPolicySettings)
+		// 模型广场功能开关（专项端点：该 key 不走全量 settings PUT）
+		adminSettings.GET("/model-plaza", h.Admin.Setting.GetModelPlazaSettings)
+		adminSettings.PUT("/model-plaza", h.Admin.Setting.UpdateModelPlazaSettings)
 		// Web Search 模拟配置
 		adminSettings.GET("/web-search-emulation", h.Admin.Setting.GetWebSearchEmulationConfig)
 		adminSettings.PUT("/web-search-emulation", h.Admin.Setting.UpdateWebSearchEmulationConfig)

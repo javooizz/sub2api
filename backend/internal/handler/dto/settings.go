@@ -486,3 +486,9 @@ func ParseCustomEndpoints(raw string) []CustomEndpoint {
 	}
 	return items
 }
+
+// ModelPlazaSettings 模型广场专项设置（GET/PUT /admin/settings/model-plaza）。
+// 该开关不在全量 settings PUT 中，专项端点是唯一写入口。
+type ModelPlazaSettings struct {
+	Enabled bool `json:"enabled"`
+}
