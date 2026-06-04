@@ -70,7 +70,11 @@ export function useModelPlazaFilters(models: Ref<PlazaModel[]>) {
   /** 计费类型选项（billing_mode + 计数）。 */
   const billingModeOptions = computed<FilterOption[]>(() => countBy((m) => m.billing_mode))
 
-  /** 分组选项：全部模型 groups 去重（保留首个对象，含倍率/订阅/accessible），按名排序。 */
+  /**
+   * 分组选项：全部模型 groups 去重（保留首个对象，含倍率/订阅/accessible），按名排序。
+   * 依赖后端不变式：同一用户视角下，同 id 分组在各模型里的 accessible/倍率必然一致
+   * （后端按用户统一计算），故取首个对象即可。
+   */
   const groupOptions = computed<PlazaGroup[]>(() => {
     const seen = new Map<number, PlazaGroup>()
     for (const m of models.value) {

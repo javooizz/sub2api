@@ -28,6 +28,11 @@ describe('formatPerMillion', () => {
     expect(formatPerMillion(undefined)).toBeNull()
   })
 
+  it('零价（免费/未配置为 0）正常显示', () => {
+    expect(formatPerMillion(0)).toBe('$0.00')
+    expect(formatPerRequest(0)).toBe('$0.00')
+  })
+
   it('倍率参与折算', () => {
     expect(formatPerMillion(9e-7, 1.8)).toBe('$1.62')
     expect(formatPerMillion(9e-7, 0.5)).toBe('$0.45')
