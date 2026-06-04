@@ -624,6 +624,18 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/admin/extension-configs/model-plaza',
+    name: 'AdminExtensionConfigModelPlaza',
+    component: () => import('@/views/admin/ExtensionConfigModelPlazaView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Extension Configs Model Plaza',
+      titleKey: 'admin.extensionConfig.modelPlaza.title',
+      descriptionKey: 'admin.extensionConfig.modelPlaza.description'
+    }
+  },
+  {
     path: '/admin/risk-control',
     name: 'AdminRiskControl',
     component: () => import('@/views/admin/RiskControlView.vue'),

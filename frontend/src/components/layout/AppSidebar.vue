@@ -968,6 +968,7 @@ const adminNavItems = computed((): NavItem[] => {
     expandOnly: true,
     children: [
       { path: '/admin/extension-configs/workbench', label: t('nav.workbench'), icon: BriefcaseIcon },
+      { path: '/admin/extension-configs/model-plaza', label: t('nav.modelPlaza'), icon: PlazaIcon },
     ],
   }
 
