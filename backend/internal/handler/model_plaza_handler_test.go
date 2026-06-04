@@ -112,6 +112,18 @@ func TestModelPlaza_EnabledReturnsModels(t *testing.T) {
 	require.Len(t, m.Groups, 1)
 	require.True(t, m.Groups[0].Accessible)
 	require.Equal(t, 1.8, m.Groups[0].RateMultiplier)
+
+	// 映射循环全字段断言：防止未来字段丢失静默通过
+	require.Equal(t, "anthropic", m.Platform)
+	require.Equal(t, "desc", m.Description)
+	require.Equal(t, 9e-7, *m.Pricing.InputPrice)
+	require.Equal(t, 4.5e-6, *m.Pricing.OutputPrice)
+	g := m.Groups[0]
+	require.Equal(t, int64(10), g.ID)
+	require.Equal(t, "cc_max", g.Name)
+	require.Equal(t, "anthropic", g.Platform)
+	require.Equal(t, "standard", g.SubscriptionType)
+	require.False(t, g.IsExclusive)
 }
 
 func TestModelPlaza_DTOWhitelist(t *testing.T) {
