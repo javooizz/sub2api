@@ -491,6 +491,8 @@ func ProvideAPIKeyService(
 
 // ProviderSet is the Wire provider set for all services
 var ProviderSet = wire.NewSet(
+	// fork 专属 Provider 集中在 ForkProviderSet（见 wire_fork.go），与上游隔离。
+	ForkProviderSet,
 	// Core services
 	NewAuthService,
 	NewUserService,
