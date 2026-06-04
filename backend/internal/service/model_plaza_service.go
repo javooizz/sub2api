@@ -181,7 +181,7 @@ func (s *ModelPlazaService) GetPlazaForUser(ctx context.Context, userID int64) (
 			}
 			// 基准价：首个可展示定价胜出（渠道名序稳定）。
 			if entry.Pricing == nil && !pricingNeedsFallback(m.Pricing) {
-				entry.Pricing = m.Pricing
+				entry.Pricing = m.Pricing // 只读别名：ListAvailable 每次返回 Clone，本服务不经此指针写入
 			}
 			for _, g := range visGroups {
 				if g.Platform != m.Platform {
@@ -198,6 +198,8 @@ func (s *ModelPlazaService) GetPlazaForUser(ctx context.Context, userID int64) (
 
 	models := make([]PlazaModel, 0, len(agg))
 	for _, m := range agg {
+		// 描述按【模型名】键控（与 admin 编辑器契约一致，规格 §4.2 步骤 5）：
+		// 字节精确匹配原始大小写；跨平台同名模型共享同一条描述，属设计限制，勿改成 platform 键控。
 		if desc, ok := cfg.ModelDescriptions[m.Name]; ok {
 			m.Description = desc
 		}
