@@ -243,7 +243,7 @@ func initializeApplication(buildInfo handler.BuildInfo) (*Application, error) {
 	userAllowedGroupLister := repository.NewUserAllowedGroupLister(client)
 	extensionConfigService := service.NewExtensionConfigService(extensionConfigRepository, settingService, groupRepository, apiKeyRepository, apiKeyService, userAllowedGroupLister)
 	extensionConfigHandler := admin.NewExtensionConfigHandler(extensionConfigService)
-	modelPlazaService := service.NewModelPlazaService(channelService, apiKeyService, extensionConfigService)
+	modelPlazaService := service.NewModelPlazaService(groupRepository, accountRepository, channelRepository, pricingService, apiKeyService, extensionConfigService)
 	modelPlazaHandler := admin.NewModelPlazaHandler(modelPlazaService)
 	adminHandlers := handler.ProvideAdminHandlers(dashboardHandler, adminUserHandler, groupHandler, accountHandler, adminAnnouncementHandler, dataManagementHandler, backupHandler, oAuthHandler, openAIOAuthHandler, geminiOAuthHandler, antigravityOAuthHandler, proxyHandler, adminRedeemHandler, promoHandler, settingHandler, opsHandler, systemHandler, adminSubscriptionHandler, adminUsageHandler, userAttributeHandler, errorPassthroughHandler, tlsFingerprintProfileHandler, adminAPIKeyHandler, scheduledTestHandler, channelHandler, channelMonitorHandler, channelMonitorRequestTemplateHandler, contentModerationHandler, paymentHandler, affiliateHandler, extensionConfigHandler, modelPlazaHandler)
 	usageRecordWorkerPool := service.NewUsageRecordWorkerPool(configConfig)

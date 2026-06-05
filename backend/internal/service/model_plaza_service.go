@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sort"
 	"strings"
 	"sync"
@@ -13,9 +14,27 @@ import (
 
 // ===== 依赖接口（窄化为本服务所需，便于单测 mock）=====
 
-// plazaChannelLister 提供渠道可用视图。*ChannelService 天然满足。
+// plazaGroupLister 提供全部 active 分组。GroupRepository 天然满足。
+type plazaGroupLister interface {
+	ListActive(ctx context.Context) ([]Group, error)
+}
+
+// plazaAccountLister 提供分组下账号（仓储已过滤 status=active，无时态谓词——
+// "配置上可提供"取样口径，规格 §2）。AccountRepository 天然满足。
+type plazaAccountLister interface {
+	ListByGroup(ctx context.Context, groupID int64) ([]Account, error)
+}
+
+// plazaChannelLister 提供渠道原始数据（纯定价目录）。不用 ChannelService.ListAvailable——
+// 它返回前会执行 fillGlobalPricingFallback，回落价会遮蔽其他渠道显式价（规格 §4.2 步骤 4）。
+// ChannelRepository 天然满足。
 type plazaChannelLister interface {
-	ListAvailable(ctx context.Context) ([]AvailableChannel, error)
+	ListAll(ctx context.Context) ([]Channel, error)
+}
+
+// plazaPricingCatalog 提供 LiteLLM 全局定价回落。*PricingService 天然满足。
+type plazaPricingCatalog interface {
+	GetModelPricing(model string) *LiteLLMModelPricing
 }
 
 // plazaGroupProvider 提供用户实际可绑定的分组（公开标准 + 授权专属 + 已订阅订阅型）。
@@ -27,12 +46,6 @@ type plazaGroupProvider interface {
 // plazaConfigProvider 提供 model-plaza 的扩展配置。*ExtensionConfigService 天然满足。
 type plazaConfigProvider interface {
 	GetAdmin(ctx context.Context, agentID string) (*ExtensionConfigRecord, error)
-}
-
-// plazaAccountLister 提供分组下账号（仓储已过滤 status=active，无时态谓词——
-// "配置上可提供"取样口径，规格 §2）。AccountRepository 天然满足。
-type plazaAccountLister interface {
-	ListByGroup(ctx context.Context, groupID int64) ([]Account, error)
 }
 
 // ===== 输出类型 =====
@@ -67,33 +80,38 @@ type ModelPlazaData struct {
 	Models       []PlazaModel
 }
 
-// ModelPlazaService 聚合"模型广场"视图：以模型为中心，合并渠道定价
-//（标准基准价）与用户可见分组（倍率），供用户端目录页展示。
-//
+// ModelPlazaService 聚合"模型广场"视图（2026-06-05 修订，规格 §4.2/§9）：
+// 模型↔分组关联以账号实际可用为准（运行时推导），渠道仅作纯定价目录。
 // 可见性只作用于广场展示，不影响绑定/计费权限（后者由 GetAvailableGroups 把关）。
 type ModelPlazaService struct {
-	channels plazaChannelLister
-	groups   plazaGroupProvider
-	config   plazaConfigProvider
-
-	// ===== 2026-06-05 账号真相源修订新增（规格 §4.2 步骤 2）=====
-	accounts plazaAccountLister
+	groups     plazaGroupLister
+	accounts   plazaAccountLister
+	channels   plazaChannelLister
+	pricing    plazaPricingCatalog
+	userGroups plazaGroupProvider
+	config     plazaConfigProvider
 
 	cacheMu     sync.RWMutex
 	usableCache map[int64]plazaUsableCacheEntry
 	now         func() time.Time // 测试注入；nil 时用 time.Now
 }
 
-// NewModelPlazaService 构造（wire 注入具体 service，接口在构造时收窄）。
+// NewModelPlazaService 构造（wire 注入具体实现，接口在构造时收窄）。
 func NewModelPlazaService(
-	channelService *ChannelService,
+	groupRepo GroupRepository,
+	accountRepo AccountRepository,
+	channelRepo ChannelRepository,
+	pricingService *PricingService,
 	apiKeyService *APIKeyService,
 	extensionConfigService *ExtensionConfigService,
 ) *ModelPlazaService {
 	return &ModelPlazaService{
-		channels: channelService,
-		groups:   apiKeyService,
-		config:   extensionConfigService,
+		groups:     groupRepo,
+		accounts:   accountRepo,
+		channels:   channelRepo,
+		pricing:    pricingService,
+		userGroups: apiKeyService,
+		config:     extensionConfigService,
 	}
 }
 
@@ -109,28 +127,38 @@ func (s *ModelPlazaService) loadConfig(ctx context.Context) (domain.ModelPlazaEx
 	return *rec.Payload.ModelPlaza, nil
 }
 
-// plazaAggKey 是模型聚合身份：与 Channel.SupportedModels 的
-// (Platform, lowercase(Name)) 去重口径一致，避免跨平台同名模型串台。
+// plazaAggKey 是模型聚合身份：(Platform, lowercase(Name))，跨平台同名模型互不串台。
 type plazaAggKey struct {
 	platform  string
 	nameLower string
 }
 
-// GetPlazaForUser 聚合当前用户可见的广场模型列表。
+// plazaGroupModels 一个可见分组及其账号推导出的可用模型集。
+type plazaGroupModels struct {
+	ref    PlazaGroupRef
+	models []string
+}
+
+// plazaPriceEntry 显式价索引条目（displayName = 定价的原始大小写，模型身份的事实来源）。
+type plazaPriceEntry struct {
+	displayName string
+	pricing     *ChannelModelPricing
+}
+
+// GetPlazaForUser 聚合当前用户可见的广场模型列表（规格 §4.2）。
 //
 // 可见分组（仅作用于广场展示）：
 //
-//	visible(g) = g ∈ GetAvailableGroups(userID)                         // 公开标准 + 授权专属 + 已订阅
-//	           || (g.SubscriptionType == subscription && !g.IsExclusive) // 公开订阅型：未订阅也展示（橱窗）
+//	visible(g) = g ∈ GetAvailableGroups(userID)            // 公开标准 + 授权专属 + 已订阅
+//	           || (g.IsSubscriptionType() && !g.IsExclusive) // 公开订阅型：未订阅也展示（橱窗）
 //
-// 基准价取首个有可展示定价（!pricingNeedsFallback）的渠道；渠道顺序按
-// ListAvailable 的渠道名序，保证输出稳定。
+// 再减排除分组名单；账号推导可用集为空的分组自然消失。
 func (s *ModelPlazaService) GetPlazaForUser(ctx context.Context, userID int64) (*ModelPlazaData, error) {
-	channels, err := s.channels.ListAvailable(ctx)
+	allGroups, err := s.groups.ListActive(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("list available channels: %w", err)
+		return nil, fmt.Errorf("list active groups: %w", err)
 	}
-	userGroups, err := s.groups.GetAvailableGroups(ctx, userID)
+	userGroups, err := s.userGroups.GetAvailableGroups(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("get user available groups: %w", err)
 	}
@@ -143,79 +171,88 @@ func (s *ModelPlazaService) GetPlazaForUser(ctx context.Context, userID int64) (
 	for i := range userGroups {
 		accessible[userGroups[i].ID] = struct{}{}
 	}
-	excludedCh := int64Set(cfg.ExcludedChannelIDs)
 	excludedGrp := int64Set(cfg.ExcludedGroupIDs)
 
+	visible := make([]plazaGroupModels, 0, len(allGroups))
+	for i := range allGroups {
+		g := &allGroups[i]
+		if _, ex := excludedGrp[g.ID]; ex {
+			continue
+		}
+		_, acc := accessible[g.ID]
+		publicSubscription := g.IsSubscriptionType() && !g.IsExclusive
+		if !acc && !publicSubscription {
+			continue
+		}
+		models, derr := s.groupUsableModels(ctx, g)
+		if derr != nil {
+			// 单分组查账号失败：跳过不中断整体（规格 §6），失败不写缓存。
+			slog.Warn("model plaza: derive group usable models failed", "group_id", g.ID, "error", derr)
+			continue
+		}
+		if len(models) == 0 {
+			continue // 空账号分组自然消失（规格 §2）
+		}
+		visible = append(visible, plazaGroupModels{
+			ref: PlazaGroupRef{
+				AvailableGroupRef: AvailableGroupRef{
+					ID:               g.ID,
+					Name:             g.Name,
+					Platform:         g.Platform,
+					SubscriptionType: g.SubscriptionType,
+					RateMultiplier:   g.RateMultiplier,
+					IsExclusive:      g.IsExclusive,
+				},
+				Accessible: acc,
+			},
+			models: models,
+		})
+	}
+
+	priceIdx, err := s.buildPricingIndex(ctx, int64Set(cfg.ExcludedChannelIDs))
+	if err != nil {
+		return nil, err
+	}
+
+	return &ModelPlazaData{Announcement: cfg.Announcement, Models: s.aggregate(visible, priceIdx, &cfg)}, nil
+}
+
+// aggregate 倒排聚合 模型×分组，并完成定价 join、描述注入与排序（规格 §4.2 步骤 3–6）。
+func (s *ModelPlazaService) aggregate(visible []plazaGroupModels, priceIdx map[plazaAggKey]plazaPriceEntry, cfg *domain.ModelPlazaExtensionConfig) []PlazaModel {
 	agg := make(map[plazaAggKey]*PlazaModel)
 	groupSeen := make(map[plazaAggKey]map[int64]struct{})
-
-	for ci := range channels {
-		ch := &channels[ci]
-		if ch.Status != StatusActive {
-			continue
-		}
-		if _, ex := excludedCh[ch.ID]; ex {
-			continue
-		}
-
-		// 该渠道下用户可见的分组（含 accessible 标记）。
-		visGroups := make([]PlazaGroupRef, 0, len(ch.Groups))
-		for _, g := range ch.Groups {
-			if _, ex := excludedGrp[g.ID]; ex {
-				continue
-			}
-			_, acc := accessible[g.ID]
-			publicSubscription := g.SubscriptionType == SubscriptionTypeSubscription && !g.IsExclusive
-			if !acc && !publicSubscription {
-				continue
-			}
-			visGroups = append(visGroups, PlazaGroupRef{AvailableGroupRef: g, Accessible: acc})
-		}
-		if len(visGroups) == 0 {
-			continue
-		}
-		platformSet := make(map[string]struct{}, 4)
-		for _, g := range visGroups {
-			if g.Platform != "" {
-				platformSet[g.Platform] = struct{}{}
-			}
-		}
-
-		for mi := range ch.SupportedModels {
-			m := &ch.SupportedModels[mi]
-			// 跨平台信息防泄漏：模型平台必须有用户可见分组。
-			if _, ok := platformSet[m.Platform]; !ok {
-				continue
-			}
-			k := plazaAggKey{platform: m.Platform, nameLower: strings.ToLower(m.Name)}
+	for _, gm := range visible {
+		for _, name := range gm.models {
+			k := plazaAggKey{platform: gm.ref.Platform, nameLower: strings.ToLower(name)}
 			entry, ok := agg[k]
 			if !ok {
-				entry = &PlazaModel{Name: m.Name, Platform: m.Platform}
+				entry = &PlazaModel{Name: name, Platform: gm.ref.Platform}
 				agg[k] = entry
 				groupSeen[k] = make(map[int64]struct{})
+			} else if name < entry.Name {
+				// 显示名确定性：未被定价索引覆盖时取字典序最小写法（规格 §4.2 步骤 4）。
+				entry.Name = name
 			}
-			// 基准价：首个可展示定价胜出（渠道名序稳定）。
-			if entry.Pricing == nil && !pricingNeedsFallback(m.Pricing) {
-				entry.Pricing = m.Pricing // 只读别名：ListAvailable 每次返回 Clone，本服务不经此指针写入
+			if _, dup := groupSeen[k][gm.ref.ID]; dup {
+				continue
 			}
-			for _, g := range visGroups {
-				if g.Platform != m.Platform {
-					continue
-				}
-				if _, dup := groupSeen[k][g.ID]; dup {
-					continue
-				}
-				groupSeen[k][g.ID] = struct{}{}
-				entry.Groups = append(entry.Groups, g)
-			}
+			groupSeen[k][gm.ref.ID] = struct{}{}
+			entry.Groups = append(entry.Groups, gm.ref)
 		}
 	}
 
-	models := make([]PlazaModel, 0, len(agg))
-	for _, m := range agg {
-		// 描述按【模型名】键控（与 admin 编辑器契约一致，规格 §4.2 步骤 5）：
-		// 字节精确匹配原始大小写；跨平台同名模型共享同一条描述，属设计限制，勿改成 platform 键控。
-		if desc, ok := cfg.ModelDescriptions[m.Name]; ok {
+	out := make([]PlazaModel, 0, len(agg))
+	for k, m := range agg {
+		if pe, ok := priceIdx[k]; ok {
+			m.Pricing = pe.pricing // 只读别名，本服务不经此指针写入
+			m.Name = pe.displayName
+		} else if lp := s.pricing.GetModelPricing(m.Name); lp != nil {
+			// LiteLLM 全局目录回落：复用可用渠道页同款合成（image/token 模式自动判定）。
+			m.Pricing = synthesizePricingFromLiteLLM(lp, nil)
+		}
+		// 描述按复合键 "platform/name" 注入（规格 §4.2 步骤 5；admin 清单与本聚合
+		// 同源同显示名口径，键可字节精确命中）。
+		if desc, ok := cfg.ModelDescriptions[m.Platform+"/"+m.Name]; ok {
 			m.Description = desc
 		}
 		if m.Pricing != nil && m.Pricing.BillingMode != "" {
@@ -224,41 +261,85 @@ func (s *ModelPlazaService) GetPlazaForUser(ctx context.Context, userID int64) (
 			m.BillingMode = BillingModeToken
 		}
 		sort.SliceStable(m.Groups, func(i, j int) bool { return m.Groups[i].Name < m.Groups[j].Name })
-		models = append(models, *m)
+		out = append(out, *m)
 	}
-	sort.SliceStable(models, func(i, j int) bool {
-		if models[i].Platform != models[j].Platform {
-			return models[i].Platform < models[j].Platform
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].Platform != out[j].Platform {
+			return out[i].Platform < out[j].Platform
 		}
-		return strings.ToLower(models[i].Name) < strings.ToLower(models[j].Name)
+		return strings.ToLower(out[i].Name) < strings.ToLower(out[j].Name)
 	})
-
-	return &ModelPlazaData{Announcement: cfg.Announcement, Models: models}, nil
+	return out
 }
 
-// ListAllModelIdentities 返回全部 active 渠道聚合出的模型身份清单
-//（不带用户过滤、不带黑名单），供管理页"模型描述"编辑器使用。
-func (s *ModelPlazaService) ListAllModelIdentities(ctx context.Context) ([]ModelIdentity, error) {
-	channels, err := s.channels.ListAvailable(ctx)
+// buildPricingIndex 用渠道原始数据构建显式价索引（规格 §4.2 步骤 4）：
+// active 渠道、排除名单生效、渠道名字母序首个 !pricingNeedsFallback 的定价胜出；
+// 渠道 group_ids 不参与（渠道已退化为纯定价目录）。
+func (s *ModelPlazaService) buildPricingIndex(ctx context.Context, excludedCh map[int64]struct{}) (map[plazaAggKey]plazaPriceEntry, error) {
+	channels, err := s.channels.ListAll(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("list available channels: %w", err)
+		return nil, fmt.Errorf("list channels: %w", err)
 	}
-	seen := make(map[plazaAggKey]struct{})
-	out := make([]ModelIdentity, 0, 64)
-	for ci := range channels {
-		ch := &channels[ci]
+	sort.SliceStable(channels, func(i, j int) bool {
+		return strings.ToLower(channels[i].Name) < strings.ToLower(channels[j].Name)
+	})
+	idx := make(map[plazaAggKey]plazaPriceEntry)
+	for i := range channels {
+		ch := &channels[i]
 		if ch.Status != StatusActive {
 			continue
 		}
-		for mi := range ch.SupportedModels {
-			m := &ch.SupportedModels[mi]
-			k := plazaAggKey{platform: m.Platform, nameLower: strings.ToLower(m.Name)}
-			if _, dup := seen[k]; dup {
+		if _, ex := excludedCh[ch.ID]; ex {
+			continue
+		}
+		for _, m := range ch.SupportedModels() {
+			if pricingNeedsFallback(m.Pricing) {
 				continue
 			}
-			seen[k] = struct{}{}
-			out = append(out, ModelIdentity{Platform: m.Platform, Name: m.Name})
+			k := plazaAggKey{platform: m.Platform, nameLower: strings.ToLower(m.Name)}
+			if _, dup := idx[k]; dup {
+				continue
+			}
+			idx[k] = plazaPriceEntry{displayName: m.Name, pricing: m.Pricing}
 		}
+	}
+	return idx, nil
+}
+
+// ListAllModelIdentities 返回全部 active 分组聚合出的模型身份清单
+// （不带用户过滤、不带排除名单），供管理页"模型描述"编辑器使用。
+// 显示名与 GetPlazaForUser 同口径（定价原始大小写优先，否则字典序最小写法），
+// 保证管理员配置的复合键能在用户端字节精确命中。
+func (s *ModelPlazaService) ListAllModelIdentities(ctx context.Context) ([]ModelIdentity, error) {
+	allGroups, err := s.groups.ListActive(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list active groups: %w", err)
+	}
+	priceIdx, err := s.buildPricingIndex(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	display := make(map[plazaAggKey]string)
+	for i := range allGroups {
+		g := &allGroups[i]
+		models, derr := s.groupUsableModels(ctx, g)
+		if derr != nil {
+			slog.Warn("model plaza: derive group usable models failed", "group_id", g.ID, "error", derr)
+			continue
+		}
+		for _, name := range models {
+			k := plazaAggKey{platform: g.Platform, nameLower: strings.ToLower(name)}
+			if cur, ok := display[k]; !ok || name < cur {
+				display[k] = name
+			}
+		}
+	}
+	out := make([]ModelIdentity, 0, len(display))
+	for k, name := range display {
+		if pe, ok := priceIdx[k]; ok {
+			name = pe.displayName
+		}
+		out = append(out, ModelIdentity{Platform: k.platform, Name: name})
 	}
 	sort.SliceStable(out, func(i, j int) bool {
 		if out[i].Platform != out[j].Platform {

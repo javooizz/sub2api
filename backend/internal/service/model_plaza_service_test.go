@@ -5,21 +5,35 @@ package service
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/domain"
 
 	"github.com/stretchr/testify/require"
 )
 
-// ===== fakes（窄接口 mock）=====
+// ===== fakes（窄接口 mock；fakePlazaAccounts 等见 model_plaza_models_test.go）=====
 
-type fakePlazaChannels struct {
-	channels []AvailableChannel
+type fakePlazaGroupLister struct {
+	groups []Group
+	err    error
+}
+
+func (f *fakePlazaGroupLister) ListActive(context.Context) ([]Group, error) { return f.groups, f.err }
+
+type fakePlazaChannelsRaw struct {
+	channels []Channel
 	err      error
 }
 
-func (f *fakePlazaChannels) ListAvailable(ctx context.Context) ([]AvailableChannel, error) {
+func (f *fakePlazaChannelsRaw) ListAll(context.Context) ([]Channel, error) {
 	return f.channels, f.err
+}
+
+type fakePlazaPricing struct{ byModel map[string]*LiteLLMModelPricing }
+
+func (f *fakePlazaPricing) GetModelPricing(model string) *LiteLLMModelPricing {
+	return f.byModel[model]
 }
 
 type fakePlazaGroups struct {
@@ -27,7 +41,7 @@ type fakePlazaGroups struct {
 	err    error
 }
 
-func (f *fakePlazaGroups) GetAvailableGroups(ctx context.Context, userID int64) ([]Group, error) {
+func (f *fakePlazaGroups) GetAvailableGroups(context.Context, int64) ([]Group, error) {
 	return f.groups, f.err
 }
 
@@ -36,22 +50,38 @@ type fakePlazaConfig struct {
 	err error
 }
 
-func (f *fakePlazaConfig) GetAdmin(ctx context.Context, agentID string) (*ExtensionConfigRecord, error) {
+func (f *fakePlazaConfig) GetAdmin(context.Context, string) (*ExtensionConfigRecord, error) {
 	return f.rec, f.err
 }
 
-func newPlazaService(ch []AvailableChannel, userGroups []Group, cfg *domain.ModelPlazaExtensionConfig) *ModelPlazaService {
+// plazaFixture 聚合测试夹具。
+type plazaFixture struct {
+	allGroups  []Group             // ListActive 返回
+	accounts   map[int64][]Account // 分组 ID → 账号
+	accountErr map[int64]error
+	channels   []Channel // 定价目录
+	litellm    map[string]*LiteLLMModelPricing
+	userGroups []Group // GetAvailableGroups 返回
+	cfg        *domain.ModelPlazaExtensionConfig
+	now        func() time.Time
+}
+
+func newPlazaService(f plazaFixture) *ModelPlazaService {
 	var rec *ExtensionConfigRecord
-	if cfg != nil {
+	if f.cfg != nil {
 		rec = &ExtensionConfigRecord{
 			AgentID: AgentIDModelPlaza,
-			Payload: domain.ExtensionConfigPayload{ModelPlaza: cfg},
+			Payload: domain.ExtensionConfigPayload{ModelPlaza: f.cfg},
 		}
 	}
 	return &ModelPlazaService{
-		channels: &fakePlazaChannels{channels: ch},
-		groups:   &fakePlazaGroups{groups: userGroups},
-		config:   &fakePlazaConfig{rec: rec},
+		groups:     &fakePlazaGroupLister{groups: f.allGroups},
+		accounts:   &fakePlazaAccounts{byGroup: f.accounts, errFor: f.accountErr, calls: map[int64]int{}},
+		channels:   &fakePlazaChannelsRaw{channels: f.channels},
+		pricing:    &fakePlazaPricing{byModel: f.litellm},
+		userGroups: &fakePlazaGroups{groups: f.userGroups},
+		config:     &fakePlazaConfig{rec: rec},
+		now:        f.now,
 	}
 }
 
@@ -59,34 +89,47 @@ func fp(v float64) *float64 { return &v }
 
 // tokenPricing 返回一份带 input/output 价的 token 计费定价。
 func tokenPricing(in, out float64) *ChannelModelPricing {
-	return &ChannelModelPricing{
-		BillingMode: BillingModeToken,
-		InputPrice:  fp(in),
-		OutputPrice: fp(out),
+	return &ChannelModelPricing{BillingMode: BillingModeToken, InputPrice: fp(in), OutputPrice: fp(out)}
+}
+
+// pricedChannel 构造带显式 token 价的渠道。
+func pricedChannel(id int64, name, platform string, models []string, in, out float64) Channel {
+	return Channel{ID: id, Name: name, Status: StatusActive, ModelPricing: []ChannelModelPricing{{
+		Platform: platform, Models: models, BillingMode: BillingModeToken,
+		InputPrice: fp(in), OutputPrice: fp(out),
+	}}}
+}
+
+// anthropicGroup 公开标准 anthropic 分组。
+func anthropicGroup(id int64, name string) Group {
+	return Group{ID: id, Name: name, Platform: PlatformAnthropic,
+		SubscriptionType: SubscriptionTypeStandard, RateMultiplier: 1.0}
+}
+
+// mappedAccount anthropic apikey 账号，可用模型 = models。
+func mappedAccount(models ...string) Account {
+	mapping := make(map[string]string, len(models))
+	for _, m := range models {
+		mapping[m] = m
 	}
+	return mkPlazaAccount(PlatformAnthropic, AccountTypeAPIKey, mapping)
 }
 
 // ===== 可见性 =====
 
 func TestGetPlazaForUser_PublicStandardGroupVisible(t *testing.T) {
-	// 公开标准分组在 GetAvailableGroups 内（user 可绑定）→ 可见且 accessible=true。
-	ch := []AvailableChannel{{
-		ID: 1, Name: "cc_max", Status: StatusActive,
-		Groups: []AvailableGroupRef{
-			{ID: 10, Name: "cc_max", Platform: "anthropic", SubscriptionType: SubscriptionTypeStandard, RateMultiplier: 1.8},
-		},
-		SupportedModels: []SupportedModel{
-			{Name: "claude-sonnet-4-6", Platform: "anthropic", Pricing: tokenPricing(9e-7, 4.5e-6)},
-		},
-	}}
-	svc := newPlazaService(ch, []Group{{ID: 10}}, nil)
-
+	svc := newPlazaService(plazaFixture{
+		allGroups:  []Group{anthropicGroup(10, "cc_max")},
+		accounts:   map[int64][]Account{10: {mappedAccount("claude-sonnet-4-6")}},
+		channels:   []Channel{pricedChannel(1, "cc_max", PlatformAnthropic, []string{"claude-sonnet-4-6"}, 9e-7, 4.5e-6)},
+		userGroups: []Group{{ID: 10}},
+	})
 	data, err := svc.GetPlazaForUser(context.Background(), 1)
 	require.NoError(t, err)
 	require.Len(t, data.Models, 1)
 	m := data.Models[0]
 	require.Equal(t, "claude-sonnet-4-6", m.Name)
-	require.Equal(t, "anthropic", m.Platform)
+	require.Equal(t, PlatformAnthropic, m.Platform)
 	require.Len(t, m.Groups, 1)
 	require.True(t, m.Groups[0].Accessible)
 	require.NotNil(t, m.Pricing)
@@ -94,323 +137,237 @@ func TestGetPlazaForUser_PublicStandardGroupVisible(t *testing.T) {
 }
 
 func TestGetPlazaForUser_ExclusiveGroupOnlyForAuthorized(t *testing.T) {
-	// 专属标准分组：不在 GetAvailableGroups → 整个分组（连带模型）不可见。
-	ch := []AvailableChannel{{
-		ID: 1, Name: "vip", Status: StatusActive,
-		Groups: []AvailableGroupRef{
-			{ID: 20, Name: "vip", Platform: "anthropic", SubscriptionType: SubscriptionTypeStandard, IsExclusive: true},
-		},
-		SupportedModels: []SupportedModel{
-			{Name: "claude-opus-4-6", Platform: "anthropic", Pricing: tokenPricing(1.5e-6, 7.5e-6)},
-		},
-	}}
-	// 未授权：空 user groups
-	svc := newPlazaService(ch, nil, nil)
-	data, err := svc.GetPlazaForUser(context.Background(), 1)
+	g := anthropicGroup(20, "vip")
+	g.IsExclusive = true
+	fix := plazaFixture{
+		allGroups: []Group{g},
+		accounts:  map[int64][]Account{20: {mappedAccount("claude-opus-4-6")}},
+	}
+	// 未授权：不可见
+	data, err := newPlazaService(fix).GetPlazaForUser(context.Background(), 1)
 	require.NoError(t, err)
 	require.Empty(t, data.Models)
-
-	// 已授权：GetAvailableGroups 含 20
-	svc = newPlazaService(ch, []Group{{ID: 20}}, nil)
-	data, err = svc.GetPlazaForUser(context.Background(), 1)
+	// 已授权：可见且 accessible=true
+	fix.userGroups = []Group{{ID: 20}}
+	data, err = newPlazaService(fix).GetPlazaForUser(context.Background(), 1)
 	require.NoError(t, err)
 	require.Len(t, data.Models, 1)
 	require.True(t, data.Models[0].Groups[0].Accessible)
 }
 
-func TestGetPlazaForUser_PublicSubscriptionGroupVisibleWithoutSub(t *testing.T) {
-	// 公开订阅型分组：未订阅（不在 GetAvailableGroups）→ 仍可见（橱窗），accessible=false。
-	ch := []AvailableChannel{{
-		ID: 1, Name: "sub_ch", Status: StatusActive,
-		Groups: []AvailableGroupRef{
-			{ID: 30, Name: "pro_sub", Platform: "openai", SubscriptionType: SubscriptionTypeSubscription, IsExclusive: false, RateMultiplier: 0.5},
-		},
-		SupportedModels: []SupportedModel{
-			{Name: "gpt-5.2", Platform: "openai", Pricing: tokenPricing(1.75e-7, 1.4e-6)},
-		},
-	}}
-	svc := newPlazaService(ch, nil, nil)
-	data, err := svc.GetPlazaForUser(context.Background(), 1)
+func TestGetPlazaForUser_PublicSubscriptionShowcase(t *testing.T) {
+	g := anthropicGroup(30, "pro_sub")
+	g.SubscriptionType = SubscriptionTypeSubscription
+	fix := plazaFixture{
+		allGroups: []Group{g},
+		accounts:  map[int64][]Account{30: {mappedAccount("claude-opus-4-6")}},
+	}
+	// 未订阅：可见（橱窗）但 accessible=false
+	data, err := newPlazaService(fix).GetPlazaForUser(context.Background(), 1)
 	require.NoError(t, err)
 	require.Len(t, data.Models, 1)
-	require.Len(t, data.Models[0].Groups, 1)
 	require.False(t, data.Models[0].Groups[0].Accessible)
-
-	// 已订阅 → accessible=true
-	svc = newPlazaService(ch, []Group{{ID: 30}}, nil)
-	data, err = svc.GetPlazaForUser(context.Background(), 1)
+	// 已订阅（∈ GetAvailableGroups）：accessible=true
+	fix.userGroups = []Group{{ID: 30}}
+	data, err = newPlazaService(fix).GetPlazaForUser(context.Background(), 1)
 	require.NoError(t, err)
 	require.True(t, data.Models[0].Groups[0].Accessible)
 }
 
-func TestGetPlazaForUser_ExclusiveSubscriptionGroupHiddenWithoutAuth(t *testing.T) {
-	// 专属订阅型分组：未订阅未授权 → 不可见（不走公开订阅型分支）。
-	ch := []AvailableChannel{{
-		ID: 1, Name: "vip_sub", Status: StatusActive,
-		Groups: []AvailableGroupRef{
-			{ID: 40, Name: "vip_sub", Platform: "openai", SubscriptionType: SubscriptionTypeSubscription, IsExclusive: true},
-		},
-		SupportedModels: []SupportedModel{
-			{Name: "gpt-5.5", Platform: "openai", Pricing: tokenPricing(5e-7, 3e-6)},
-		},
-	}}
-	svc := newPlazaService(ch, nil, nil)
-	data, err := svc.GetPlazaForUser(context.Background(), 1)
+func TestGetPlazaForUser_ExclusiveSubscriptionHiddenWithoutAuth(t *testing.T) {
+	g := anthropicGroup(40, "vip_sub")
+	g.SubscriptionType = SubscriptionTypeSubscription
+	g.IsExclusive = true
+	data, err := newPlazaService(plazaFixture{
+		allGroups: []Group{g},
+		accounts:  map[int64][]Account{40: {mappedAccount("claude-opus-4-6")}},
+	}).GetPlazaForUser(context.Background(), 1)
 	require.NoError(t, err)
 	require.Empty(t, data.Models)
 }
 
-// ===== 黑名单 =====
-
-func TestGetPlazaForUser_ExcludeListsApply(t *testing.T) {
-	groups := []AvailableGroupRef{
-		{ID: 10, Name: "g10", Platform: "anthropic", SubscriptionType: SubscriptionTypeStandard},
-		{ID: 11, Name: "g11", Platform: "anthropic", SubscriptionType: SubscriptionTypeStandard},
-	}
-	models := []SupportedModel{
-		{Name: "claude-sonnet-4-6", Platform: "anthropic", Pricing: tokenPricing(9e-7, 4.5e-6)},
-	}
-	ch := []AvailableChannel{
-		{ID: 1, Name: "ch1", Status: StatusActive, Groups: groups, SupportedModels: models},
-		{ID: 2, Name: "ch2", Status: StatusActive, Groups: groups, SupportedModels: []SupportedModel{
-			{Name: "claude-opus-4-6", Platform: "anthropic", Pricing: tokenPricing(1.5e-6, 7.5e-6)},
-		}},
-	}
-	cfg := &domain.ModelPlazaExtensionConfig{
-		ExcludedChannelIDs: []int64{2},  // 排除 ch2 → opus 不出现
-		ExcludedGroupIDs:   []int64{11}, // 排除 g11 → 模型只挂 g10
-	}
-	svc := newPlazaService(ch, []Group{{ID: 10}, {ID: 11}}, cfg)
-
-	data, err := svc.GetPlazaForUser(context.Background(), 1)
-	require.NoError(t, err)
-	require.Len(t, data.Models, 1)
-	require.Equal(t, "claude-sonnet-4-6", data.Models[0].Name)
-	require.Len(t, data.Models[0].Groups, 1)
-	require.Equal(t, int64(10), data.Models[0].Groups[0].ID)
-}
-
-func TestGetPlazaForUser_InactiveChannelSkipped(t *testing.T) {
-	ch := []AvailableChannel{{
-		ID: 1, Name: "disabled", Status: "disabled",
-		Groups: []AvailableGroupRef{{ID: 10, Name: "g", Platform: "anthropic", SubscriptionType: SubscriptionTypeStandard}},
-		SupportedModels: []SupportedModel{
-			{Name: "claude-sonnet-4-6", Platform: "anthropic", Pricing: tokenPricing(9e-7, 4.5e-6)},
-		},
-	}}
-	svc := newPlazaService(ch, []Group{{ID: 10}}, nil)
-	data, err := svc.GetPlazaForUser(context.Background(), 1)
+func TestGetPlazaForUser_ExcludedGroup(t *testing.T) {
+	data, err := newPlazaService(plazaFixture{
+		allGroups:  []Group{anthropicGroup(10, "g")},
+		accounts:   map[int64][]Account{10: {mappedAccount("m1")}},
+		userGroups: []Group{{ID: 10}},
+		cfg:        &domain.ModelPlazaExtensionConfig{ExcludedGroupIDs: []int64{10}},
+	}).GetPlazaForUser(context.Background(), 1)
 	require.NoError(t, err)
 	require.Empty(t, data.Models)
 }
 
-// ===== 聚合身份 =====
+func TestGetPlazaForUser_EmptyAccountGroupDisappears(t *testing.T) {
+	// 账号真相源核心语义：分组无账号 → 即使渠道定价里有模型，也不展示。
+	data, err := newPlazaService(plazaFixture{
+		allGroups:  []Group{anthropicGroup(10, "g")},
+		accounts:   map[int64][]Account{},
+		channels:   []Channel{pricedChannel(1, "ch", PlatformAnthropic, []string{"claude-opus-4-6"}, 1e-6, 5e-6)},
+		userGroups: []Group{{ID: 10}},
+	}).GetPlazaForUser(context.Background(), 1)
+	require.NoError(t, err)
+	require.Empty(t, data.Models)
+}
 
-func TestGetPlazaForUser_MergesSameModelAcrossChannels(t *testing.T) {
-	// 同 (platform, name) 跨渠道 → 一条记录，分组并集；大小写不敏感合并。
-	g1 := AvailableGroupRef{ID: 10, Name: "g10", Platform: "anthropic", SubscriptionType: SubscriptionTypeStandard}
-	g2 := AvailableGroupRef{ID: 11, Name: "g11", Platform: "anthropic", SubscriptionType: SubscriptionTypeStandard}
-	ch := []AvailableChannel{
-		{ID: 1, Name: "a_ch", Status: StatusActive, Groups: []AvailableGroupRef{g1}, SupportedModels: []SupportedModel{
-			{Name: "Claude-Sonnet-4-6", Platform: "anthropic", Pricing: tokenPricing(9e-7, 4.5e-6)},
-		}},
-		{ID: 2, Name: "b_ch", Status: StatusActive, Groups: []AvailableGroupRef{g2}, SupportedModels: []SupportedModel{
-			{Name: "claude-sonnet-4-6", Platform: "anthropic", Pricing: tokenPricing(1e-6, 5e-6)},
-		}},
-	}
-	svc := newPlazaService(ch, []Group{{ID: 10}, {ID: 11}}, nil)
-
-	data, err := svc.GetPlazaForUser(context.Background(), 1)
+func TestGetPlazaForUser_GroupAccountErrorSkipped(t *testing.T) {
+	// 单分组查账号失败：跳过该分组，其余正常（规格 §6）。
+	data, err := newPlazaService(plazaFixture{
+		allGroups:  []Group{anthropicGroup(10, "ok"), anthropicGroup(11, "bad")},
+		accounts:   map[int64][]Account{10: {mappedAccount("m1")}},
+		accountErr: map[int64]error{11: context.DeadlineExceeded},
+		userGroups: []Group{{ID: 10}, {ID: 11}},
+	}).GetPlazaForUser(context.Background(), 1)
 	require.NoError(t, err)
 	require.Len(t, data.Models, 1)
-	m := data.Models[0]
-	require.Len(t, m.Groups, 2)
-	// 基准价取渠道名序第一个有可展示定价的（a_ch）
-	require.Equal(t, 9e-7, *m.Pricing.InputPrice)
+	require.Equal(t, "m1", data.Models[0].Name)
+}
+
+// ===== 聚合 =====
+
+func TestGetPlazaForUser_ModelGroupsFromAccountsOnly(t *testing.T) {
+	// 两个分组各自账号能力不同：模型的分组列表只反映账号推导，
+	// 渠道 group_ids 不参与（旧实现的"合并渠道传染"问题在此杜绝）。
+	g1, g2 := anthropicGroup(10, "g1"), anthropicGroup(11, "g2")
+	data, err := newPlazaService(plazaFixture{
+		allGroups: []Group{g1, g2},
+		accounts: map[int64][]Account{
+			10: {mappedAccount("shared-model", "only-g1")},
+			11: {mappedAccount("shared-model")},
+		},
+		userGroups: []Group{{ID: 10}, {ID: 11}},
+	}).GetPlazaForUser(context.Background(), 1)
+	require.NoError(t, err)
+	require.Len(t, data.Models, 2)
+	byName := map[string]PlazaModel{}
+	for _, m := range data.Models {
+		byName[m.Name] = m
+	}
+	require.Len(t, byName["shared-model"].Groups, 2)
+	require.Len(t, byName["only-g1"].Groups, 1)
+	require.Equal(t, "g1", byName["only-g1"].Groups[0].Name)
 }
 
 func TestGetPlazaForUser_CrossPlatformSameNameNotMerged(t *testing.T) {
-	// 同名不同平台 → 两条独立记录。
-	ch := []AvailableChannel{{
-		ID: 1, Name: "multi", Status: StatusActive,
-		Groups: []AvailableGroupRef{
-			{ID: 10, Name: "g-ant", Platform: "anthropic", SubscriptionType: SubscriptionTypeStandard},
-			{ID: 11, Name: "g-gem", Platform: "gemini", SubscriptionType: SubscriptionTypeStandard},
-		},
-		SupportedModels: []SupportedModel{
-			{Name: "shared-model", Platform: "anthropic", Pricing: tokenPricing(1e-6, 2e-6)},
-			{Name: "shared-model", Platform: "gemini", Pricing: tokenPricing(3e-7, 6e-7)},
-		},
-	}}
-	svc := newPlazaService(ch, []Group{{ID: 10}, {ID: 11}}, nil)
-
-	data, err := svc.GetPlazaForUser(context.Background(), 1)
+	ga := anthropicGroup(10, "ga")
+	gb := Group{ID: 11, Name: "gb", Platform: PlatformOpenAI, SubscriptionType: SubscriptionTypeStandard, RateMultiplier: 1}
+	accA := mappedAccount("same-name")
+	accB := mkPlazaAccount(PlatformOpenAI, AccountTypeAPIKey, map[string]string{"same-name": "x"})
+	data, err := newPlazaService(plazaFixture{
+		allGroups:  []Group{ga, gb},
+		accounts:   map[int64][]Account{10: {accA}, 11: {accB}},
+		userGroups: []Group{{ID: 10}, {ID: 11}},
+	}).GetPlazaForUser(context.Background(), 1)
 	require.NoError(t, err)
-	require.Len(t, data.Models, 2)
-	// platform 排序：anthropic 在前
-	require.Equal(t, "anthropic", data.Models[0].Platform)
-	require.Equal(t, "gemini", data.Models[1].Platform)
-	// 各自只挂本平台分组
-	require.Equal(t, int64(10), data.Models[0].Groups[0].ID)
-	require.Equal(t, int64(11), data.Models[1].Groups[0].ID)
-}
-
-func TestGetPlazaForUser_CrossPlatformLeakPrevention(t *testing.T) {
-	// 渠道同时有 anthropic/openai 模型，但用户可见分组只覆盖 anthropic → openai 模型剔除。
-	ch := []AvailableChannel{{
-		ID: 1, Name: "mixed", Status: StatusActive,
-		Groups: []AvailableGroupRef{
-			{ID: 10, Name: "g-ant", Platform: "anthropic", SubscriptionType: SubscriptionTypeStandard},
-			{ID: 11, Name: "g-oai", Platform: "openai", IsExclusive: true, SubscriptionType: SubscriptionTypeStandard},
-		},
-		SupportedModels: []SupportedModel{
-			{Name: "claude-sonnet-4-6", Platform: "anthropic", Pricing: tokenPricing(9e-7, 4.5e-6)},
-			{Name: "gpt-5.2", Platform: "openai", Pricing: tokenPricing(1.75e-7, 1.4e-6)},
-		},
-	}}
-	svc := newPlazaService(ch, []Group{{ID: 10}}, nil) // 只授权 anthropic 分组
-
-	data, err := svc.GetPlazaForUser(context.Background(), 1)
-	require.NoError(t, err)
-	require.Len(t, data.Models, 1)
-	require.Equal(t, "claude-sonnet-4-6", data.Models[0].Name)
-}
-
-// ===== 基准价选取 =====
-
-func TestGetPlazaForUser_PricingSelection(t *testing.T) {
-	g := AvailableGroupRef{ID: 10, Name: "g", Platform: "openai", SubscriptionType: SubscriptionTypeStandard}
-	// a_ch 的定价全空（needsFallback）→ 跳过；b_ch 是 per_request 有价 → 选中。
-	emptyPricing := &ChannelModelPricing{BillingMode: BillingModeToken}
-	perReq := &ChannelModelPricing{BillingMode: BillingModePerRequest, PerRequestPrice: fp(0.08)}
-	ch := []AvailableChannel{
-		{ID: 1, Name: "a_ch", Status: StatusActive, Groups: []AvailableGroupRef{g}, SupportedModels: []SupportedModel{
-			{Name: "gpt-image-2", Platform: "openai", Pricing: emptyPricing},
-		}},
-		{ID: 2, Name: "b_ch", Status: StatusActive, Groups: []AvailableGroupRef{g}, SupportedModels: []SupportedModel{
-			{Name: "gpt-image-2", Platform: "openai", Pricing: perReq},
-		}},
+	require.Len(t, data.Models, 2, "跨平台同名模型是两条独立记录")
+	for _, m := range data.Models {
+		require.Len(t, m.Groups, 1)
+		require.Equal(t, m.Platform, m.Groups[0].Platform)
 	}
-	svc := newPlazaService(ch, []Group{{ID: 10}}, nil)
-
-	data, err := svc.GetPlazaForUser(context.Background(), 1)
-	require.NoError(t, err)
-	require.Len(t, data.Models, 1)
-	m := data.Models[0]
-	require.NotNil(t, m.Pricing)
-	require.Equal(t, 0.08, *m.Pricing.PerRequestPrice)
-	require.Equal(t, BillingModePerRequest, m.BillingMode)
 }
 
-func TestGetPlazaForUser_ImageBillingPricingDisplayable(t *testing.T) {
-	// image 计费形态：image_output_price / per_request_price 带价即可展示。
-	g := AvailableGroupRef{ID: 10, Name: "g", Platform: "gemini", SubscriptionType: SubscriptionTypeStandard}
-	imgPricing := &ChannelModelPricing{
-		BillingMode:      BillingModeImage,
-		ImageOutputPrice: fp(3e-5),
-		PerRequestPrice:  fp(0.266),
-	}
-	ch := []AvailableChannel{{
-		ID: 1, Name: "ch", Status: StatusActive, Groups: []AvailableGroupRef{g},
-		SupportedModels: []SupportedModel{{Name: "gemini-3-pro-image", Platform: "gemini", Pricing: imgPricing}},
-	}}
-	svc := newPlazaService(ch, []Group{{ID: 10}}, nil)
+// ===== 定价 join =====
 
-	data, err := svc.GetPlazaForUser(context.Background(), 1)
+func TestGetPlazaForUser_ExplicitPriceNotShadowedByEarlierChannelWithoutPrice(t *testing.T) {
+	// 渠道 a（名序在前）有该模型条目但没填价；渠道 b 有显式价 → b 的价胜出（审查修复④）。
+	noPriceCh := Channel{ID: 1, Name: "a-ch", Status: StatusActive, ModelPricing: []ChannelModelPricing{{
+		Platform: PlatformAnthropic, Models: []string{"claude-opus-4-6"}, BillingMode: BillingModeToken,
+	}}}
+	data, err := newPlazaService(plazaFixture{
+		allGroups:  []Group{anthropicGroup(10, "g")},
+		accounts:   map[int64][]Account{10: {mappedAccount("claude-opus-4-6")}},
+		channels:   []Channel{noPriceCh, pricedChannel(2, "b-ch", PlatformAnthropic, []string{"claude-opus-4-6"}, 5e-6, 2.5e-5)},
+		userGroups: []Group{{ID: 10}},
+	}).GetPlazaForUser(context.Background(), 1)
 	require.NoError(t, err)
 	require.Len(t, data.Models, 1)
 	require.NotNil(t, data.Models[0].Pricing)
-	require.Equal(t, BillingModeImage, data.Models[0].BillingMode)
-	require.Equal(t, 0.266, *data.Models[0].Pricing.PerRequestPrice)
+	require.Equal(t, 5e-6, *data.Models[0].Pricing.InputPrice)
 }
 
-func TestGetPlazaForUser_NoDisplayablePricingNil(t *testing.T) {
-	// 全部候选无可展示价格 → Pricing=nil，BillingMode 回落 token。
-	g := AvailableGroupRef{ID: 10, Name: "g", Platform: "openai", SubscriptionType: SubscriptionTypeStandard}
-	ch := []AvailableChannel{{
-		ID: 1, Name: "ch", Status: StatusActive, Groups: []AvailableGroupRef{g},
-		SupportedModels: []SupportedModel{{Name: "mystery-model", Platform: "openai", Pricing: nil}},
-	}}
-	svc := newPlazaService(ch, []Group{{ID: 10}}, nil)
+func TestGetPlazaForUser_ExcludedChannelPricingIgnored(t *testing.T) {
+	data, err := newPlazaService(plazaFixture{
+		allGroups:  []Group{anthropicGroup(10, "g")},
+		accounts:   map[int64][]Account{10: {mappedAccount("claude-opus-4-6")}},
+		channels:   []Channel{pricedChannel(7, "ch", PlatformAnthropic, []string{"claude-opus-4-6"}, 5e-6, 2.5e-5)},
+		userGroups: []Group{{ID: 10}},
+		cfg:        &domain.ModelPlazaExtensionConfig{ExcludedChannelIDs: []int64{7}},
+	}).GetPlazaForUser(context.Background(), 1)
+	require.NoError(t, err)
+	require.Len(t, data.Models, 1, "排除渠道只影响定价，不影响模型可见性")
+	require.Nil(t, data.Models[0].Pricing)
+}
 
-	data, err := svc.GetPlazaForUser(context.Background(), 1)
+func TestGetPlazaForUser_LiteLLMFallback(t *testing.T) {
+	data, err := newPlazaService(plazaFixture{
+		allGroups:  []Group{anthropicGroup(10, "g")},
+		accounts:   map[int64][]Account{10: {mappedAccount("claude-opus-4-6")}},
+		litellm:    map[string]*LiteLLMModelPricing{"claude-opus-4-6": {InputCostPerToken: 5e-6, OutputCostPerToken: 2.5e-5}},
+		userGroups: []Group{{ID: 10}},
+	}).GetPlazaForUser(context.Background(), 1)
+	require.NoError(t, err)
+	require.Len(t, data.Models, 1)
+	require.NotNil(t, data.Models[0].Pricing, "渠道无价时回落 LiteLLM 合成展示价")
+	require.Equal(t, BillingModeToken, data.Models[0].BillingMode)
+}
+
+func TestGetPlazaForUser_NoPricingAnywhere(t *testing.T) {
+	data, err := newPlazaService(plazaFixture{
+		allGroups:  []Group{anthropicGroup(10, "g")},
+		accounts:   map[int64][]Account{10: {mappedAccount("unknown-model")}},
+		userGroups: []Group{{ID: 10}},
+	}).GetPlazaForUser(context.Background(), 1)
 	require.NoError(t, err)
 	require.Len(t, data.Models, 1)
 	require.Nil(t, data.Models[0].Pricing)
 	require.Equal(t, BillingModeToken, data.Models[0].BillingMode)
 }
 
-func TestGetPlazaForUser_IntervalOnlyPricingDisplayable(t *testing.T) {
-	// flat 全空但 interval 带价 → 视为可展示（!pricingNeedsFallback）。
-	g := AvailableGroupRef{ID: 10, Name: "g", Platform: "gemini", SubscriptionType: SubscriptionTypeStandard}
-	maxTok := 200000
-	interval := &ChannelModelPricing{
-		BillingMode: BillingModeToken,
-		Intervals: []PricingInterval{
-			{MinTokens: 0, MaxTokens: &maxTok, InputPrice: fp(2.5e-7), OutputPrice: fp(1.5e-6)},
-		},
-	}
-	ch := []AvailableChannel{{
-		ID: 1, Name: "ch", Status: StatusActive, Groups: []AvailableGroupRef{g},
-		SupportedModels: []SupportedModel{{Name: "gemini-3-pro", Platform: "gemini", Pricing: interval}},
-	}}
-	svc := newPlazaService(ch, []Group{{ID: 10}}, nil)
-
-	data, err := svc.GetPlazaForUser(context.Background(), 1)
+func TestGetPlazaForUser_DisplayNameFromPricingCase(t *testing.T) {
+	// 账号写法 CLAUDE-OPUS-4-6，定价目录存 claude-opus-4-6 → 显示名用定价原始大小写。
+	data, err := newPlazaService(plazaFixture{
+		allGroups:  []Group{anthropicGroup(10, "g")},
+		accounts:   map[int64][]Account{10: {mappedAccount("CLAUDE-OPUS-4-6")}},
+		channels:   []Channel{pricedChannel(1, "ch", PlatformAnthropic, []string{"claude-opus-4-6"}, 1e-6, 5e-6)},
+		userGroups: []Group{{ID: 10}},
+	}).GetPlazaForUser(context.Background(), 1)
 	require.NoError(t, err)
-	require.NotNil(t, data.Models[0].Pricing)
-	require.Len(t, data.Models[0].Pricing.Intervals, 1)
+	require.Equal(t, "claude-opus-4-6", data.Models[0].Name)
 }
 
-// ===== 描述与公告 =====
+// ===== 描述注入（复合键）=====
 
-func TestGetPlazaForUser_DescriptionAndAnnouncement(t *testing.T) {
-	g := AvailableGroupRef{ID: 10, Name: "g", Platform: "anthropic", SubscriptionType: SubscriptionTypeStandard}
-	ch := []AvailableChannel{{
-		ID: 1, Name: "ch", Status: StatusActive, Groups: []AvailableGroupRef{g},
-		SupportedModels: []SupportedModel{
-			{Name: "claude-sonnet-4-6", Platform: "anthropic", Pricing: tokenPricing(9e-7, 4.5e-6)},
-		},
-	}}
-	cfg := &domain.ModelPlazaExtensionConfig{
-		ModelDescriptions: map[string]string{"claude-sonnet-4-6": "旗舰对话模型"},
-		Announcement:      "## 计费说明",
-	}
-	svc := newPlazaService(ch, []Group{{ID: 10}}, cfg)
-
-	data, err := svc.GetPlazaForUser(context.Background(), 1)
+func TestGetPlazaForUser_DescriptionCompositeKey(t *testing.T) {
+	data, err := newPlazaService(plazaFixture{
+		allGroups:  []Group{anthropicGroup(10, "g")},
+		accounts:   map[int64][]Account{10: {mappedAccount("claude-opus-4-6")}},
+		userGroups: []Group{{ID: 10}},
+		cfg: &domain.ModelPlazaExtensionConfig{ModelDescriptions: map[string]string{
+			"anthropic/claude-opus-4-6": "旗舰模型",
+			"openai/claude-opus-4-6":    "不应命中（平台不同）",
+			"claude-opus-4-6":           "不应命中（旧裸键）",
+		}},
+	}).GetPlazaForUser(context.Background(), 1)
 	require.NoError(t, err)
-	require.Equal(t, "## 计费说明", data.Announcement)
-	require.Equal(t, "旗舰对话模型", data.Models[0].Description)
+	require.Equal(t, "旗舰模型", data.Models[0].Description)
 }
 
 // ===== admin 模型清单 =====
 
-func TestListAllModelIdentities_DedupNoFilters(t *testing.T) {
-	// 不带用户过滤、不带黑名单：active 渠道的全部模型 (platform, name) 去重排序。
-	ch := []AvailableChannel{
-		{ID: 1, Name: "a", Status: StatusActive,
-			Groups: []AvailableGroupRef{{ID: 10, Name: "g", Platform: "anthropic", IsExclusive: true, SubscriptionType: SubscriptionTypeStandard}},
-			SupportedModels: []SupportedModel{
-				{Name: "claude-sonnet-4-6", Platform: "anthropic"},
-				{Name: "Claude-Sonnet-4-6", Platform: "anthropic"}, // 大小写重复 → 去重
-			}},
-		{ID: 2, Name: "b", Status: StatusActive,
-			Groups: []AvailableGroupRef{{ID: 11, Name: "g2", Platform: "openai", SubscriptionType: SubscriptionTypeStandard}},
-			SupportedModels: []SupportedModel{
-				{Name: "gpt-5.2", Platform: "openai"},
-			}},
-		{ID: 3, Name: "c", Status: "disabled", SupportedModels: []SupportedModel{
-			{Name: "ghost", Platform: "openai"},
-		}},
-	}
-	svc := newPlazaService(ch, nil, &domain.ModelPlazaExtensionConfig{ExcludedChannelIDs: []int64{2}})
-
-	out, err := svc.ListAllModelIdentities(context.Background())
+func TestListAllModelIdentities_AllGroupsNoUserFilterNoBlacklist(t *testing.T) {
+	exclusive := anthropicGroup(20, "vip")
+	exclusive.IsExclusive = true
+	svc := newPlazaService(plazaFixture{
+		allGroups: []Group{anthropicGroup(10, "pub"), exclusive},
+		accounts: map[int64][]Account{
+			10: {mappedAccount("model-a")},
+			20: {mappedAccount("model-b")},
+		},
+		// 排除名单不影响管理清单
+		cfg: &domain.ModelPlazaExtensionConfig{ExcludedGroupIDs: []int64{10}},
+	})
+	ids, err := svc.ListAllModelIdentities(context.Background())
 	require.NoError(t, err)
-	// 黑名单不影响 admin 清单；disabled 渠道跳过
-	require.Equal(t, []ModelIdentity{
-		{Platform: "anthropic", Name: "claude-sonnet-4-6"},
-		{Platform: "openai", Name: "gpt-5.2"},
-	}, out)
+	require.Len(t, ids, 2)
+	require.Equal(t, "model-a", ids[0].Name)
+	require.Equal(t, "model-b", ids[1].Name)
 }
