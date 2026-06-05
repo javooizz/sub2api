@@ -116,13 +116,13 @@
               <span class="shrink-0 text-[10px] text-gray-400">{{ m.platform }}</span>
             </div>
             <input
-              :value="form.model_descriptions[m.name] ?? ''"
+              :value="form.model_descriptions[descKey(m)] ?? ''"
               type="text"
               maxlength="500"
               class="input flex-1 text-sm"
               :aria-label="m.name"
               :placeholder="t('admin.extensionConfig.modelPlaza.descriptionPlaceholder')"
-              @input="setDescription(m.name, ($event.target as HTMLInputElement).value)"
+              @input="setDescription(descKey(m), ($event.target as HTMLInputElement).value)"
             />
           </div>
         </div>
@@ -220,10 +220,13 @@ const filteredModelList = computed(() => {
   return modelList.value.filter((m) => m.name.toLowerCase().includes(q))
 })
 
+/** 模型描述复合键（2026-06-05 修订，与后端校验/广场注入一致）：platform/name */
+const descKey = (m: { platform: string; name: string }) => `${m.platform}/${m.name}`
+
 /** payload 中存在、但当前模型清单没有的描述 key（渠道临时下线等场景，保存时保留）。 */
 const orphanDescriptions = computed(() => {
-  const inList = new Set(modelList.value.map((m) => m.name))
-  return Object.keys(form.value.model_descriptions).filter((name) => !inList.has(name))
+  const inList = new Set(modelList.value.map(descKey))
+  return Object.keys(form.value.model_descriptions).filter((key) => !inList.has(key))
 })
 
 // ===== dirty 跟踪 =====
@@ -248,10 +251,10 @@ function toggleId(list: number[], id: number) {
   else list.push(id)
 }
 
-function setDescription(name: string, value: string) {
+function setDescription(key: string, value: string) {
   const v = value.trim()
-  if (v) form.value.model_descriptions[name] = v
-  else delete form.value.model_descriptions[name]
+  if (v) form.value.model_descriptions[key] = v
+  else delete form.value.model_descriptions[key]
 }
 
 // ===== load / save =====
