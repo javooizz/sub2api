@@ -248,10 +248,14 @@ func (s *ModelPlazaService) aggregate(visible []plazaGroupModels, priceIdx map[p
 			m.Name = pe.displayName
 		} else if lp := s.pricing.GetModelPricing(m.Name); lp != nil {
 			// LiteLLM 全局目录回落：复用可用渠道页同款合成（image/token 模式自动判定）。
+			// 注：依赖 GetModelPricing 内部 case-insensitive 查找（PricingService 实现保证）。
 			m.Pricing = synthesizePricingFromLiteLLM(lp, nil)
 		}
 		// 描述按复合键 "platform/name" 注入（规格 §4.2 步骤 5；admin 清单与本聚合
 		// 同源同显示名口径，键可字节精确命中）。
+		// 已知边界：若排除渠道恰好改变了某模型显式价的"首选渠道大小写"，本侧显示名与
+		// admin 清单（不带排除名单，见 ListAllModelIdentities）可能出现大小写漂移导致
+		// 描述不命中——触发需同模型跨渠道大小写不一致且较前名序渠道被排除，现实中罕见。
 		if desc, ok := cfg.ModelDescriptions[m.Platform+"/"+m.Name]; ok {
 			m.Description = desc
 		}
