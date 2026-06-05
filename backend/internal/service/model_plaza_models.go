@@ -1,8 +1,12 @@
 package service
 
 import (
+	"context"
+	"fmt"
+	"log/slog"
 	"sort"
 	"strings"
+	"time"
 )
 
 // 本文件是 fork 自有代码：模型广场"账号实际可用"推导（规格 §4.2 步骤 2）。
@@ -113,4 +117,95 @@ func plazaCustomListAllowsModel(availablePatterns []string, model string) bool {
 		}
 	}
 	return false
+}
+
+// ===== Task 3: 分组可用模型集推导 + TTL 缓存 =====
+
+// plazaUsableTTL 分组可用模型集缓存时长（规格 §4.2：~60s，配置/账号变更最迟一个 TTL 生效，
+// 不做主动失效——纯展示页可接受）。
+const plazaUsableTTL = time.Minute
+
+type plazaUsableCacheEntry struct {
+	models    []string
+	expiresAt time.Time
+}
+
+// groupUsableModels 计算分组实际可用模型集（最终集：含 ModelsListConfig 过滤、剔除通配条目）。
+// 取样口径"配置上可提供"（规格 §2）：ListByGroup（仓储已过滤 status=active、无时态谓词）
+// + 内存过滤 Schedulable 标志与平台匹配——过载/限流窗口中的账号仍计入，目录不抖动。
+// 缓存键 = 分组 ID，值 = 最终可用集；失败不写缓存（规格 §6）。
+func (s *ModelPlazaService) groupUsableModels(ctx context.Context, g *Group) ([]string, error) {
+	if cached, ok := s.usableFromCache(g.ID); ok {
+		return cached, nil
+	}
+	accounts, err := s.accounts.ListByGroup(ctx, g.ID)
+	if err != nil {
+		return nil, fmt.Errorf("list accounts for group %d: %w", g.ID, err)
+	}
+	entrySet := make(map[string]struct{})
+	for i := range accounts {
+		acc := &accounts[i]
+		// 仓储已按 status=active 过滤；此处显式复验，语义不依赖仓储实现细节（fake 也会经过同一过滤）。
+		if acc.Status != StatusActive || !acc.Schedulable || acc.Platform != g.Platform {
+			continue
+		}
+		for _, m := range accountUsableModelEntries(acc) {
+			m = strings.TrimSpace(m)
+			if m == "" {
+				continue
+			}
+			entrySet[m] = struct{}{}
+		}
+	}
+	entries := make([]string, 0, len(entrySet))
+	for m := range entrySet {
+		entries = append(entries, m)
+	}
+	sort.Strings(entries)
+
+	usable := entries
+	if g.CustomModelsListEnabled() {
+		usable = plazaFilterModelsByCustomList(entries, defaultModelsListCandidateIDs(g.Platform), g.ModelsListConfig.Models)
+	}
+
+	// 通配条目不进展示集：无法枚举为具体模型（规格 §4.2；作为 allow 模式已在过滤中生效）。
+	out := make([]string, 0, len(usable))
+	for _, m := range usable {
+		if strings.Contains(m, "*") {
+			slog.Debug("model plaza: skip wildcard model entry", "group_id", g.ID, "entry", m)
+			continue
+		}
+		out = append(out, m)
+	}
+	s.storeUsableCache(g.ID, out)
+	return out, nil
+}
+
+func (s *ModelPlazaService) timeNow() time.Time {
+	if s.now != nil {
+		return s.now()
+	}
+	return time.Now()
+}
+
+func (s *ModelPlazaService) usableFromCache(groupID int64) ([]string, bool) {
+	s.cacheMu.RLock()
+	defer s.cacheMu.RUnlock()
+	e, ok := s.usableCache[groupID]
+	if !ok || s.timeNow().After(e.expiresAt) {
+		return nil, false
+	}
+	return append([]string(nil), e.models...), true
+}
+
+func (s *ModelPlazaService) storeUsableCache(groupID int64, models []string) {
+	s.cacheMu.Lock()
+	defer s.cacheMu.Unlock()
+	if s.usableCache == nil {
+		s.usableCache = make(map[int64]plazaUsableCacheEntry)
+	}
+	s.usableCache[groupID] = plazaUsableCacheEntry{
+		models:    append([]string(nil), models...),
+		expiresAt: s.timeNow().Add(plazaUsableTTL),
+	}
 }

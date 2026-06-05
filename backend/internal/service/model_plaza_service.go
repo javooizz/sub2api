@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/domain"
 )
@@ -25,6 +27,12 @@ type plazaGroupProvider interface {
 // plazaConfigProvider 提供 model-plaza 的扩展配置。*ExtensionConfigService 天然满足。
 type plazaConfigProvider interface {
 	GetAdmin(ctx context.Context, agentID string) (*ExtensionConfigRecord, error)
+}
+
+// plazaAccountLister 提供分组下账号（仓储已过滤 status=active，无时态谓词——
+// "配置上可提供"取样口径，规格 §2）。AccountRepository 天然满足。
+type plazaAccountLister interface {
+	ListByGroup(ctx context.Context, groupID int64) ([]Account, error)
 }
 
 // ===== 输出类型 =====
@@ -67,6 +75,13 @@ type ModelPlazaService struct {
 	channels plazaChannelLister
 	groups   plazaGroupProvider
 	config   plazaConfigProvider
+
+	// ===== 2026-06-05 账号真相源修订新增（规格 §4.2 步骤 2）=====
+	accounts plazaAccountLister
+
+	cacheMu     sync.RWMutex
+	usableCache map[int64]plazaUsableCacheEntry
+	now         func() time.Time // 测试注入；nil 时用 time.Now
 }
 
 // NewModelPlazaService 构造（wire 注入具体 service，接口在构造时收窄）。
