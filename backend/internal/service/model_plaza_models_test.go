@@ -65,3 +65,27 @@ func TestAccountUsableModelEntries_OpenAIPassthrough(t *testing.T) {
 	require.True(t, acc.IsOpenAIPassthroughEnabled(), "fixture 必须真的开启 passthrough")
 	require.Equal(t, defaultModelsListCandidateIDs(PlatformOpenAI), accountUsableModelEntries(&acc))
 }
+
+// TestPlazaFilterModelsByCustomList 钉住与 gateway_handler.go filterModelsByCustomList
+// 的等价语义（规格 §4.2：结果=圈定清单中被 available 模式允许的项，保序去重去空；
+// * 尾缀前缀通配；available 空时回落 fallback 作 source）。
+func TestPlazaFilterModelsByCustomList(t *testing.T) {
+	cases := []struct {
+		name                          string
+		available, fallback, selected []string
+		want                          []string
+	}{
+		{"未配圈定 → 原样返回 available", []string{"a", "b"}, nil, nil, []string{"a", "b"}},
+		{"结果取圈定清单且保序", []string{"m1", "m2", "m3"}, nil, []string{"m3", "m1"}, []string{"m3", "m1"}},
+		{"圈定含 available 没有的 → 剔除", []string{"m1"}, nil, []string{"m1", "mx"}, []string{"m1"}},
+		{"通配 allow：available 含 claude-* 放行前缀匹配", []string{"claude-*"}, nil, []string{"claude-opus-4-6", "gpt-5.2"}, []string{"claude-opus-4-6"}},
+		{"圈定去重去空", []string{"m1"}, nil, []string{" m1 ", "m1", ""}, []string{"m1"}},
+		{"available 空 → fallback 作 source", nil, []string{"d1"}, []string{"d1", "d2"}, []string{"d1"}},
+		{"available 与 fallback 均空 → nil", nil, nil, []string{"x"}, nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.want, plazaFilterModelsByCustomList(tc.available, tc.fallback, tc.selected))
+		})
+	}
+}

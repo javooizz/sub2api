@@ -2,6 +2,7 @@ package service
 
 import (
 	"sort"
+	"strings"
 )
 
 // 本文件是 fork 自有代码：模型广场"账号实际可用"推导（规格 §4.2 步骤 2）。
@@ -56,4 +57,60 @@ func sortedStringKeys(m map[string]string) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// plazaFilterModelsByCustomList 复刻 gateway_handler.go filterModelsByCustomList。
+// service 不能反向 import handler（会成环），等价性由 TestPlazaFilterModelsByCustomList 钉住。
+// 注意"available 为空回落 fallback"分支在广场推导下实际不可达（无账号分组已提前消失），
+// 保留只为函数级等价（规格 §4.2）。
+func plazaFilterModelsByCustomList(availableModels, fallbackModels, selectedModels []string) []string {
+	if len(selectedModels) == 0 {
+		return availableModels
+	}
+	source := availableModels
+	if len(source) == 0 {
+		source = fallbackModels
+	}
+	if len(source) == 0 {
+		return nil
+	}
+
+	allowed := make([]string, 0, len(source))
+	for _, model := range source {
+		model = strings.TrimSpace(model)
+		if model != "" {
+			allowed = append(allowed, model)
+		}
+	}
+
+	seen := make(map[string]struct{}, len(selectedModels))
+	filtered := make([]string, 0, len(selectedModels))
+	for _, model := range selectedModels {
+		model = strings.TrimSpace(model)
+		if model == "" {
+			continue
+		}
+		if !plazaCustomListAllowsModel(allowed, model) {
+			continue
+		}
+		if _, ok := seen[model]; ok {
+			continue
+		}
+		seen[model] = struct{}{}
+		filtered = append(filtered, model)
+	}
+	return filtered
+}
+
+// plazaCustomListAllowsModel 复刻 gateway_handler.go customModelsListAllowsModel。
+func plazaCustomListAllowsModel(availablePatterns []string, model string) bool {
+	for _, pattern := range availablePatterns {
+		if pattern == model {
+			return true
+		}
+		if strings.HasSuffix(pattern, "*") && strings.HasPrefix(model, strings.TrimSuffix(pattern, "*")) {
+			return true
+		}
+	}
+	return false
 }
