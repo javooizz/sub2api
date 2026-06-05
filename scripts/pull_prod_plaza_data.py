@@ -228,7 +228,8 @@ def upsert_seed_account(local, group_name, local_gid, platform, models, existing
     cur = existing_by_name.get(name)
     action = "更新" if cur else "新建"
     if not apply:
-        print(f"  📝 占位账号 {name:<44} 将{action}: 模型数={len(models)}")
+        # 预演模式不拉本地账号列表, 无法区分新建/更新, 文案统一为"upsert"
+        print(f"  📝 占位账号 {name:<44} 将 upsert: 模型数={len(models)}")
         return True
     r = local.put(f"/accounts/{cur['id']}", payload) if cur else local.post("/accounts", payload)
     ok = r.get("code") == 0
