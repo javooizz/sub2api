@@ -259,11 +259,7 @@ func (s *ModelPlazaService) aggregate(visible []plazaGroupModels, priceIdx map[p
 		if desc, ok := cfg.ModelDescriptions[m.Platform+"/"+m.Name]; ok {
 			m.Description = desc
 		}
-		if m.Pricing != nil && m.Pricing.BillingMode != "" {
-			m.BillingMode = m.Pricing.BillingMode
-		} else {
-			m.BillingMode = BillingModeToken
-		}
+		m.BillingMode = plazaDisplayBillingMode(m.Pricing)
 		sort.SliceStable(m.Groups, func(i, j int) bool { return m.Groups[i].Name < m.Groups[j].Name })
 		out = append(out, *m)
 	}
@@ -352,6 +348,29 @@ func (s *ModelPlazaService) ListAllModelIdentities(ctx context.Context) ([]Model
 		return strings.ToLower(out[i].Name) < strings.ToLower(out[j].Name)
 	})
 	return out, nil
+}
+
+// plazaDisplayBillingMode 归一展示计费模式：image/per_request 必须有每张价或带价档位
+// （与渠道校验 BILLING_MODE_MISSING_PRICE 同语义），否则按 token 展示。
+// 典型场景：gpt-image 系在 LiteLLM 标 image_generation 但只有图像 token 价
+// （output_cost_per_image_token），回落合成物若直接透出 image 标签，会与真实计费
+// 形态（按图像 token）不符——渠道显式价被删时计费标签会凭空翻成"按图"。
+func plazaDisplayBillingMode(p *ChannelModelPricing) BillingMode {
+	if p == nil || p.BillingMode == "" {
+		return BillingModeToken
+	}
+	if p.BillingMode != BillingModeImage && p.BillingMode != BillingModePerRequest {
+		return p.BillingMode
+	}
+	if p.PerRequestPrice != nil {
+		return p.BillingMode
+	}
+	for _, iv := range p.Intervals {
+		if iv.PerRequestPrice != nil {
+			return p.BillingMode
+		}
+	}
+	return BillingModeToken
 }
 
 // int64Set 把 slice 转为查询集合。

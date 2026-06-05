@@ -371,3 +371,43 @@ func TestListAllModelIdentities_AllGroupsNoUserFilterNoBlacklist(t *testing.T) {
 	require.Equal(t, "model-a", ids[0].Name)
 	require.Equal(t, "model-b", ids[1].Name)
 }
+
+// ===== 展示计费模式归一 =====
+
+func TestGetPlazaForUser_ImageModeFallbackWithoutPerImagePriceShowsToken(t *testing.T) {
+	// gpt-image 系：LiteLLM mode=image_generation 但无每张价（只有图像 token 价）。
+	// 回落合成物带 image 标签却无每张价，违反"image=按张计费"语义（渠道校验同款），
+	// 展示层归一为 token，避免删渠道价后计费标签翻成"按图"。
+	data, err := newPlazaService(plazaFixture{
+		allGroups: []Group{{ID: 10, Name: "g", Platform: PlatformOpenAI, SubscriptionType: SubscriptionTypeStandard, RateMultiplier: 1}},
+		accounts: map[int64][]Account{10: {mkPlazaAccount(PlatformOpenAI, AccountTypeAPIKey, map[string]string{"gpt-image-2": "gpt-image-2"})}},
+		litellm: map[string]*LiteLLMModelPricing{"gpt-image-2": {
+			Mode: "image_generation", InputCostPerToken: 5e-6, OutputCostPerToken: 1e-5, OutputCostPerImageToken: 3e-5,
+		}},
+		userGroups: []Group{{ID: 10}},
+	}).GetPlazaForUser(context.Background(), 1)
+	require.NoError(t, err)
+	require.Len(t, data.Models, 1)
+	m := data.Models[0]
+	require.Equal(t, BillingModeToken, m.BillingMode, "无每张价的 image 合成物应按 token 展示")
+	require.NotNil(t, m.Pricing)
+	require.NotNil(t, m.Pricing.ImageOutputPrice, "图像 token 价保留展示")
+}
+
+func TestGetPlazaForUser_ImageModeFallbackWithPerImagePriceKeepsImage(t *testing.T) {
+	// gemini image 系：LiteLLM 有 output_cost_per_image（真按张）→ 保持 image 模式。
+	data, err := newPlazaService(plazaFixture{
+		allGroups: []Group{{ID: 11, Name: "gi", Platform: PlatformGemini, SubscriptionType: SubscriptionTypeStandard, RateMultiplier: 1}},
+		accounts: map[int64][]Account{11: {mkPlazaAccount(PlatformGemini, AccountTypeAPIKey, map[string]string{"gemini-3-pro-image-preview": "x"})}},
+		litellm: map[string]*LiteLLMModelPricing{"gemini-3-pro-image-preview": {
+			Mode: "image_generation", OutputCostPerImage: 0.00012,
+		}},
+		userGroups: []Group{{ID: 11}},
+	}).GetPlazaForUser(context.Background(), 1)
+	require.NoError(t, err)
+	require.Len(t, data.Models, 1)
+	m := data.Models[0]
+	require.Equal(t, BillingModeImage, m.BillingMode)
+	require.NotNil(t, m.Pricing.PerRequestPrice)
+	require.Equal(t, 0.00012, *m.Pricing.PerRequestPrice)
+}
