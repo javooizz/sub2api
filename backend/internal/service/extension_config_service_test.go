@@ -166,10 +166,29 @@ func TestValidatePayload_ModelPlaza(t *testing.T) {
 	valid := domain.ExtensionConfigPayload{ModelPlaza: &domain.ModelPlazaExtensionConfig{
 		ExcludedChannelIDs: []int64{1, 2},
 		ExcludedGroupIDs:   []int64{3},
-		ModelDescriptions:  map[string]string{"claude-sonnet-4-6": "旗舰对话模型"},
+		ModelDescriptions:  map[string]string{"anthropic/claude-sonnet-4-6": "旗舰对话模型"},
 		Announcement:       "## 公告\n按量计费",
 	}}
 	require.NoError(t, s.validatePayload(ctx, AgentIDModelPlaza, &valid))
+
+	// 复合键格式（2026-06-05 修订）：缺 "/"、platform 非法、name 空/超长均拒绝
+	for _, badKey := range []string{
+		"claude-sonnet-4-6",                      // 缺 platform 前缀（旧裸键）
+		"foo/claude-sonnet-4-6",                  // platform 非法
+		"anthropic/",                             // name 空
+		"anthropic/" + strings.Repeat("x", 101), // name 超长
+		"",                                       // 空键（既无 "/" 也无合法 platform）
+	} {
+		bad := domain.ExtensionConfigPayload{ModelPlaza: &domain.ModelPlazaExtensionConfig{
+			ModelDescriptions: map[string]string{badKey: "desc"},
+		}}
+		require.Error(t, s.validatePayload(ctx, AgentIDModelPlaza, &bad), "key=%s", badKey)
+	}
+	// name 可含 "/"（按首个 "/" 切分）
+	slashName := domain.ExtensionConfigPayload{ModelPlaza: &domain.ModelPlazaExtensionConfig{
+		ModelDescriptions: map[string]string{"openai/vendor/gpt-x": "ok"},
+	}}
+	require.NoError(t, s.validatePayload(ctx, AgentIDModelPlaza, &slashName))
 
 	tooLongAnnouncement := domain.ExtensionConfigPayload{ModelPlaza: &domain.ModelPlazaExtensionConfig{
 		Announcement: strings.Repeat("公", 2001),
@@ -186,13 +205,8 @@ func TestValidatePayload_ModelPlaza(t *testing.T) {
 	}}
 	require.Error(t, s.validatePayload(ctx, AgentIDModelPlaza, &badGroupID))
 
-	emptyModelName := domain.ExtensionConfigPayload{ModelPlaza: &domain.ModelPlazaExtensionConfig{
-		ModelDescriptions: map[string]string{"": "x"},
-	}}
-	require.Error(t, s.validatePayload(ctx, AgentIDModelPlaza, &emptyModelName))
-
 	tooLongDesc := domain.ExtensionConfigPayload{ModelPlaza: &domain.ModelPlazaExtensionConfig{
-		ModelDescriptions: map[string]string{"m": strings.Repeat("描", 501)},
+		ModelDescriptions: map[string]string{"anthropic/m": strings.Repeat("描", 501)},
 	}}
 	require.Error(t, s.validatePayload(ctx, AgentIDModelPlaza, &tooLongDesc))
 

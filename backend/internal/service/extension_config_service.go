@@ -22,6 +22,14 @@ const AgentIDImageGen = "image-gen"
 // AgentIDModelPlaza 是模型广场扩展配置的 agent slug（黑名单/模型描述/公告）。
 const AgentIDModelPlaza = "model-plaza"
 
+// plazaDescriptionPlatforms 模型描述复合键 platform 段合法值（规格 §4.3）。
+var plazaDescriptionPlatforms = map[string]bool{
+	PlatformAnthropic:   true,
+	PlatformOpenAI:      true,
+	PlatformGemini:      true,
+	PlatformAntigravity: true,
+}
+
 // ====== Domain Types ======
 
 // ExtensionConfigRecord 是 ext config 表行的 service 层表示。
@@ -497,12 +505,18 @@ func (s *ExtensionConfigService) validatePayload(
 				return fmt.Errorf("%w: excluded_group_ids contains non-positive id %d", ErrExtensionConfigInvalidPayload, id)
 			}
 		}
-		for name, desc := range cfg.ModelDescriptions {
-			if l := len(name); l == 0 || l > 100 {
-				return fmt.Errorf("%w: model_descriptions contains invalid model name length=%d", ErrExtensionConfigInvalidPayload, l)
+		for key, desc := range cfg.ModelDescriptions {
+			// 复合键 "platform/name"（2026-06-05 修订，规格 §4.3）：platform 为固定枚举
+			// 按首个 "/" 切分；name 可含 "/"。
+			platform, model, found := strings.Cut(key, "/")
+			if !found || !plazaDescriptionPlatforms[platform] {
+				return fmt.Errorf("%w: model_descriptions key %q must be \"platform/name\" with platform in {anthropic, openai, gemini, antigravity}", ErrExtensionConfigInvalidPayload, key)
+			}
+			if l := len(model); l == 0 || l > 100 {
+				return fmt.Errorf("%w: model_descriptions key %q has invalid model name length=%d", ErrExtensionConfigInvalidPayload, key, l)
 			}
 			if l := len([]rune(desc)); l > 500 {
-				return fmt.Errorf("%w: model_descriptions[%s] exceeds 500 chars", ErrExtensionConfigInvalidPayload, name)
+				return fmt.Errorf("%w: model_descriptions[%s] exceeds 500 chars", ErrExtensionConfigInvalidPayload, key)
 			}
 		}
 	}
