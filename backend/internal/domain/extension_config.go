@@ -47,14 +47,17 @@ type ImageGenExtensionConfig struct {
 // ModelPlazaExtensionConfig 模型广场展示配置。
 // 只影响广场展示，不影响绑定/计费权限（绑定权限由 GetAvailableGroups 把关）。
 type ModelPlazaExtensionConfig struct {
-	// ExcludedChannelIDs 不在广场展示的渠道 ID 黑名单。
+	// ExcludedChannelIDs 定价目录排除的渠道 ID 黑名单（2026-06-05 修订后渠道仅作定价源，
+	// 排除只影响价格来源，不影响模型/分组可见性——可见性由账号推导决定）。
 	// 仅校验为正整数，不校验存在性——渠道删除后黑名单残留无害（聚合时自然失配跳过）。
 	ExcludedChannelIDs []int64 `json:"excluded_channel_ids,omitempty"`
 
 	// ExcludedGroupIDs 不在广场展示的分组 ID 黑名单。同上仅校验正整数。
 	ExcludedGroupIDs []int64 `json:"excluded_group_ids,omitempty"`
 
-	// ModelDescriptions 模型名 → 展示描述。key 长度 1-100 字节，value ≤500 字符（rune）。
+	// ModelDescriptions 复合键 "platform/name" → 展示描述（2026-06-05 修订；platform ∈
+	// {anthropic, openai, gemini, antigravity}，按首个 "/" 切分，name 长度 1-100 字节），
+	// value ≤500 字符（rune）。
 	// 无条目数上限（不同于 image-gen GroupModels 的 ≤50）：admin-only 输入、单 jsonb 行，
 	// 失败模式只是行变大，刻意不设 cap。
 	ModelDescriptions map[string]string `json:"model_descriptions,omitempty"`
