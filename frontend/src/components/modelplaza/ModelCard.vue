@@ -142,13 +142,15 @@ const priceLines = computed<PriceLine[]>(() => {
   if (props.model.billing_mode === 'per_request' || props.model.billing_mode === 'image') {
     const pr = formatPerRequest(p.per_request_price, m)
     if (pr) lines.push({ label: t('modelPlaza.pricing.perRequest'), value: pr, unit: perCall })
-    const img = formatPerMillion(p.image_output_price, m)
-    if (img) lines.push({ label: t('modelPlaza.pricing.imageOutput'), value: img, unit: perM })
   }
   const input = formatPerMillion(p.input_price, m)
   if (input) lines.push({ label: t('modelPlaza.pricing.input'), value: input, unit: perM })
   const output = formatPerMillion(p.output_price, m)
   if (output) lines.push({ label: t('modelPlaza.pricing.output'), value: output, unit: perM })
+  // 图像输出价不限模式：gpt-image 系是 token 模式但按图像 token 计费（LiteLLM
+  // output_cost_per_image_token），藏在 image 分支会让该价在卡片上消失
+  const img = formatPerMillion(p.image_output_price, m)
+  if (img) lines.push({ label: t('modelPlaza.pricing.imageOutput'), value: img, unit: perM })
   const cacheRead = formatPerMillion(p.cache_read_price, m)
   if (cacheRead) lines.push({ label: t('modelPlaza.pricing.cacheRead'), value: cacheRead, unit: perM })
   const cacheWrite = formatPerMillion(p.cache_write_price, m)

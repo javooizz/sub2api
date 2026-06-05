@@ -215,10 +215,11 @@ function buildPriceRows(m: PlazaModel, mult: number): PriceRow[] {
   }
   if (m.billing_mode === 'per_request' || m.billing_mode === 'image') {
     push(t('modelPlaza.pricing.perRequest'), formatPerRequest(p.per_request_price, mult), perCall)
-    push(t('modelPlaza.pricing.imageOutput'), formatPerMillion(p.image_output_price, mult), perM)
   }
   push(t('modelPlaza.pricing.input'), formatPerMillion(p.input_price, mult), perM)
   push(t('modelPlaza.pricing.output'), formatPerMillion(p.output_price, mult), perM)
+  // 图像输出价不限模式：gpt-image 系是 token 模式但按图像 token 计费（与 ModelCard 同理）
+  push(t('modelPlaza.pricing.imageOutput'), formatPerMillion(p.image_output_price, mult), perM)
   push(t('modelPlaza.pricing.cacheRead'), formatPerMillion(p.cache_read_price, mult), perM)
   push(t('modelPlaza.pricing.cacheWrite'), formatPerMillion(p.cache_write_price, mult), perM)
   return rows
