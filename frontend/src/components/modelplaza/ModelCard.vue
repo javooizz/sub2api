@@ -66,7 +66,7 @@
         {{ t(`modelPlaza.billingMode.${model.billing_mode}`, model.billing_mode) }}
       </span>
       <span
-        v-if="(model.pricing?.intervals?.length ?? 0) > 0"
+        v-if="(model.pricing?.intervals?.length ?? 0) > 0 && model.billing_mode !== 'image'"
         class="rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-medium text-violet-700 dark:bg-violet-900/40 dark:text-violet-300"
       >
         {{ t('modelPlaza.card.dynamicTiers', { count: model.pricing!.intervals.length }) }}
@@ -90,7 +90,14 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Icon from '@/components/icons/Icon.vue'
 import ModelIcon from '@/components/common/ModelIcon.vue'
-import { formatPerMillion, formatPerRequest, effectiveMultiplier } from '@/utils/plazaPricing'
+import {
+  formatPerMillion,
+  formatPerRequest,
+  effectiveMultiplier,
+  effectiveImageMultiplier,
+  imageTierLines,
+  isImageTierModel,
+} from '@/utils/plazaPricing'
 import type { PlazaModel, PlazaGroup } from '@/api/modelPlaza'
 
 const props = defineProps<{
@@ -109,11 +116,18 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-/** 当前生效倍率：选中分组（且模型挂在该分组）→ 分组倍率（用户专属优先）；否则 null（基准价）。 */
-const activeMultiplier = computed<number | null>(() => {
+/** 选中分组（且模型挂在该分组）→ 该分组；否则 null（基准价）。 */
+const activeGroup = computed<PlazaGroup | null>(() => {
   const g = props.selectedGroup
   if (!g) return null
-  if (!props.model.groups.some((x) => x.id === g.id)) return null
+  return props.model.groups.some((x) => x.id === g.id) ? g : null
+})
+
+/** 当前生效倍率：图像模型用图像倍率（override 优先，规格 2026-06-07 §5），其余沿用常规倍率。 */
+const activeMultiplier = computed<number | null>(() => {
+  const g = activeGroup.value
+  if (!g) return null
+  if (isImageTierModel(props.model)) return effectiveImageMultiplier(g, props.userRates)
   return effectiveMultiplier(g, props.userRates)
 })
 
@@ -134,6 +148,19 @@ interface PriceLine {
 const priceLines = computed<PriceLine[]>(() => {
   const p = props.model.pricing
   if (!p) return []
+
+  // 图像生成模型：三档按次行，token 价不显示（出图请求 tokens=0，显示误导；规格 §2/§5）
+  if (isImageTierModel(props.model)) {
+    const tiers = imageTierLines(props.model, activeGroup.value, props.userRates)
+    if (tiers.length > 0) {
+      return tiers.map((tl) => ({
+        label: t('modelPlaza.pricing.imageTier', { tier: tl.tier }),
+        value: tl.value,
+        unit: t('modelPlaza.pricing.perImage'),
+      }))
+    }
+  }
+
   const m = activeMultiplier.value ?? 1
   const perM = t('modelPlaza.pricing.perMillionTokens')
   const perCall = t('modelPlaza.pricing.perCall')
