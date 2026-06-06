@@ -475,6 +475,26 @@ func TestCalculateImageCost(t *testing.T) {
 	require.InDelta(t, 0.134*3, cost.ActualCost, 1e-10)
 }
 
+func TestDefaultImageTierPrices(t *testing.T) {
+	// LiteLLM 有按张价 → 用按张价;2K=×1.5、4K=×2
+	p1k, p2k, p4k := defaultImageTierPrices(&LiteLLMModelPricing{OutputCostPerImage: 0.2})
+	require.InDelta(t, 0.2, p1k, 1e-10)
+	require.InDelta(t, 0.3, p2k, 1e-10)
+	require.InDelta(t, 0.4, p4k, 1e-10)
+
+	// 无按张价(0 = 未配置)→ 硬编码 $0.134 链
+	p1k, p2k, p4k = defaultImageTierPrices(&LiteLLMModelPricing{})
+	require.InDelta(t, 0.134, p1k, 1e-10)
+	require.InDelta(t, 0.201, p2k, 1e-10)
+	require.InDelta(t, 0.268, p4k, 1e-10)
+
+	// lp 为 nil(LiteLLM 查不到该模型)→ 同硬编码链
+	p1k, p2k, p4k = defaultImageTierPrices(nil)
+	require.InDelta(t, 0.134, p1k, 1e-10)
+	require.InDelta(t, 0.201, p2k, 1e-10)
+	require.InDelta(t, 0.268, p4k, 1e-10)
+}
+
 func TestIsModelSupported(t *testing.T) {
 	svc := newTestBillingService()
 

@@ -913,30 +913,30 @@ func (s *BillingService) getImageUnitPrice(model string, imageSize string, group
 	return s.getDefaultImagePrice(model, imageSize)
 }
 
+// defaultImageTierPrices 返回模型的平台默认出图三档价（1K/2K/4K）。
+// 出图计费 fallback 链的单一真相源（计费 getDefaultImagePrice 与模型广场展示共用，
+// 规格 2026-06-07 §4.1）：LiteLLM output_cost_per_image 优先，缺省 $0.134
+// （来自 gemini-3-pro-image-preview）；2K=×1.5、4K=×2。lp 可为 nil（目录查不到该模型）。
+func defaultImageTierPrices(lp *LiteLLMModelPricing) (p1k, p2k, p4k float64) {
+	base := 0.134
+	if lp != nil && lp.OutputCostPerImage > 0 {
+		base = lp.OutputCostPerImage
+	}
+	return base, base * 1.5, base * 2
+}
+
 // getDefaultImagePrice 获取 LiteLLM 默认图片价格
 func (s *BillingService) getDefaultImagePrice(model string, imageSize string) float64 {
-	basePrice := 0.0
-
-	// 从 PricingService 获取 output_cost_per_image
+	var lp *LiteLLMModelPricing
 	if s.pricingService != nil {
-		pricing := s.pricingService.GetModelPricing(model)
-		if pricing != nil && pricing.OutputCostPerImage > 0 {
-			basePrice = pricing.OutputCostPerImage
-		}
+		lp = s.pricingService.GetModelPricing(model)
 	}
-
-	// 如果没有找到价格，使用硬编码默认值（$0.134，来自 gemini-3-pro-image-preview）
-	if basePrice <= 0 {
-		basePrice = 0.134
+	p1k, p2k, p4k := defaultImageTierPrices(lp)
+	switch imageSize {
+	case "2K":
+		return p2k
+	case "4K":
+		return p4k
 	}
-
-	// 2K 尺寸 1.5 倍，4K 尺寸翻倍
-	if imageSize == "2K" {
-		return basePrice * 1.5
-	}
-	if imageSize == "4K" {
-		return basePrice * 2
-	}
-
-	return basePrice
+	return p1k
 }
