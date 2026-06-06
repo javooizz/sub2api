@@ -7,6 +7,17 @@
 import { apiClient } from './client'
 import type { BillingMode } from '@/constants/channel'
 
+export interface PlazaGroupImagePricing {
+  /** false = 该分组不允许出图,前端显示提示。 */
+  allowed: boolean
+  /** 解析后的分组基准档价(后端已含 fallback);渠道按次价优先时为 null(用模型级 pricing)。 */
+  price_1k: number | null
+  price_2k: number | null
+  price_4k: number | null
+  /** image_rate_independent 时非 null:固定倍率,不吃用户专属倍率。 */
+  multiplier_override: number | null
+}
+
 export interface PlazaGroup {
   id: number
   name: string
@@ -18,6 +29,8 @@ export interface PlazaGroup {
   is_exclusive: boolean
   /** false = 公开订阅型但未订阅 → 前端显示"需订阅"标签。 */
   accessible: boolean
+  /** 出图计费展示信息;仅图像生成模型的分组带(规格 2026-06-07)。 */
+  image_pricing?: PlazaGroupImagePricing | null
 }
 
 export interface PlazaPricingInterval {
