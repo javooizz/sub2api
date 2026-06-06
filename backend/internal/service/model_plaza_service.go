@@ -56,6 +56,20 @@ type plazaConfigProvider interface {
 type PlazaGroupRef struct {
 	AvailableGroupRef
 	Accessible bool
+	// ImagePricing 该分组的出图计费展示信息；仅图像生成模型注入（规格 2026-06-07 §4.3：
+	// (模型×分组) 维度——fallback 档价依赖模型，在 aggregate 模型循环内 per-model 写入，
+	// 依赖 entry.Groups append 的值拷贝语义，不会串扰其他模型）。
+	ImagePricing *PlazaGroupImagePricing
+}
+
+// PlazaGroupImagePricing 分组出图计费展示信息（规格 2026-06-07 §4.2）。
+// 展示优先级与真实计费 calculateOpenAIImageCost 一致：渠道按次价 > 分组图片价 > 平台默认价。
+type PlazaGroupImagePricing struct {
+	Allowed            bool     // Group.AllowImageGeneration；false → 前端显示"该分组不支持出图"
+	Price1K            *float64 // 解析后的分组基准档价（逐档 分组配价 ?? defaultImageTierPrices）；
+	Price2K            *float64 // 渠道按次显式价优先时为 nil（展示用模型级 Pricing）
+	Price4K            *float64
+	MultiplierOverride *float64 // image_rate_independent 时非 nil：固定倍率，不吃用户专属倍率
 }
 
 // PlazaModel 广场视图中的一个模型条目。唯一身份 = (Platform, lower(Name))。
@@ -355,6 +369,7 @@ func (s *ModelPlazaService) ListAllModelIdentities(ctx context.Context) ([]Model
 // 典型场景：gpt-image 系在 LiteLLM 标 image_generation 但只有图像 token 价
 // （output_cost_per_image_token），回落合成物若直接透出 image 标签，会与真实计费
 // 形态（按图像 token）不符——渠道显式价被删时计费标签会凭空翻成"按图"。
+// 注：图像生成模型经 applyGroupImagePricing 合成按次价后自然透出 image（规格 2026-06-07）。
 func plazaDisplayBillingMode(p *ChannelModelPricing) BillingMode {
 	if p == nil || p.BillingMode == "" {
 		return BillingModeToken
@@ -362,16 +377,57 @@ func plazaDisplayBillingMode(p *ChannelModelPricing) BillingMode {
 	if p.BillingMode != BillingModeImage && p.BillingMode != BillingModePerRequest {
 		return p.BillingMode
 	}
-	if p.PerRequestPrice != nil {
+	if pricingHasPerRequest(p) {
 		return p.BillingMode
-	}
-	for _, iv := range p.Intervals {
-		if iv.PerRequestPrice != nil {
-			return p.BillingMode
-		}
 	}
 	return BillingModeToken
 }
+
+// pricingHasPerRequest 判定定价是否为"带价"的按次形态（flat 按次价或任一带价档位）。
+// 与渠道校验 BILLING_MODE_MISSING_PRICE 同语义。
+func pricingHasPerRequest(p *ChannelModelPricing) bool {
+	if p == nil {
+		return false
+	}
+	if p.BillingMode != BillingModeImage && p.BillingMode != BillingModePerRequest {
+		return false
+	}
+	if p.PerRequestPrice != nil {
+		return true
+	}
+	for _, iv := range p.Intervals {
+		if iv.PerRequestPrice != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// synthesizeImageTierPricing 把三档按次基准价合成展示用 ChannelModelPricing（规格 §3 ②）。
+// PerRequestPrice = 1K 档（表格摘要/兜底）；MinTokens/MaxTokens 取零值——按次档位以
+// TierLabel 标识，不按 context 分层。
+func synthesizeImageTierPricing(p1k, p2k, p4k float64) *ChannelModelPricing {
+	return &ChannelModelPricing{
+		BillingMode:     BillingModeImage,
+		PerRequestPrice: ptrF(p1k),
+		Intervals: []PricingInterval{
+			{TierLabel: "1K", PerRequestPrice: ptrF(p1k)},
+			{TierLabel: "2K", PerRequestPrice: ptrF(p2k)},
+			{TierLabel: "4K", PerRequestPrice: ptrF(p4k)},
+		},
+	}
+}
+
+// orDefaultF 解引用可空价格，nil 时用默认值。
+func orDefaultF(p *float64, def float64) float64 {
+	if p != nil {
+		return *p
+	}
+	return def
+}
+
+// ptrF 返回 float64 指针（生产代码侧 helper；测试侧已有 fp）。
+func ptrF(v float64) *float64 { return &v }
 
 // int64Set 把 slice 转为查询集合。
 func int64Set(ids []int64) map[int64]struct{} {

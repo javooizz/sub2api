@@ -411,3 +411,42 @@ func TestGetPlazaForUser_ImageModeFallbackWithPerImagePriceKeepsImage(t *testing
 	require.NotNil(t, m.Pricing.PerRequestPrice)
 	require.Equal(t, 0.00012, *m.Pricing.PerRequestPrice)
 }
+
+// ===== 图像按次展示:纯函数 =====
+
+func TestSynthesizeImageTierPricing(t *testing.T) {
+	p := synthesizeImageTierPricing(0.6, 0.6, 0.8)
+	require.Equal(t, BillingModeImage, p.BillingMode)
+	require.NotNil(t, p.PerRequestPrice)
+	require.InDelta(t, 0.6, *p.PerRequestPrice, 1e-10) // 模型级兜底 = 1K 档
+	require.Len(t, p.Intervals, 3)
+	require.Equal(t, "1K", p.Intervals[0].TierLabel)
+	require.Equal(t, "2K", p.Intervals[1].TierLabel)
+	require.Equal(t, "4K", p.Intervals[2].TierLabel)
+	require.InDelta(t, 0.6, *p.Intervals[0].PerRequestPrice, 1e-10)
+	require.InDelta(t, 0.6, *p.Intervals[1].PerRequestPrice, 1e-10)
+	require.InDelta(t, 0.8, *p.Intervals[2].PerRequestPrice, 1e-10)
+	// MinTokens/MaxTokens 零值(0/nil):按次档位不按 context 分层(规格 §3 ②)
+	require.Equal(t, 0, p.Intervals[0].MinTokens)
+	require.Nil(t, p.Intervals[0].MaxTokens)
+	// 合成物必须被 plazaDisplayBillingMode 识别为 image(带价档位)
+	require.Equal(t, BillingModeImage, plazaDisplayBillingMode(p))
+}
+
+func TestPricingHasPerRequest(t *testing.T) {
+	require.False(t, pricingHasPerRequest(nil))
+	require.False(t, pricingHasPerRequest(tokenPricing(1e-6, 2e-6)))
+	// image 模式但无按次价(gpt-image LiteLLM 合成物形态)→ false
+	require.False(t, pricingHasPerRequest(&ChannelModelPricing{
+		BillingMode: BillingModeImage, InputPrice: fp(5e-6), ImageOutputPrice: fp(3e-5),
+	}))
+	// flat 按次价 → true
+	require.True(t, pricingHasPerRequest(&ChannelModelPricing{
+		BillingMode: BillingModeImage, PerRequestPrice: fp(0.6),
+	}))
+	// 仅带价档位 → true
+	require.True(t, pricingHasPerRequest(&ChannelModelPricing{
+		BillingMode: BillingModePerRequest,
+		Intervals:   []PricingInterval{{TierLabel: "1K", PerRequestPrice: fp(0.6)}},
+	}))
+}
