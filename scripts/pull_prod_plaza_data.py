@@ -10,7 +10,9 @@
 本脚本把生产环境的这两类数据通过 admin API 同步到本地:
 
   1. 拉取生产全部分组 → 按【分组名】幂等 upsert 到本地
-     (同步 description/platform/rate_multiplier/is_exclusive/subscription_type/status);
+     (同步 description/platform/rate_multiplier/is_exclusive/subscription_type/status,
+      含 allow_image_generation / image_rate_* / image_price_×3 图片计费字段,
+      供广场"分组图片价"真实计费链展示);
   2. 渠道定价取自 docs/channel-pricing-public-groups.json
      (由蓝本脚本 sync_public_group_pricing.py 预演生成, 可用 --refresh-snapshot 现场重抓);
   3. 把渠道 payload 中的生产 group_ids 按分组名重映射为本地 id,
@@ -56,8 +58,17 @@ DEFAULT_LOCAL_BASE = "http://localhost:3000/api/v1/admin"
 
 # 分组同步白名单字段: 只同步模型广场展示所需的核心属性,
 # 不碰 model_routing / fallback_group_id 等跨实体引用 (本地无对应数据)。
+# 图片计费字段 (allow/rate/price×3) 供广场"分组图片价"真实计费链展示 (规格 2026-06-07 §6.1)。
 GROUP_SYNC_FIELDS = ("description", "platform", "rate_multiplier",
-                     "is_exclusive", "subscription_type")
+                     "is_exclusive", "subscription_type",
+                     "allow_image_generation", "image_rate_independent",
+                     "image_rate_multiplier",
+                     "image_price_1k", "image_price_2k", "image_price_4k")
+
+# 指针价格字段: 本地 PUT/POST 时 JSON null 会被 Go 当"未提供"忽略,
+# 更新场景需转 -1 触发清除 (normalizePrice 负数→nil)。
+# 注意 image_rate_multiplier 不在此列——后端校验负数会 400, 生产为 null 时跳过该键。
+CLEARABLE_PRICE_FIELDS = ("image_price_1k", "image_price_2k", "image_price_4k")
 
 
 # ===========================================================================
@@ -160,6 +171,13 @@ def upsert_group(local, prod_group, existing_by_name, apply):
         if not diff:
             print(f"  ⏭️  分组 {name:<36} 无变化 (本地 id={cur['id']})")
             return cur["id"]
+        # 清除语义: 价格字段生产为 null 且本地非 null → 传 -1 触发后端清除
+        for k in CLEARABLE_PRICE_FIELDS:
+            if k in diff and diff[k] is None:
+                diff[k] = -1
+        # image_rate_multiplier 后端拒绝负数; 生产为 null(理论上不出现, 默认 1)时跳过保持本地
+        if "image_rate_multiplier" in diff and diff["image_rate_multiplier"] is None:
+            del diff["image_rate_multiplier"]
         diff["status"] = prod_group.get("status", "active")
         if not apply:
             print(f"  📝 分组 {name:<36} 将更新: {json.dumps(diff, ensure_ascii=False)}")
