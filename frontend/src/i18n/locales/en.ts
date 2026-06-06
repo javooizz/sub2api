@@ -1162,6 +1162,8 @@ export default {
       perRequest: 'Model price',
       perMillionTokens: '/ 1M tokens',
       perCall: '/ call',
+      imageTier: '{tier} image',
+      perImage: '/ image',
     },
     toolbar: {
       cardView: 'Card view',
@@ -1177,6 +1179,7 @@ export default {
       billingType: 'Billing',
       price: 'Price',
       groups: 'Groups',
+      imageFrom: 'from {price} /image',
     },
     detail: {
       basicInfo: 'Basic Info',
@@ -1186,6 +1189,7 @@ export default {
       groupPricing: 'Group Pricing',
       groupPricingHint: 'Actual price per group = base price × group multiplier (personal rate takes precedence)',
       goSubscribe: 'Subscribe',
+      noImageGeneration: 'Image generation not available in this group',
     },
     empty: 'No visible models. Ask the admin to configure channel pricing.',
     emptyFiltered: 'No models match the current filters',

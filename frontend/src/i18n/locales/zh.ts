@@ -1166,6 +1166,8 @@ export default {
       perRequest: '模型价格',
       perMillionTokens: '/ 1M tokens',
       perCall: '/ 次',
+      imageTier: '{tier} 图像',
+      perImage: '/ 张',
     },
     toolbar: {
       cardView: '卡片视图',
@@ -1181,6 +1183,7 @@ export default {
       billingType: '计费类型',
       price: '模型价格',
       groups: '可用分组',
+      imageFrom: '{price} /张 起',
     },
     detail: {
       basicInfo: '基本信息',
@@ -1190,6 +1193,7 @@ export default {
       groupPricing: '分组价格',
       groupPricingHint: '各分组实际价格 = 标准价 × 分组倍率（专属倍率优先）',
       goSubscribe: '去订阅',
+      noImageGeneration: '该分组不支持出图',
     },
     empty: '暂无可见模型，请联系管理员配置渠道定价',
     emptyFiltered: '没有匹配当前筛选条件的模型',
