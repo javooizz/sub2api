@@ -68,7 +68,7 @@
 import { useI18n } from 'vue-i18n'
 import Icon from '@/components/icons/Icon.vue'
 import ModelIcon from '@/components/common/ModelIcon.vue'
-import { formatPerMillion, formatPerRequest, effectiveMultiplier } from '@/utils/plazaPricing'
+import { formatPerMillion, formatPerRequest, effectiveMultiplier, imageTierLines, isImageTierModel } from '@/utils/plazaPricing'
 import type { PlazaModel, PlazaGroup } from '@/api/modelPlaza'
 
 const props = defineProps<{
@@ -86,14 +86,27 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
+/** 选中分组且模型挂其上 → 该分组；否则 null（基准价）。 */
+function activeGroupFor(m: PlazaModel): PlazaGroup | null {
+  if (props.selectedGroup && m.groups.some((g) => g.id === props.selectedGroup!.id)) {
+    return props.selectedGroup
+  }
+  return null
+}
+
 /** 表格单元价格摘要：输入/输出（或按次价）一行展示。 */
 function priceSummary(m: PlazaModel): string {
   const p = m.pricing
   if (!p) return t('modelPlaza.card.noPricing')
-  let mult = 1
-  if (props.selectedGroup && m.groups.some((g) => g.id === props.selectedGroup!.id)) {
-    mult = effectiveMultiplier(props.selectedGroup, props.userRates)
+  const g = activeGroupFor(m)
+  // 图像生成模型：三档以首档 + "起" 摘要（规格 2026-06-07 §5）
+  if (isImageTierModel(m)) {
+    const tiers = imageTierLines(m, g, props.userRates)
+    if (tiers.length > 0) {
+      return t('modelPlaza.table.imageFrom', { price: tiers[0].value })
+    }
   }
+  const mult = g ? effectiveMultiplier(g, props.userRates) : 1
   if (m.billing_mode === 'per_request' || m.billing_mode === 'image') {
     const pr = formatPerRequest(p.per_request_price, mult)
     if (pr) return `${pr} ${t('modelPlaza.pricing.perCall')}`

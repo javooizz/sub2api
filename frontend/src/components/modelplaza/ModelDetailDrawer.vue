@@ -80,8 +80,8 @@
             </dl>
             <p v-else class="text-sm text-gray-400">{{ t('modelPlaza.card.noPricing') }}</p>
 
-            <!-- 区间档位 -->
-            <div v-if="(model.pricing?.intervals?.length ?? 0) > 0" class="mt-3">
+            <!-- 区间档位（token 上下文分层；图像三档已在上方价格行展示） -->
+            <div v-if="(model.pricing?.intervals?.length ?? 0) > 0 && model.billing_mode !== 'image'" class="mt-3">
               <table class="w-full text-xs">
                 <thead>
                   <tr class="text-left text-gray-500 dark:text-gray-400">
@@ -133,11 +133,21 @@
                       {{ t('modelPlaza.card.userRateBadge') }}
                     </span>
                   </div>
-                  <span class="shrink-0 font-mono text-xs text-gray-500 dark:text-gray-400">
-                    {{ effectiveMultiplier(g, userRates) }}x
+                  <span
+                    v-if="!(isImage && g.image_pricing && !g.image_pricing.allowed)"
+                    class="shrink-0 font-mono text-xs text-gray-500 dark:text-gray-400"
+                  >
+                    {{ groupBadgeMultiplier(g) }}x
                   </span>
                 </div>
-                <dl class="space-y-1 text-xs">
+                <p
+                  v-if="isImage && g.image_pricing && !g.image_pricing.allowed"
+                  class="text-xs text-amber-700 dark:text-amber-400"
+                  role="note"
+                >
+                  {{ t('modelPlaza.detail.noImageGeneration') }}
+                </p>
+                <dl v-else class="space-y-1 text-xs">
                   <div
                     v-for="row in groupPriceRows(g)"
                     :key="row.label"
@@ -172,7 +182,14 @@ import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import Icon from '@/components/icons/Icon.vue'
 import ModelIcon from '@/components/common/ModelIcon.vue'
-import { formatPerMillion, formatPerRequest, effectiveMultiplier } from '@/utils/plazaPricing'
+import {
+  formatPerMillion,
+  formatPerRequest,
+  effectiveMultiplier,
+  effectiveImageMultiplier,
+  imageTierLines,
+  isImageTierModel,
+} from '@/utils/plazaPricing'
 import type { PlazaModel, PlazaGroup, PlazaPricingInterval } from '@/api/modelPlaza'
 
 const props = defineProps<{
@@ -225,13 +242,39 @@ function buildPriceRows(m: PlazaModel, mult: number): PriceRow[] {
   return rows
 }
 
-const basePriceRows = computed<PriceRow[]>(() =>
-  props.model ? buildPriceRows(props.model, 1) : [],
-)
+/** 图像三档 → PriceRow 行（g=null 为基准）。 */
+function imageRows(g: PlazaGroup | null): PriceRow[] {
+  if (!props.model) return []
+  return imageTierLines(props.model, g, props.userRates).map((tl) => ({
+    label: t('modelPlaza.pricing.imageTier', { tier: tl.tier }),
+    value: tl.value,
+    unit: t('modelPlaza.pricing.perImage'),
+  }))
+}
+
+const isImage = computed(() => (props.model ? isImageTierModel(props.model) : false))
+
+const basePriceRows = computed<PriceRow[]>(() => {
+  if (!props.model) return []
+  if (isImage.value) {
+    const rows = imageRows(null)
+    if (rows.length > 0) return rows
+  }
+  return buildPriceRows(props.model, 1)
+})
 
 function groupPriceRows(g: PlazaGroup): PriceRow[] {
   if (!props.model) return []
+  if (isImage.value) {
+    const rows = imageRows(g)
+    if (rows.length > 0) return rows
+  }
   return buildPriceRows(props.model, effectiveMultiplier(g, props.userRates))
+}
+
+/** 分组角标倍率：图像模型用图像生效倍率（override 优先），与折算价口径一致。 */
+function groupBadgeMultiplier(g: PlazaGroup): number {
+  return isImage.value ? effectiveImageMultiplier(g, props.userRates) : effectiveMultiplier(g, props.userRates)
 }
 
 function intervalRange(iv: PlazaPricingInterval): string {
