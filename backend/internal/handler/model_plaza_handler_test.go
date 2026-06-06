@@ -144,3 +144,62 @@ func mapKeys(m map[string]any) []string {
 	}
 	return out
 }
+
+func TestModelPlaza_GroupImagePricingDTO(t *testing.T) {
+	one, four, mult := 0.6, 0.8, 1.0
+	h := &ModelPlazaHandler{
+		plaza: &fakePlazaData{data: &service.ModelPlazaData{
+			Models: []service.PlazaModel{{
+				Name: "gpt-image-2", Platform: "openai",
+				BillingMode: service.BillingModeImage,
+				Groups: []service.PlazaGroupRef{
+					{
+						AvailableGroupRef: service.AvailableGroupRef{ID: 23, Name: "gpt-image", Platform: "openai", RateMultiplier: 0.1},
+						Accessible:        true,
+						ImagePricing: &service.PlazaGroupImagePricing{
+							Allowed: true, Price1K: &one, Price2K: &one, Price4K: &four,
+							MultiplierOverride: &mult,
+						},
+					},
+					{ // 非图像注入分组(ImagePricing nil)→ DTO 省略 image_pricing 键
+						AvailableGroupRef: service.AvailableGroupRef{ID: 10, Name: "cc_max", Platform: "anthropic", RateMultiplier: 1},
+						Accessible:        true,
+					},
+				},
+			}},
+		}},
+		setting: &fakePlazaRuntime{enabled: true},
+	}
+	c, w := plazaTestContext(t, true)
+
+	h.Get(c)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var resp struct {
+		Data struct {
+			Models []struct {
+				Groups []map[string]json.RawMessage `json:"groups"`
+			} `json:"models"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	groups := resp.Data.Models[0].Groups
+
+	var ip struct {
+		Allowed            bool     `json:"allowed"`
+		Price1K            *float64 `json:"price_1k"`
+		Price2K            *float64 `json:"price_2k"`
+		Price4K            *float64 `json:"price_4k"`
+		MultiplierOverride *float64 `json:"multiplier_override"`
+	}
+	require.Contains(t, groups[0], "image_pricing")
+	require.NoError(t, json.Unmarshal(groups[0]["image_pricing"], &ip))
+	require.True(t, ip.Allowed)
+	require.InDelta(t, 0.6, *ip.Price1K, 1e-10)
+	require.InDelta(t, 0.6, *ip.Price2K, 1e-10)
+	require.InDelta(t, 0.8, *ip.Price4K, 1e-10)
+	require.InDelta(t, 1.0, *ip.MultiplierOverride, 1e-10)
+
+	// ImagePricing nil → 响应不含 image_pricing 键(与现状字节级兼容)
+	require.NotContains(t, groups[1], "image_pricing")
+}

@@ -23,8 +23,8 @@ type modelPlazaRuntimeReader interface {
 // ModelPlazaHandler 处理用户侧"模型广场"查询。
 //
 // 响应做字段白名单：分组只暴露 id/name/platform/subscription_type/
-// rate_multiplier/is_exclusive/accessible；定价复用可用渠道的
-// userSupportedModelPricing DTO（见 available_channel_handler.go）。
+// rate_multiplier/is_exclusive/accessible；图像生成模型的分组额外带 image_pricing 子对象；
+// 定价复用可用渠道的 userSupportedModelPricing DTO（见 available_channel_handler.go）。
 type ModelPlazaHandler struct {
 	plaza   plazaDataProvider
 	setting modelPlazaRuntimeReader
@@ -41,13 +41,37 @@ func NewModelPlazaHandler(
 // plazaGroupDTO 用户可见的分组白名单字段。
 // Accessible=false 表示"公开订阅型但未订阅"——前端显示"需订阅"标签。
 type plazaGroupDTO struct {
-	ID               int64   `json:"id"`
-	Name             string  `json:"name"`
-	Platform         string  `json:"platform"`
-	SubscriptionType string  `json:"subscription_type"`
-	RateMultiplier   float64 `json:"rate_multiplier"`
-	IsExclusive      bool    `json:"is_exclusive"`
-	Accessible       bool    `json:"accessible"`
+	ID               int64                      `json:"id"`
+	Name             string                     `json:"name"`
+	Platform         string                     `json:"platform"`
+	SubscriptionType string                     `json:"subscription_type"`
+	RateMultiplier   float64                    `json:"rate_multiplier"`
+	IsExclusive      bool                       `json:"is_exclusive"`
+	Accessible       bool                       `json:"accessible"`
+	ImagePricing     *plazaGroupImagePricingDTO `json:"image_pricing,omitempty"`
+}
+
+// plazaGroupImagePricingDTO 分组出图计费展示信息(仅图像生成模型的分组带,规格 2026-06-07 §4.4)。
+type plazaGroupImagePricingDTO struct {
+	Allowed            bool     `json:"allowed"`
+	Price1K            *float64 `json:"price_1k"`
+	Price2K            *float64 `json:"price_2k"`
+	Price4K            *float64 `json:"price_4k"`
+	MultiplierOverride *float64 `json:"multiplier_override"`
+}
+
+// toPlazaImagePricingDTO 转换 service 层出图展示信息;nil 透传。
+func toPlazaImagePricingDTO(p *service.PlazaGroupImagePricing) *plazaGroupImagePricingDTO {
+	if p == nil {
+		return nil
+	}
+	return &plazaGroupImagePricingDTO{
+		Allowed:            p.Allowed,
+		Price1K:            p.Price1K,
+		Price2K:            p.Price2K,
+		Price4K:            p.Price4K,
+		MultiplierOverride: p.MultiplierOverride,
+	}
 }
 
 // plazaModelDTO 用户可见的模型条目。唯一身份 = (platform, name)。
@@ -102,6 +126,7 @@ func (h *ModelPlazaHandler) Get(c *gin.Context) {
 				RateMultiplier:   g.RateMultiplier,
 				IsExclusive:      g.IsExclusive,
 				Accessible:       g.Accessible,
+				ImagePricing:     toPlazaImagePricingDTO(g.ImagePricing),
 			})
 		}
 		models = append(models, plazaModelDTO{
