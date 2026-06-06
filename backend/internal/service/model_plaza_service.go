@@ -148,9 +148,18 @@ type plazaAggKey struct {
 }
 
 // plazaGroupModels 一个可见分组及其账号推导出的可用模型集。
+// img* 为图像计费原始配置(从 Group 拷贝):ImagePricing 是 (模型×分组) 维度——
+// fallback 档价依赖模型,故原始配置带到 aggregate 阶段 per-model 解析(规格 2026-06-07 §4.3)。
 type plazaGroupModels struct {
 	ref    PlazaGroupRef
 	models []string
+
+	imgAllow       bool
+	imgIndependent bool
+	imgMultiplier  float64
+	imgPrice1K     *float64
+	imgPrice2K     *float64
+	imgPrice4K     *float64
 }
 
 // plazaPriceEntry 显式价索引条目（displayName = 定价的原始大小写，模型身份的事实来源）。
@@ -219,7 +228,13 @@ func (s *ModelPlazaService) GetPlazaForUser(ctx context.Context, userID int64) (
 				},
 				Accessible: acc,
 			},
-			models: models,
+			models:         models,
+			imgAllow:       g.AllowImageGeneration,
+			imgIndependent: g.ImageRateIndependent,
+			imgMultiplier:  g.ImageRateMultiplier,
+			imgPrice1K:     g.ImagePrice1K,
+			imgPrice2K:     g.ImagePrice2K,
+			imgPrice4K:     g.ImagePrice4K,
 		})
 	}
 
@@ -255,15 +270,34 @@ func (s *ModelPlazaService) aggregate(visible []plazaGroupModels, priceIdx map[p
 		}
 	}
 
+	// 分组图像原始配置索引(分组 ID → 配置);ImagePricing 在模型循环内 per-model 解析。
+	groupConf := make(map[int64]*plazaGroupModels, len(visible))
+	for i := range visible {
+		groupConf[visible[i].ref.ID] = &visible[i]
+	}
+
 	out := make([]PlazaModel, 0, len(agg))
 	for k, m := range agg {
+		// channelHit 区分 Pricing 来源:仅"渠道显式按次价"可遮蔽分组图片价(规格 §3 ①
+		// "priceIdx 命中且带价");LiteLLM 回落合成物即使自带 PerRequestPrice(gemini image
+		// 系)也不遮蔽——真实计费 getImageUnitPrice 是 分组价 > LiteLLM 价。
+		channelHit := false
 		if pe, ok := priceIdx[k]; ok {
 			m.Pricing = pe.pricing // 只读别名，本服务不经此指针写入
 			m.Name = pe.displayName
-		} else if lp := s.pricing.GetModelPricing(m.Name); lp != nil {
+			channelHit = true
+		}
+		// LiteLLM 条目一次查取:渠道未命中时回落合成,图像生成模型判定与 fallback 解析共用。
+		// 注:依赖 GetModelPricing 内部 case-insensitive 查找(PricingService 实现保证)。
+		lp := s.pricing.GetModelPricing(m.Name)
+		if m.Pricing == nil && lp != nil {
 			// LiteLLM 全局目录回落：复用可用渠道页同款合成（image/token 模式自动判定）。
-			// 注：依赖 GetModelPricing 内部 case-insensitive 查找（PricingService 实现保证）。
 			m.Pricing = synthesizePricingFromLiteLLM(lp, nil)
+		}
+		// 分组排序提前:图像注入"首个配价分组"按名序取(规格 §3 ②)。
+		sort.SliceStable(m.Groups, func(i, j int) bool { return m.Groups[i].Name < m.Groups[j].Name })
+		if lp != nil && lp.Mode == "image_generation" {
+			s.applyGroupImagePricing(m, lp, groupConf, channelHit)
 		}
 		// 描述按复合键 "platform/name" 注入（规格 §4.2 步骤 5；admin 清单与本聚合
 		// 同源同显示名口径，键可字节精确命中）。
@@ -274,7 +308,6 @@ func (s *ModelPlazaService) aggregate(visible []plazaGroupModels, priceIdx map[p
 			m.Description = desc
 		}
 		m.BillingMode = plazaDisplayBillingMode(m.Pricing)
-		sort.SliceStable(m.Groups, func(i, j int) bool { return m.Groups[i].Name < m.Groups[j].Name })
 		out = append(out, *m)
 	}
 	sort.SliceStable(out, func(i, j int) bool {
@@ -284,6 +317,54 @@ func (s *ModelPlazaService) aggregate(visible []plazaGroupModels, priceIdx map[p
 		return strings.ToLower(out[i].Name) < strings.ToLower(out[j].Name)
 	})
 	return out
+}
+
+// applyGroupImagePricing 对图像生成模型(LiteLLM mode=image_generation)注入
+// "分组图片价"真实计费链的展示(规格 2026-06-07 §3/§4.3)。展示优先级与
+// calculateOpenAIImageCost 一致:
+//
+//	渠道显式按次价 > 分组图片价(逐档 配价??默认) > 平台默认价(defaultImageTierPrices)
+//
+// channelHit = m.Pricing 来自 priceIdx(渠道显式价):仅此来源的按次价可遮蔽分组档价
+// (注入 Allowed/MultiplierOverride,档价 nil,用模型级 Pricing);其余情形——含渠道仅
+// token 价(真实出图计费会忽略它)与 LiteLLM 回落合成物自带按张价(真实计费分组价更优)
+// ——一律以分组价/默认价合成按次形态覆盖;模型级基准取首个(按名序,Groups 已排序)
+// 显式配价的可出图分组,全未配则用平台默认三档。
+func (s *ModelPlazaService) applyGroupImagePricing(m *PlazaModel, lp *LiteLLMModelPricing, groupConf map[int64]*plazaGroupModels, channelHit bool) {
+	// "命中且带价"是有意比真实计费的 mode-only 判定更严:渠道 Image 模式但只填了
+	// 图像 token 价(无按次价)的退化配置,真实计费会按 0 元扣(本身是配置错误),
+	// 展示侧回落分组价/默认价更有意义——不要"修"成 mode-only。
+	channelPerRequest := channelHit && pricingHasPerRequest(m.Pricing)
+	d1, d2, d4 := defaultImageTierPrices(lp)
+
+	var base *PlazaGroupImagePricing // 首个配价分组的解析档价(模型级基准)
+	for i := range m.Groups {
+		gc := groupConf[m.Groups[i].ID]
+		if gc == nil {
+			continue // 防御:Groups 均源自 visible,不可达
+		}
+		ip := &PlazaGroupImagePricing{Allowed: gc.imgAllow}
+		if gc.imgIndependent {
+			ip.MultiplierOverride = ptrF(gc.imgMultiplier)
+		}
+		if !channelPerRequest {
+			ip.Price1K = ptrF(orDefaultF(gc.imgPrice1K, d1))
+			ip.Price2K = ptrF(orDefaultF(gc.imgPrice2K, d2))
+			ip.Price4K = ptrF(orDefaultF(gc.imgPrice4K, d4))
+			explicit := gc.imgPrice1K != nil || gc.imgPrice2K != nil || gc.imgPrice4K != nil
+			if base == nil && gc.imgAllow && explicit {
+				base = ip
+			}
+		}
+		m.Groups[i].ImagePricing = ip
+	}
+	if channelPerRequest {
+		return // 模型级 Pricing 已是渠道按次价
+	}
+	if base == nil {
+		base = &PlazaGroupImagePricing{Price1K: &d1, Price2K: &d2, Price4K: &d4}
+	}
+	m.Pricing = synthesizeImageTierPricing(*base.Price1K, *base.Price2K, *base.Price4K)
 }
 
 // buildPricingIndex 用渠道原始数据构建显式价索引（规格 §4.2 步骤 4）：

@@ -374,26 +374,6 @@ func TestListAllModelIdentities_AllGroupsNoUserFilterNoBlacklist(t *testing.T) {
 
 // ===== 展示计费模式归一 =====
 
-func TestGetPlazaForUser_ImageModeFallbackWithoutPerImagePriceShowsToken(t *testing.T) {
-	// gpt-image 系：LiteLLM mode=image_generation 但无每张价（只有图像 token 价）。
-	// 回落合成物带 image 标签却无每张价，违反"image=按张计费"语义（渠道校验同款），
-	// 展示层归一为 token，避免删渠道价后计费标签翻成"按图"。
-	data, err := newPlazaService(plazaFixture{
-		allGroups: []Group{{ID: 10, Name: "g", Platform: PlatformOpenAI, SubscriptionType: SubscriptionTypeStandard, RateMultiplier: 1}},
-		accounts: map[int64][]Account{10: {mkPlazaAccount(PlatformOpenAI, AccountTypeAPIKey, map[string]string{"gpt-image-2": "gpt-image-2"})}},
-		litellm: map[string]*LiteLLMModelPricing{"gpt-image-2": {
-			Mode: "image_generation", InputCostPerToken: 5e-6, OutputCostPerToken: 1e-5, OutputCostPerImageToken: 3e-5,
-		}},
-		userGroups: []Group{{ID: 10}},
-	}).GetPlazaForUser(context.Background(), 1)
-	require.NoError(t, err)
-	require.Len(t, data.Models, 1)
-	m := data.Models[0]
-	require.Equal(t, BillingModeToken, m.BillingMode, "无每张价的 image 合成物应按 token 展示")
-	require.NotNil(t, m.Pricing)
-	require.NotNil(t, m.Pricing.ImageOutputPrice, "图像 token 价保留展示")
-}
-
 func TestGetPlazaForUser_ImageModeFallbackWithPerImagePriceKeepsImage(t *testing.T) {
 	// gemini image 系：LiteLLM 有 output_cost_per_image（真按张）→ 保持 image 模式。
 	data, err := newPlazaService(plazaFixture{
@@ -449,4 +429,259 @@ func TestPricingHasPerRequest(t *testing.T) {
 		BillingMode: BillingModePerRequest,
 		Intervals:   []PricingInterval{{TierLabel: "1K", PerRequestPrice: fp(0.6)}},
 	}))
+}
+
+// ===== 图像按次展示:聚合注入(规格 2026-06-07 §3/§4.3/§7)=====
+
+// imageGroup 公开 openai 出图分组(0.1x,allow=true)。
+func imageGroup(id int64, name string, p1k, p2k, p4k *float64) Group {
+	return Group{ID: id, Name: name, Platform: PlatformOpenAI,
+		SubscriptionType: SubscriptionTypeStandard, RateMultiplier: 0.1,
+		AllowImageGeneration: true, ImageRateMultiplier: 1.0,
+		ImagePrice1K: p1k, ImagePrice2K: p2k, ImagePrice4K: p4k}
+}
+
+// openaiMappedAccount openai apikey 账号,可用模型 = models。
+func openaiMappedAccount(models ...string) Account {
+	mapping := make(map[string]string, len(models))
+	for _, m := range models {
+		mapping[m] = m
+	}
+	return mkPlazaAccount(PlatformOpenAI, AccountTypeAPIKey, mapping)
+}
+
+// imageGenLiteLLM gpt-image 系 LiteLLM 条目:image_generation 但无按张价。
+func imageGenLiteLLM() *LiteLLMModelPricing {
+	return &LiteLLMModelPricing{Mode: "image_generation",
+		InputCostPerToken: 5e-6, OutputCostPerToken: 1e-5, OutputCostPerImageToken: 3e-5}
+}
+
+// requireTierPrices 断言模型级合成按次三档。
+func requireTierPrices(t *testing.T, p *ChannelModelPricing, p1k, p2k, p4k float64) {
+	t.Helper()
+	require.NotNil(t, p)
+	require.Equal(t, BillingModeImage, p.BillingMode)
+	require.NotNil(t, p.PerRequestPrice)
+	require.InDelta(t, p1k, *p.PerRequestPrice, 1e-10)
+	require.Len(t, p.Intervals, 3)
+	for i, want := range []float64{p1k, p2k, p4k} {
+		require.NotNil(t, p.Intervals[i].PerRequestPrice)
+		require.InDelta(t, want, *p.Intervals[i].PerRequestPrice, 1e-10)
+	}
+}
+
+// 配价分组:模型级合成 + 分组 ImagePricing 三档(规格 §7 用例 1)
+func TestGetPlazaForUser_ImageModelGroupPricing(t *testing.T) {
+	g := imageGroup(23, "gpt-image", fp(0.6), fp(0.6), fp(0.8))
+	svc := newPlazaService(plazaFixture{
+		allGroups:  []Group{g},
+		accounts:   map[int64][]Account{23: {openaiMappedAccount("gpt-image-2")}},
+		litellm:    map[string]*LiteLLMModelPricing{"gpt-image-2": imageGenLiteLLM()},
+		userGroups: []Group{{ID: 23}},
+	})
+	data, err := svc.GetPlazaForUser(context.Background(), 1)
+	require.NoError(t, err)
+	require.Len(t, data.Models, 1)
+	m := data.Models[0]
+	require.Equal(t, BillingModeImage, m.BillingMode)
+	requireTierPrices(t, m.Pricing, 0.6, 0.6, 0.8)
+	require.Len(t, m.Groups, 1)
+	ip := m.Groups[0].ImagePricing
+	require.NotNil(t, ip)
+	require.True(t, ip.Allowed)
+	require.InDelta(t, 0.6, *ip.Price1K, 1e-10)
+	require.InDelta(t, 0.6, *ip.Price2K, 1e-10)
+	require.InDelta(t, 0.8, *ip.Price4K, 1e-10)
+	require.Nil(t, ip.MultiplierOverride) // image_rate_independent=false
+}
+
+// 未配价分组:fallback 三档,$0.134 链与 LiteLLM 按张价两分支(规格 §7 用例 2)
+func TestGetPlazaForUser_ImageModelFallbackTiers(t *testing.T) {
+	// 分支 1:LiteLLM 无按张价 → $0.134/$0.201/$0.268
+	g := imageGroup(23, "gpt-image", nil, nil, nil)
+	svc := newPlazaService(plazaFixture{
+		allGroups:  []Group{g},
+		accounts:   map[int64][]Account{23: {openaiMappedAccount("gpt-image-2")}},
+		litellm:    map[string]*LiteLLMModelPricing{"gpt-image-2": imageGenLiteLLM()},
+		userGroups: []Group{{ID: 23}},
+	})
+	data, err := svc.GetPlazaForUser(context.Background(), 1)
+	require.NoError(t, err)
+	m := data.Models[0]
+	requireTierPrices(t, m.Pricing, 0.134, 0.201, 0.268)
+	require.InDelta(t, 0.134, *m.Groups[0].ImagePricing.Price1K, 1e-10)
+
+	// 分支 2:LiteLLM 有按张价 0.2 → 0.2/0.3/0.4
+	lp := imageGenLiteLLM()
+	lp.OutputCostPerImage = 0.2
+	svc = newPlazaService(plazaFixture{
+		allGroups:  []Group{g},
+		accounts:   map[int64][]Account{23: {openaiMappedAccount("gemini-image-x")}},
+		litellm:    map[string]*LiteLLMModelPricing{"gemini-image-x": lp},
+		userGroups: []Group{{ID: 23}},
+	})
+	data, err = svc.GetPlazaForUser(context.Background(), 1)
+	require.NoError(t, err)
+	requireTierPrices(t, data.Models[0].Pricing, 0.2, 0.3, 0.4)
+}
+
+// 部分档位配价:逐档 分组价 ?? fallback(规格 §3 ② 逐档语义)
+func TestGetPlazaForUser_ImageModelPartialTierConfig(t *testing.T) {
+	g := imageGroup(23, "gpt-image", fp(0.6), nil, nil) // 仅 1K 配价
+	svc := newPlazaService(plazaFixture{
+		allGroups:  []Group{g},
+		accounts:   map[int64][]Account{23: {openaiMappedAccount("gpt-image-2")}},
+		litellm:    map[string]*LiteLLMModelPricing{"gpt-image-2": imageGenLiteLLM()},
+		userGroups: []Group{{ID: 23}},
+	})
+	data, err := svc.GetPlazaForUser(context.Background(), 1)
+	require.NoError(t, err)
+	requireTierPrices(t, data.Models[0].Pricing, 0.6, 0.201, 0.268)
+}
+
+// allow=false:Allowed 标记;全部分组禁止时仍按次形态(规格 §4.3 末条)
+func TestGetPlazaForUser_ImageModelDisallowedGroup(t *testing.T) {
+	g := imageGroup(23, "gpt-image", fp(0.6), fp(0.6), fp(0.8))
+	g.AllowImageGeneration = false
+	svc := newPlazaService(plazaFixture{
+		allGroups:  []Group{g},
+		accounts:   map[int64][]Account{23: {openaiMappedAccount("gpt-image-2")}},
+		litellm:    map[string]*LiteLLMModelPricing{"gpt-image-2": imageGenLiteLLM()},
+		userGroups: []Group{{ID: 23}},
+	})
+	data, err := svc.GetPlazaForUser(context.Background(), 1)
+	require.NoError(t, err)
+	m := data.Models[0]
+	require.Equal(t, BillingModeImage, m.BillingMode) // 展示以图像本质为主
+	require.False(t, m.Groups[0].ImagePricing.Allowed)
+}
+
+// 渠道显式按次价 → 模型级用渠道价,分组档价 nil(规格 §3 ①、§7 用例 4)
+func TestGetPlazaForUser_ImageModelChannelPerRequestWins(t *testing.T) {
+	g := imageGroup(23, "gpt-image", fp(0.6), fp(0.6), fp(0.8))
+	ch := Channel{ID: 1, Name: "img-ch", Status: StatusActive, ModelPricing: []ChannelModelPricing{{
+		Platform: PlatformOpenAI, Models: []string{"gpt-image-2"},
+		BillingMode: BillingModeImage, PerRequestPrice: fp(0.5),
+	}}}
+	svc := newPlazaService(plazaFixture{
+		allGroups:  []Group{g},
+		accounts:   map[int64][]Account{23: {openaiMappedAccount("gpt-image-2")}},
+		channels:   []Channel{ch},
+		litellm:    map[string]*LiteLLMModelPricing{"gpt-image-2": imageGenLiteLLM()},
+		userGroups: []Group{{ID: 23}},
+	})
+	data, err := svc.GetPlazaForUser(context.Background(), 1)
+	require.NoError(t, err)
+	m := data.Models[0]
+	require.Equal(t, BillingModeImage, m.BillingMode)
+	require.InDelta(t, 0.5, *m.Pricing.PerRequestPrice, 1e-10) // 渠道价胜出
+	ip := m.Groups[0].ImagePricing
+	require.NotNil(t, ip)
+	require.True(t, ip.Allowed)
+	require.Nil(t, ip.Price1K) // 渠道价遮蔽分组档价
+	require.Nil(t, ip.Price2K)
+	require.Nil(t, ip.Price4K)
+}
+
+// 渠道仅 token 价 → 分组价合成覆盖、displayName 保留渠道大小写(规格 §3 ②、§7 用例 5)
+func TestGetPlazaForUser_ImageModelOverridesChannelTokenPricing(t *testing.T) {
+	g := imageGroup(23, "gpt-image", fp(0.6), fp(0.6), fp(0.8))
+	// 蓝本同步形态:渠道 token 价(displayName 大小写 GPT-Image-2)
+	ch := Channel{ID: 1, Name: "gpt-image", Status: StatusActive, ModelPricing: []ChannelModelPricing{{
+		Platform: PlatformOpenAI, Models: []string{"GPT-Image-2"},
+		BillingMode: BillingModeToken, InputPrice: fp(5e-6), OutputPrice: fp(1e-5),
+		ImageOutputPrice: fp(3e-5),
+	}}}
+	svc := newPlazaService(plazaFixture{
+		allGroups: []Group{g},
+		accounts:  map[int64][]Account{23: {openaiMappedAccount("gpt-image-2")}},
+		channels:  []Channel{ch},
+		// 注:真实 PricingService 大小写不敏感;fake 为精确匹配,displayName 改写后查 GPT-Image-2
+		litellm: map[string]*LiteLLMModelPricing{
+			"gpt-image-2": imageGenLiteLLM(), "GPT-Image-2": imageGenLiteLLM(),
+		},
+		userGroups: []Group{{ID: 23}},
+	})
+	data, err := svc.GetPlazaForUser(context.Background(), 1)
+	require.NoError(t, err)
+	m := data.Models[0]
+	require.Equal(t, "GPT-Image-2", m.Name) // displayName 保留渠道大小写
+	require.Equal(t, BillingModeImage, m.BillingMode)
+	requireTierPrices(t, m.Pricing, 0.6, 0.6, 0.8) // 分组价覆盖渠道 token 价
+}
+
+// 非图像模型:ImagePricing nil、行为与现状全等(规格 §7 用例 6)
+func TestGetPlazaForUser_NonImageModelNoImagePricing(t *testing.T) {
+	svc := newPlazaService(plazaFixture{
+		allGroups:  []Group{anthropicGroup(10, "cc_max")},
+		accounts:   map[int64][]Account{10: {mappedAccount("claude-sonnet-4-6")}},
+		channels:   []Channel{pricedChannel(1, "cc_max", PlatformAnthropic, []string{"claude-sonnet-4-6"}, 9e-7, 4.5e-6)},
+		userGroups: []Group{{ID: 10}},
+	})
+	data, err := svc.GetPlazaForUser(context.Background(), 1)
+	require.NoError(t, err)
+	m := data.Models[0]
+	require.Equal(t, BillingModeToken, m.BillingMode)
+	require.Nil(t, m.Groups[0].ImagePricing)
+}
+
+// image_rate_independent → MultiplierOverride(规格 §7 用例 7)
+func TestGetPlazaForUser_ImageRateIndependentOverride(t *testing.T) {
+	g := imageGroup(34, "gpt-image-official", nil, nil, nil)
+	g.ImageRateIndependent = true
+	g.ImageRateMultiplier = 1.0
+	svc := newPlazaService(plazaFixture{
+		allGroups:  []Group{g},
+		accounts:   map[int64][]Account{34: {openaiMappedAccount("gpt-image-2")}},
+		litellm:    map[string]*LiteLLMModelPricing{"gpt-image-2": imageGenLiteLLM()},
+		userGroups: []Group{{ID: 34}},
+	})
+	data, err := svc.GetPlazaForUser(context.Background(), 1)
+	require.NoError(t, err)
+	ip := data.Models[0].Groups[0].ImagePricing
+	require.NotNil(t, ip.MultiplierOverride)
+	require.InDelta(t, 1.0, *ip.MultiplierOverride, 1e-10)
+}
+
+// (模型×分组) 维度隔离:同分组两个图像模型 fallback 不同价互不串扰(规格 §7 末条)
+func TestGetPlazaForUser_ImageFallbackPerModel(t *testing.T) {
+	g := imageGroup(23, "gpt-image", nil, nil, nil)
+	lpWithPerImage := imageGenLiteLLM()
+	lpWithPerImage.OutputCostPerImage = 0.2
+	svc := newPlazaService(plazaFixture{
+		allGroups: []Group{g},
+		accounts:  map[int64][]Account{23: {openaiMappedAccount("gpt-image-2", "gemini-image-x")}},
+		litellm: map[string]*LiteLLMModelPricing{
+			"gpt-image-2":    imageGenLiteLLM(), // 无按张价 → 0.134
+			"gemini-image-x": lpWithPerImage,    // 按张价 0.2
+		},
+		userGroups: []Group{{ID: 23}},
+	})
+	data, err := svc.GetPlazaForUser(context.Background(), 1)
+	require.NoError(t, err)
+	require.Len(t, data.Models, 2)
+	byName := map[string]PlazaModel{}
+	for _, m := range data.Models {
+		byName[m.Name] = m
+	}
+	require.InDelta(t, 0.2, *byName["gemini-image-x"].Groups[0].ImagePricing.Price1K, 1e-10)
+	require.InDelta(t, 0.134, *byName["gpt-image-2"].Groups[0].ImagePricing.Price1K, 1e-10)
+}
+
+// LiteLLM 回落合成物自带按张价(gemini image 系)不构成"渠道按次价":分组配价仍优先
+// (规格 §3 ① 遮蔽仅限 priceIdx 命中;真实计费 getImageUnitPrice 分组价 > LiteLLM 价)
+func TestGetPlazaForUser_GroupPricingBeatsLiteLLMPerImage(t *testing.T) {
+	g := imageGroup(23, "gpt-image", fp(0.6), fp(0.6), fp(0.8))
+	lp := imageGenLiteLLM()
+	lp.OutputCostPerImage = 0.2 // 回落合成物将自带 PerRequestPrice=0.2
+	svc := newPlazaService(plazaFixture{
+		allGroups:  []Group{g},
+		accounts:   map[int64][]Account{23: {openaiMappedAccount("gemini-image-x")}},
+		litellm:    map[string]*LiteLLMModelPricing{"gemini-image-x": lp},
+		userGroups: []Group{{ID: 23}},
+	})
+	data, err := svc.GetPlazaForUser(context.Background(), 1)
+	require.NoError(t, err)
+	requireTierPrices(t, data.Models[0].Pricing, 0.6, 0.6, 0.8) // 分组价胜出,非 0.2
+	require.InDelta(t, 0.6, *data.Models[0].Groups[0].ImagePricing.Price1K, 1e-10)
 }
