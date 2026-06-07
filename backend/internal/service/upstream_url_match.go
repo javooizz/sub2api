@@ -2,7 +2,9 @@ package service
 
 import (
 	"errors"
+	"net"
 	"net/url"
+	"path"
 	"strings"
 )
 
@@ -25,17 +27,30 @@ func NormalizeUpstreamURL(raw string) (string, error) {
 	if (scheme == "https" && port == "443") || (scheme == "http" && port == "80") {
 		port = ""
 	}
-	hostPort := host
-	if port != "" {
-		hostPort = host + ":" + port
+
+	// 修复 1: IPv6 host 归一化 — 用 net.JoinHostPort 为带端口的 IPv6 加方括号;
+	// 无端口的裸 IPv6 地址(含冒号)同样需要方括号。
+	var hostPort string
+	switch {
+	case port != "":
+		hostPort = net.JoinHostPort(host, port) // 自动为 IPv6 加 []
+	case strings.Contains(host, ":"):
+		hostPort = "[" + host + "]" // 无端口的 IPv6
+	default:
+		hostPort = host
 	}
-	path := normalizePathSegments(u.Path)
-	return scheme + "://" + hostPort + path, nil
+
+	p := normalizePathSegments(u.Path)
+	return scheme + "://" + hostPort + p, nil
 }
 
-// normalizePathSegments 压缩重复斜杠、去尾斜杠;根路径返回空串。
+// normalizePathSegments 规范化路径:先用 path.Clean 解析 ../.  段,
+// 再压缩重复斜杠、去尾斜杠;根路径返回空串。
+// 修复 2: 引入 path.Clean 防止 ../  段穿越(如 /tenant_a/../tenant_b 误匹配)。
 func normalizePathSegments(p string) string {
-	segs := pathSegments(p)
+	// path.Clean 需要以 "/" 开头才能正确解析 ".." 至根
+	cleaned := path.Clean("/" + p)
+	segs := pathSegments(cleaned)
 	if len(segs) == 0 {
 		return ""
 	}
@@ -60,8 +75,14 @@ func UpstreamURLMatches(providerURL, accountURL string) bool {
 	if err1 != nil || err2 != nil {
 		return false
 	}
-	pu, _ := url.Parse(pn)
-	au, _ := url.Parse(an)
+
+	// 修复 3: nil 守卫 — 归一化后二次 Parse 失败时安全返回 false 而非 panic。
+	pu, err1b := url.Parse(pn)
+	au, err2b := url.Parse(an)
+	if err1b != nil || err2b != nil || pu == nil || au == nil {
+		return false
+	}
+
 	if pu.Scheme != au.Scheme || pu.Host != au.Host {
 		return false
 	}
