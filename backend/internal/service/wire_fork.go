@@ -1,6 +1,9 @@
 package service
 
-import "github.com/google/wire"
+import (
+	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/google/wire"
+)
 
 // ForkProviderSet 汇集本 fork 相对上游新增的 Service Provider。
 //
@@ -14,4 +17,12 @@ var ForkProviderSet = wire.NewSet(
 	NewNotifyDispatcher,             // 通知分发器(Task 15 消费)
 	ProvideUpstreamAdapters,         // 上游适配器 map(newapi/sub2api)
 	ProvideUpstreamProviderService,  // 上游站点管理 Service(CRUD/token/测试连接/关联帐号)
+	ProvideBrowserSolver,            // CloakBrowser CDP 封装(Task 14)
+	ProvideUpstreamMonitor,          // 刷新编排 + 定时 runner(Task 15)
 )
+
+// ProvideBrowserSolver wire 组装 BrowserSolver。
+// dataDir 取 cfg.Pricing.DataDir(R-dataDir 修订:顶层 Config 无 DataDir,与截图目录一致)。
+func ProvideBrowserSolver(settingService *SettingService, cfg *config.Config) BrowserSolver {
+	return NewChromedpBrowserSolver(settingService, cfg.Pricing.DataDir)
+}
