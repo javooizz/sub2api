@@ -470,16 +470,6 @@ func APIBaseURLHasSuffix(v string) predicate.UpstreamProvider {
 	return predicate.UpstreamProvider(sql.FieldHasSuffix(FieldAPIBaseURL, v))
 }
 
-// APIBaseURLIsNil applies the IsNil predicate on the "api_base_url" field.
-func APIBaseURLIsNil() predicate.UpstreamProvider {
-	return predicate.UpstreamProvider(sql.FieldIsNull(FieldAPIBaseURL))
-}
-
-// APIBaseURLNotNil applies the NotNil predicate on the "api_base_url" field.
-func APIBaseURLNotNil() predicate.UpstreamProvider {
-	return predicate.UpstreamProvider(sql.FieldNotNull(FieldAPIBaseURL))
-}
-
 // APIBaseURLEqualFold applies the EqualFold predicate on the "api_base_url" field.
 func APIBaseURLEqualFold(v string) predicate.UpstreamProvider {
 	return predicate.UpstreamProvider(sql.FieldEqualFold(FieldAPIBaseURL, v))

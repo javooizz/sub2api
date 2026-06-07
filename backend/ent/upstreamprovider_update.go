@@ -92,12 +92,6 @@ func (_u *UpstreamProviderUpdate) SetNillableAPIBaseURL(v *string) *UpstreamProv
 	return _u
 }
 
-// ClearAPIBaseURL clears the value of the "api_base_url" field.
-func (_u *UpstreamProviderUpdate) ClearAPIBaseURL() *UpstreamProviderUpdate {
-	_u.mutation.ClearAPIBaseURL()
-	return _u
-}
-
 // SetStatus sets the "status" field.
 func (_u *UpstreamProviderUpdate) SetStatus(v string) *UpstreamProviderUpdate {
 	_u.mutation.SetStatus(v)
@@ -424,9 +418,6 @@ func (_u *UpstreamProviderUpdate) sqlSave(ctx context.Context) (_node int, err e
 	if value, ok := _u.mutation.APIBaseURL(); ok {
 		_spec.SetField(upstreamprovider.FieldAPIBaseURL, field.TypeString, value)
 	}
-	if _u.mutation.APIBaseURLCleared() {
-		_spec.ClearField(upstreamprovider.FieldAPIBaseURL, field.TypeString)
-	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(upstreamprovider.FieldStatus, field.TypeString, value)
 	}
@@ -592,12 +583,6 @@ func (_u *UpstreamProviderUpdateOne) SetNillableAPIBaseURL(v *string) *UpstreamP
 	if v != nil {
 		_u.SetAPIBaseURL(*v)
 	}
-	return _u
-}
-
-// ClearAPIBaseURL clears the value of the "api_base_url" field.
-func (_u *UpstreamProviderUpdateOne) ClearAPIBaseURL() *UpstreamProviderUpdateOne {
-	_u.mutation.ClearAPIBaseURL()
 	return _u
 }
 
@@ -956,9 +941,6 @@ func (_u *UpstreamProviderUpdateOne) sqlSave(ctx context.Context) (_node *Upstre
 	}
 	if value, ok := _u.mutation.APIBaseURL(); ok {
 		_spec.SetField(upstreamprovider.FieldAPIBaseURL, field.TypeString, value)
-	}
-	if _u.mutation.APIBaseURLCleared() {
-		_spec.ClearField(upstreamprovider.FieldAPIBaseURL, field.TypeString)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(upstreamprovider.FieldStatus, field.TypeString, value)

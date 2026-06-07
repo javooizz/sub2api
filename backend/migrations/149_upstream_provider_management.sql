@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS upstream_change_events (
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     provider_id BIGINT NOT NULL,
     type        VARCHAR(40) NOT NULL,
-    summary     TEXT NOT NULL DEFAULT '',
+    summary     TEXT NOT NULL,
     detail      JSONB NULL,
     notified    BOOLEAN NOT NULL DEFAULT FALSE
 );

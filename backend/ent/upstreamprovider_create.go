@@ -364,6 +364,9 @@ func (_c *UpstreamProviderCreate) check() error {
 			return &ValidationError{Name: "site_url", err: fmt.Errorf(`ent: validator failed for field "UpstreamProvider.site_url": %w`, err)}
 		}
 	}
+	if _, ok := _c.mutation.APIBaseURL(); !ok {
+		return &ValidationError{Name: "api_base_url", err: errors.New(`ent: missing required field "UpstreamProvider.api_base_url"`)}
+	}
 	if v, ok := _c.mutation.APIBaseURL(); ok {
 		if err := upstreamprovider.APIBaseURLValidator(v); err != nil {
 			return &ValidationError{Name: "api_base_url", err: fmt.Errorf(`ent: validator failed for field "UpstreamProvider.api_base_url": %w`, err)}
@@ -623,12 +626,6 @@ func (u *UpstreamProviderUpsert) SetAPIBaseURL(v string) *UpstreamProviderUpsert
 // UpdateAPIBaseURL sets the "api_base_url" field to the value that was provided on create.
 func (u *UpstreamProviderUpsert) UpdateAPIBaseURL() *UpstreamProviderUpsert {
 	u.SetExcluded(upstreamprovider.FieldAPIBaseURL)
-	return u
-}
-
-// ClearAPIBaseURL clears the value of the "api_base_url" field.
-func (u *UpstreamProviderUpsert) ClearAPIBaseURL() *UpstreamProviderUpsert {
-	u.SetNull(upstreamprovider.FieldAPIBaseURL)
 	return u
 }
 
@@ -948,13 +945,6 @@ func (u *UpstreamProviderUpsertOne) SetAPIBaseURL(v string) *UpstreamProviderUps
 func (u *UpstreamProviderUpsertOne) UpdateAPIBaseURL() *UpstreamProviderUpsertOne {
 	return u.Update(func(s *UpstreamProviderUpsert) {
 		s.UpdateAPIBaseURL()
-	})
-}
-
-// ClearAPIBaseURL clears the value of the "api_base_url" field.
-func (u *UpstreamProviderUpsertOne) ClearAPIBaseURL() *UpstreamProviderUpsertOne {
-	return u.Update(func(s *UpstreamProviderUpsert) {
-		s.ClearAPIBaseURL()
 	})
 }
 
@@ -1474,13 +1464,6 @@ func (u *UpstreamProviderUpsertBulk) SetAPIBaseURL(v string) *UpstreamProviderUp
 func (u *UpstreamProviderUpsertBulk) UpdateAPIBaseURL() *UpstreamProviderUpsertBulk {
 	return u.Update(func(s *UpstreamProviderUpsert) {
 		s.UpdateAPIBaseURL()
-	})
-}
-
-// ClearAPIBaseURL clears the value of the "api_base_url" field.
-func (u *UpstreamProviderUpsertBulk) ClearAPIBaseURL() *UpstreamProviderUpsertBulk {
-	return u.Update(func(s *UpstreamProviderUpsert) {
-		s.ClearAPIBaseURL()
 	})
 }
 

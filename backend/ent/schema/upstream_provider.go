@@ -31,15 +31,16 @@ func (UpstreamProvider) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("name").MaxLen(100).NotEmpty(),
 		// type: sub2api | newapi
-		field.String("type").MaxLen(20),
+		field.String("type").MaxLen(20).NotEmpty(),
 		// 官网地址:登录与数据采集;允许含路径前缀(反代场景)
 		field.String("site_url").MaxLen(500).NotEmpty(),
 		// 模型网关地址,空 = 同 site_url;仅用于关联帐号匹配与 token 展示
-		field.String("api_base_url").MaxLen(500).Optional().Default(""),
+		field.String("api_base_url").MaxLen(500).Default(""),
 		field.String("status").MaxLen(30).Default(domain.UpstreamStatusActive),
 		// 凭证:username/password/access_token/user_id/cf_clearance/... 见 spec §4.1.1
 		field.JSON("credentials", map[string]any{}).
-			SchemaType(map[string]string{dialect.Postgres: "jsonb"}),
+			SchemaType(map[string]string{dialect.Postgres: "jsonb"}).
+			Sensitive(),
 		field.Int64("proxy_id").Optional().Nillable(),
 		field.Float("balance_threshold").Optional().Nillable(),
 		field.Bool("notify_on_price_change").Default(true),

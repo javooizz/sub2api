@@ -1340,7 +1340,7 @@ var (
 		{Name: "name", Type: field.TypeString, Size: 100},
 		{Name: "type", Type: field.TypeString, Size: 20},
 		{Name: "site_url", Type: field.TypeString, Size: 500},
-		{Name: "api_base_url", Type: field.TypeString, Nullable: true, Size: 500, Default: ""},
+		{Name: "api_base_url", Type: field.TypeString, Size: 500, Default: ""},
 		{Name: "status", Type: field.TypeString, Size: 30, Default: "active"},
 		{Name: "credentials", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
 		{Name: "balance_threshold", Type: field.TypeFloat64, Nullable: true},

@@ -35890,22 +35890,9 @@ func (m *UpstreamProviderMutation) OldAPIBaseURL(ctx context.Context) (v string,
 	return oldValue.APIBaseURL, nil
 }
 
-// ClearAPIBaseURL clears the value of the "api_base_url" field.
-func (m *UpstreamProviderMutation) ClearAPIBaseURL() {
-	m.api_base_url = nil
-	m.clearedFields[upstreamprovider.FieldAPIBaseURL] = struct{}{}
-}
-
-// APIBaseURLCleared returns if the "api_base_url" field was cleared in this mutation.
-func (m *UpstreamProviderMutation) APIBaseURLCleared() bool {
-	_, ok := m.clearedFields[upstreamprovider.FieldAPIBaseURL]
-	return ok
-}
-
 // ResetAPIBaseURL resets all changes to the "api_base_url" field.
 func (m *UpstreamProviderMutation) ResetAPIBaseURL() {
 	m.api_base_url = nil
-	delete(m.clearedFields, upstreamprovider.FieldAPIBaseURL)
 }
 
 // SetStatus sets the "status" field.
@@ -36925,9 +36912,6 @@ func (m *UpstreamProviderMutation) AddField(name string, value ent.Value) error 
 // mutation.
 func (m *UpstreamProviderMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(upstreamprovider.FieldAPIBaseURL) {
-		fields = append(fields, upstreamprovider.FieldAPIBaseURL)
-	}
 	if m.FieldCleared(upstreamprovider.FieldProxyID) {
 		fields = append(fields, upstreamprovider.FieldProxyID)
 	}
@@ -36957,9 +36941,6 @@ func (m *UpstreamProviderMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *UpstreamProviderMutation) ClearField(name string) error {
 	switch name {
-	case upstreamprovider.FieldAPIBaseURL:
-		m.ClearAPIBaseURL()
-		return nil
 	case upstreamprovider.FieldProxyID:
 		m.ClearProxyID()
 		return nil

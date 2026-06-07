@@ -29,8 +29,8 @@ func (NotifyChannel) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("name").MaxLen(100).NotEmpty(),
 		// email | webhook
-		field.String("type").MaxLen(20),
-		field.String("scope").MaxLen(40),
+		field.String("type").MaxLen(20).NotEmpty(),
+		field.String("scope").MaxLen(40).NotEmpty(),
 		field.Bool("enabled").Default(true),
 		// 订阅的事件类型;空数组 = 订阅全部
 		field.JSON("events", []string{}).

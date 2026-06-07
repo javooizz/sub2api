@@ -27,7 +27,7 @@ func (UpstreamChangeEvent) Mixin() []ent.Mixin {
 func (UpstreamChangeEvent) Fields() []ent.Field {
 	return []ent.Field{
 		field.Int64("provider_id"),
-		field.String("type").MaxLen(40),
+		field.String("type").MaxLen(40).NotEmpty(),
 		// 人读摘要,如「分组 vip 倍率 1.0 → 1.5」
 		field.String("summary").SchemaType(map[string]string{dialect.Postgres: "text"}),
 		// 结构化 diff(前后值);凭证类事件只存错误类别+状态码,严禁凭证值

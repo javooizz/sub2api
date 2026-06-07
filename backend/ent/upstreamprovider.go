@@ -35,7 +35,7 @@ type UpstreamProvider struct {
 	// Status holds the value of the "status" field.
 	Status string `json:"status,omitempty"`
 	// Credentials holds the value of the "credentials" field.
-	Credentials map[string]interface{} `json:"credentials,omitempty"`
+	Credentials map[string]interface{} `json:"-"`
 	// ProxyID holds the value of the "proxy_id" field.
 	ProxyID *int64 `json:"proxy_id,omitempty"`
 	// BalanceThreshold holds the value of the "balance_threshold" field.
@@ -306,8 +306,7 @@ func (_m *UpstreamProvider) String() string {
 	builder.WriteString("status=")
 	builder.WriteString(_m.Status)
 	builder.WriteString(", ")
-	builder.WriteString("credentials=")
-	builder.WriteString(fmt.Sprintf("%v", _m.Credentials))
+	builder.WriteString("credentials=<sensitive>")
 	builder.WriteString(", ")
 	if v := _m.ProxyID; v != nil {
 		builder.WriteString("proxy_id=")

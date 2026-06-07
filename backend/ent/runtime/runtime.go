@@ -1017,11 +1017,39 @@ func init() {
 	// notifychannelDescType is the schema descriptor for type field.
 	notifychannelDescType := notifychannelFields[1].Descriptor()
 	// notifychannel.TypeValidator is a validator for the "type" field. It is called by the builders before save.
-	notifychannel.TypeValidator = notifychannelDescType.Validators[0].(func(string) error)
+	notifychannel.TypeValidator = func() func(string) error {
+		validators := notifychannelDescType.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(_type string) error {
+			for _, fn := range fns {
+				if err := fn(_type); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
 	// notifychannelDescScope is the schema descriptor for scope field.
 	notifychannelDescScope := notifychannelFields[2].Descriptor()
 	// notifychannel.ScopeValidator is a validator for the "scope" field. It is called by the builders before save.
-	notifychannel.ScopeValidator = notifychannelDescScope.Validators[0].(func(string) error)
+	notifychannel.ScopeValidator = func() func(string) error {
+		validators := notifychannelDescScope.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(scope string) error {
+			for _, fn := range fns {
+				if err := fn(scope); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
 	// notifychannelDescEnabled is the schema descriptor for enabled field.
 	notifychannelDescEnabled := notifychannelFields[3].Descriptor()
 	// notifychannel.DefaultEnabled holds the default value on creation for the enabled field.
@@ -1676,7 +1704,21 @@ func init() {
 	// upstreamchangeeventDescType is the schema descriptor for type field.
 	upstreamchangeeventDescType := upstreamchangeeventFields[1].Descriptor()
 	// upstreamchangeevent.TypeValidator is a validator for the "type" field. It is called by the builders before save.
-	upstreamchangeevent.TypeValidator = upstreamchangeeventDescType.Validators[0].(func(string) error)
+	upstreamchangeevent.TypeValidator = func() func(string) error {
+		validators := upstreamchangeeventDescType.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(_type string) error {
+			for _, fn := range fns {
+				if err := fn(_type); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
 	// upstreamchangeeventDescNotified is the schema descriptor for notified field.
 	upstreamchangeeventDescNotified := upstreamchangeeventFields[4].Descriptor()
 	// upstreamchangeevent.DefaultNotified holds the default value on creation for the notified field.
@@ -1717,7 +1759,21 @@ func init() {
 	// upstreamproviderDescType is the schema descriptor for type field.
 	upstreamproviderDescType := upstreamproviderFields[1].Descriptor()
 	// upstreamprovider.TypeValidator is a validator for the "type" field. It is called by the builders before save.
-	upstreamprovider.TypeValidator = upstreamproviderDescType.Validators[0].(func(string) error)
+	upstreamprovider.TypeValidator = func() func(string) error {
+		validators := upstreamproviderDescType.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(_type string) error {
+			for _, fn := range fns {
+				if err := fn(_type); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
 	// upstreamproviderDescSiteURL is the schema descriptor for site_url field.
 	upstreamproviderDescSiteURL := upstreamproviderFields[2].Descriptor()
 	// upstreamprovider.SiteURLValidator is a validator for the "site_url" field. It is called by the builders before save.
