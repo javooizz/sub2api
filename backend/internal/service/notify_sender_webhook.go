@@ -124,9 +124,10 @@ func (s *WebhookNotifySender) buildBody(ch *NotifyChannel, ev NotifyEvent) ([]by
 
 // newClient 构造带 SSRF 防护的 http.Client。
 // 防护要点：
-//  1. DialContext 中先 DNS 解析，校验 resolved IP 是否属于禁止范围；
-//     用解析得到的 IP 直连，而非再次解析（防 DNS rebinding）。
-//  2. CheckRedirect 直接拒绝，避免重定向到内网地址。
+//  1. DialContext 中先 DNS 解析，用 isPrivateIP（同包）校验每个 resolved IP；
+//     命中私网则跳过，用第一个通过校验的 IP 字面量直连（防 DNS rebinding）。
+//  2. 逐 IP 尝试，全部被拒绝时返回最后一个错误。
+//  3. CheckRedirect 直接拒绝，避免重定向到内网地址。
 func (s *WebhookNotifySender) newClient(ctx context.Context) *http.Client {
 	// 计算一次，避免在 DialContext 闭包中重复调用
 	allowPrivate := s.allowPrivate != nil && s.allowPrivate(ctx)
@@ -145,12 +146,20 @@ func (s *WebhookNotifySender) newClient(ctx context.Context) *http.Client {
 			if len(ips) == 0 {
 				return nil, fmt.Errorf("无法解析 %s", host)
 			}
-			ip := ips[0].IP
-			if !allowPrivate && isDisallowedWebhookIP(ip) {
-				return nil, fmt.Errorf("webhook 目标地址 %s 被 SSRF 策略拒绝（可在采集设置中放开私网）", ip)
+			var lastErr error
+			for _, a := range ips {
+				if !allowPrivate && isPrivateIP(a.IP) {
+					lastErr = fmt.Errorf("webhook 目标地址 %s 被 SSRF 策略拒绝(可在采集设置中放开私网)", a.IP)
+					continue
+				}
+				conn, derr := dialer.DialContext(dctx, network, net.JoinHostPort(a.IP.String(), port))
+				if derr != nil {
+					lastErr = derr
+					continue
+				}
+				return conn, nil
 			}
-			// 用解析到的 IP 直连，规避 DNS rebinding
-			return dialer.DialContext(dctx, network, net.JoinHostPort(ip.String(), port))
+			return nil, lastErr
 		},
 	}
 	return &http.Client{
@@ -161,22 +170,4 @@ func (s *WebhookNotifySender) newClient(ctx context.Context) *http.Client {
 			return errors.New("webhook 不允许重定向")
 		},
 	}
-}
-
-// isDisallowedWebhookIP 默认拒绝的 IP 范围：
-//   - loopback（127.x.x.x / ::1）
-//   - 私网（RFC 1918 / ULA）
-//   - link-local（169.254.x.x / fe80::）
-//   - 组播
-//   - 云 metadata（169.254.169.254，IsLinkLocalUnicast 已覆盖，此处冗余防御）
-func isDisallowedWebhookIP(ip net.IP) bool {
-	if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
-		ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
-		return true
-	}
-	// 额外冗余：显式拦截云 metadata 服务地址
-	if ip.Equal(net.ParseIP("169.254.169.254")) {
-		return true
-	}
-	return false
 }
