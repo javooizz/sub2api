@@ -31,6 +31,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/idempotencyrecord"
 	"github.com/Wei-Shaw/sub2api/ent/identityadoptiondecision"
+	"github.com/Wei-Shaw/sub2api/ent/notifychannel"
 	"github.com/Wei-Shaw/sub2api/ent/paymentauditlog"
 	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
 	"github.com/Wei-Shaw/sub2api/ent/paymentproviderinstance"
@@ -43,6 +44,8 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/setting"
 	"github.com/Wei-Shaw/sub2api/ent/subscriptionplan"
 	"github.com/Wei-Shaw/sub2api/ent/tlsfingerprintprofile"
+	"github.com/Wei-Shaw/sub2api/ent/upstreamchangeevent"
+	"github.com/Wei-Shaw/sub2api/ent/upstreamprovider"
 	"github.com/Wei-Shaw/sub2api/ent/usagecleanuptask"
 	"github.com/Wei-Shaw/sub2api/ent/usagelog"
 	"github.com/Wei-Shaw/sub2api/ent/user"
@@ -92,6 +95,8 @@ type Client struct {
 	IdempotencyRecord *IdempotencyRecordClient
 	// IdentityAdoptionDecision is the client for interacting with the IdentityAdoptionDecision builders.
 	IdentityAdoptionDecision *IdentityAdoptionDecisionClient
+	// NotifyChannel is the client for interacting with the NotifyChannel builders.
+	NotifyChannel *NotifyChannelClient
 	// PaymentAuditLog is the client for interacting with the PaymentAuditLog builders.
 	PaymentAuditLog *PaymentAuditLogClient
 	// PaymentOrder is the client for interacting with the PaymentOrder builders.
@@ -116,6 +121,10 @@ type Client struct {
 	SubscriptionPlan *SubscriptionPlanClient
 	// TLSFingerprintProfile is the client for interacting with the TLSFingerprintProfile builders.
 	TLSFingerprintProfile *TLSFingerprintProfileClient
+	// UpstreamChangeEvent is the client for interacting with the UpstreamChangeEvent builders.
+	UpstreamChangeEvent *UpstreamChangeEventClient
+	// UpstreamProvider is the client for interacting with the UpstreamProvider builders.
+	UpstreamProvider *UpstreamProviderClient
 	// UsageCleanupTask is the client for interacting with the UsageCleanupTask builders.
 	UsageCleanupTask *UsageCleanupTaskClient
 	// UsageLog is the client for interacting with the UsageLog builders.
@@ -159,6 +168,7 @@ func (c *Client) init() {
 	c.Group = NewGroupClient(c.config)
 	c.IdempotencyRecord = NewIdempotencyRecordClient(c.config)
 	c.IdentityAdoptionDecision = NewIdentityAdoptionDecisionClient(c.config)
+	c.NotifyChannel = NewNotifyChannelClient(c.config)
 	c.PaymentAuditLog = NewPaymentAuditLogClient(c.config)
 	c.PaymentOrder = NewPaymentOrderClient(c.config)
 	c.PaymentProviderInstance = NewPaymentProviderInstanceClient(c.config)
@@ -171,6 +181,8 @@ func (c *Client) init() {
 	c.Setting = NewSettingClient(c.config)
 	c.SubscriptionPlan = NewSubscriptionPlanClient(c.config)
 	c.TLSFingerprintProfile = NewTLSFingerprintProfileClient(c.config)
+	c.UpstreamChangeEvent = NewUpstreamChangeEventClient(c.config)
+	c.UpstreamProvider = NewUpstreamProviderClient(c.config)
 	c.UsageCleanupTask = NewUsageCleanupTaskClient(c.config)
 	c.UsageLog = NewUsageLogClient(c.config)
 	c.User = NewUserClient(c.config)
@@ -287,6 +299,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Group:                         NewGroupClient(cfg),
 		IdempotencyRecord:             NewIdempotencyRecordClient(cfg),
 		IdentityAdoptionDecision:      NewIdentityAdoptionDecisionClient(cfg),
+		NotifyChannel:                 NewNotifyChannelClient(cfg),
 		PaymentAuditLog:               NewPaymentAuditLogClient(cfg),
 		PaymentOrder:                  NewPaymentOrderClient(cfg),
 		PaymentProviderInstance:       NewPaymentProviderInstanceClient(cfg),
@@ -299,6 +312,8 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Setting:                       NewSettingClient(cfg),
 		SubscriptionPlan:              NewSubscriptionPlanClient(cfg),
 		TLSFingerprintProfile:         NewTLSFingerprintProfileClient(cfg),
+		UpstreamChangeEvent:           NewUpstreamChangeEventClient(cfg),
+		UpstreamProvider:              NewUpstreamProviderClient(cfg),
 		UsageCleanupTask:              NewUsageCleanupTaskClient(cfg),
 		UsageLog:                      NewUsageLogClient(cfg),
 		User:                          NewUserClient(cfg),
@@ -342,6 +357,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Group:                         NewGroupClient(cfg),
 		IdempotencyRecord:             NewIdempotencyRecordClient(cfg),
 		IdentityAdoptionDecision:      NewIdentityAdoptionDecisionClient(cfg),
+		NotifyChannel:                 NewNotifyChannelClient(cfg),
 		PaymentAuditLog:               NewPaymentAuditLogClient(cfg),
 		PaymentOrder:                  NewPaymentOrderClient(cfg),
 		PaymentProviderInstance:       NewPaymentProviderInstanceClient(cfg),
@@ -354,6 +370,8 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Setting:                       NewSettingClient(cfg),
 		SubscriptionPlan:              NewSubscriptionPlanClient(cfg),
 		TLSFingerprintProfile:         NewTLSFingerprintProfileClient(cfg),
+		UpstreamChangeEvent:           NewUpstreamChangeEventClient(cfg),
+		UpstreamProvider:              NewUpstreamProviderClient(cfg),
 		UsageCleanupTask:              NewUsageCleanupTaskClient(cfg),
 		UsageLog:                      NewUsageLogClient(cfg),
 		User:                          NewUserClient(cfg),
@@ -395,10 +413,11 @@ func (c *Client) Use(hooks ...Hook) {
 		c.AuthIdentity, c.AuthIdentityChannel, c.ChannelMonitor,
 		c.ChannelMonitorDailyRollup, c.ChannelMonitorHistory,
 		c.ChannelMonitorRequestTemplate, c.ErrorPassthroughRule, c.ExtensionConfig,
-		c.Group, c.IdempotencyRecord, c.IdentityAdoptionDecision, c.PaymentAuditLog,
-		c.PaymentOrder, c.PaymentProviderInstance, c.PendingAuthSession, c.PromoCode,
-		c.PromoCodeUsage, c.Proxy, c.RedeemCode, c.SecuritySecret, c.Setting,
-		c.SubscriptionPlan, c.TLSFingerprintProfile, c.UsageCleanupTask, c.UsageLog,
+		c.Group, c.IdempotencyRecord, c.IdentityAdoptionDecision, c.NotifyChannel,
+		c.PaymentAuditLog, c.PaymentOrder, c.PaymentProviderInstance,
+		c.PendingAuthSession, c.PromoCode, c.PromoCodeUsage, c.Proxy, c.RedeemCode,
+		c.SecuritySecret, c.Setting, c.SubscriptionPlan, c.TLSFingerprintProfile,
+		c.UpstreamChangeEvent, c.UpstreamProvider, c.UsageCleanupTask, c.UsageLog,
 		c.User, c.UserAllowedGroup, c.UserAttributeDefinition, c.UserAttributeValue,
 		c.UserPlatformQuota, c.UserSubscription,
 	} {
@@ -414,10 +433,11 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.AuthIdentity, c.AuthIdentityChannel, c.ChannelMonitor,
 		c.ChannelMonitorDailyRollup, c.ChannelMonitorHistory,
 		c.ChannelMonitorRequestTemplate, c.ErrorPassthroughRule, c.ExtensionConfig,
-		c.Group, c.IdempotencyRecord, c.IdentityAdoptionDecision, c.PaymentAuditLog,
-		c.PaymentOrder, c.PaymentProviderInstance, c.PendingAuthSession, c.PromoCode,
-		c.PromoCodeUsage, c.Proxy, c.RedeemCode, c.SecuritySecret, c.Setting,
-		c.SubscriptionPlan, c.TLSFingerprintProfile, c.UsageCleanupTask, c.UsageLog,
+		c.Group, c.IdempotencyRecord, c.IdentityAdoptionDecision, c.NotifyChannel,
+		c.PaymentAuditLog, c.PaymentOrder, c.PaymentProviderInstance,
+		c.PendingAuthSession, c.PromoCode, c.PromoCodeUsage, c.Proxy, c.RedeemCode,
+		c.SecuritySecret, c.Setting, c.SubscriptionPlan, c.TLSFingerprintProfile,
+		c.UpstreamChangeEvent, c.UpstreamProvider, c.UsageCleanupTask, c.UsageLog,
 		c.User, c.UserAllowedGroup, c.UserAttributeDefinition, c.UserAttributeValue,
 		c.UserPlatformQuota, c.UserSubscription,
 	} {
@@ -460,6 +480,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.IdempotencyRecord.mutate(ctx, m)
 	case *IdentityAdoptionDecisionMutation:
 		return c.IdentityAdoptionDecision.mutate(ctx, m)
+	case *NotifyChannelMutation:
+		return c.NotifyChannel.mutate(ctx, m)
 	case *PaymentAuditLogMutation:
 		return c.PaymentAuditLog.mutate(ctx, m)
 	case *PaymentOrderMutation:
@@ -484,6 +506,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.SubscriptionPlan.mutate(ctx, m)
 	case *TLSFingerprintProfileMutation:
 		return c.TLSFingerprintProfile.mutate(ctx, m)
+	case *UpstreamChangeEventMutation:
+		return c.UpstreamChangeEvent.mutate(ctx, m)
+	case *UpstreamProviderMutation:
+		return c.UpstreamProvider.mutate(ctx, m)
 	case *UsageCleanupTaskMutation:
 		return c.UsageCleanupTask.mutate(ctx, m)
 	case *UsageLogMutation:
@@ -3102,6 +3128,139 @@ func (c *IdentityAdoptionDecisionClient) mutate(ctx context.Context, m *Identity
 	}
 }
 
+// NotifyChannelClient is a client for the NotifyChannel schema.
+type NotifyChannelClient struct {
+	config
+}
+
+// NewNotifyChannelClient returns a client for the NotifyChannel from the given config.
+func NewNotifyChannelClient(c config) *NotifyChannelClient {
+	return &NotifyChannelClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `notifychannel.Hooks(f(g(h())))`.
+func (c *NotifyChannelClient) Use(hooks ...Hook) {
+	c.hooks.NotifyChannel = append(c.hooks.NotifyChannel, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `notifychannel.Intercept(f(g(h())))`.
+func (c *NotifyChannelClient) Intercept(interceptors ...Interceptor) {
+	c.inters.NotifyChannel = append(c.inters.NotifyChannel, interceptors...)
+}
+
+// Create returns a builder for creating a NotifyChannel entity.
+func (c *NotifyChannelClient) Create() *NotifyChannelCreate {
+	mutation := newNotifyChannelMutation(c.config, OpCreate)
+	return &NotifyChannelCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of NotifyChannel entities.
+func (c *NotifyChannelClient) CreateBulk(builders ...*NotifyChannelCreate) *NotifyChannelCreateBulk {
+	return &NotifyChannelCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *NotifyChannelClient) MapCreateBulk(slice any, setFunc func(*NotifyChannelCreate, int)) *NotifyChannelCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &NotifyChannelCreateBulk{err: fmt.Errorf("calling to NotifyChannelClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*NotifyChannelCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &NotifyChannelCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for NotifyChannel.
+func (c *NotifyChannelClient) Update() *NotifyChannelUpdate {
+	mutation := newNotifyChannelMutation(c.config, OpUpdate)
+	return &NotifyChannelUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *NotifyChannelClient) UpdateOne(_m *NotifyChannel) *NotifyChannelUpdateOne {
+	mutation := newNotifyChannelMutation(c.config, OpUpdateOne, withNotifyChannel(_m))
+	return &NotifyChannelUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *NotifyChannelClient) UpdateOneID(id int64) *NotifyChannelUpdateOne {
+	mutation := newNotifyChannelMutation(c.config, OpUpdateOne, withNotifyChannelID(id))
+	return &NotifyChannelUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for NotifyChannel.
+func (c *NotifyChannelClient) Delete() *NotifyChannelDelete {
+	mutation := newNotifyChannelMutation(c.config, OpDelete)
+	return &NotifyChannelDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *NotifyChannelClient) DeleteOne(_m *NotifyChannel) *NotifyChannelDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *NotifyChannelClient) DeleteOneID(id int64) *NotifyChannelDeleteOne {
+	builder := c.Delete().Where(notifychannel.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &NotifyChannelDeleteOne{builder}
+}
+
+// Query returns a query builder for NotifyChannel.
+func (c *NotifyChannelClient) Query() *NotifyChannelQuery {
+	return &NotifyChannelQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeNotifyChannel},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a NotifyChannel entity by its id.
+func (c *NotifyChannelClient) Get(ctx context.Context, id int64) (*NotifyChannel, error) {
+	return c.Query().Where(notifychannel.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *NotifyChannelClient) GetX(ctx context.Context, id int64) *NotifyChannel {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *NotifyChannelClient) Hooks() []Hook {
+	return c.hooks.NotifyChannel
+}
+
+// Interceptors returns the client interceptors.
+func (c *NotifyChannelClient) Interceptors() []Interceptor {
+	return c.inters.NotifyChannel
+}
+
+func (c *NotifyChannelClient) mutate(ctx context.Context, m *NotifyChannelMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&NotifyChannelCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&NotifyChannelUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&NotifyChannelUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&NotifyChannelDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown NotifyChannel mutation op: %q", m.Op())
+	}
+}
+
 // PaymentAuditLogClient is a client for the PaymentAuditLog schema.
 type PaymentAuditLogClient struct {
 	config
@@ -4844,6 +5003,288 @@ func (c *TLSFingerprintProfileClient) mutate(ctx context.Context, m *TLSFingerpr
 	}
 }
 
+// UpstreamChangeEventClient is a client for the UpstreamChangeEvent schema.
+type UpstreamChangeEventClient struct {
+	config
+}
+
+// NewUpstreamChangeEventClient returns a client for the UpstreamChangeEvent from the given config.
+func NewUpstreamChangeEventClient(c config) *UpstreamChangeEventClient {
+	return &UpstreamChangeEventClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `upstreamchangeevent.Hooks(f(g(h())))`.
+func (c *UpstreamChangeEventClient) Use(hooks ...Hook) {
+	c.hooks.UpstreamChangeEvent = append(c.hooks.UpstreamChangeEvent, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `upstreamchangeevent.Intercept(f(g(h())))`.
+func (c *UpstreamChangeEventClient) Intercept(interceptors ...Interceptor) {
+	c.inters.UpstreamChangeEvent = append(c.inters.UpstreamChangeEvent, interceptors...)
+}
+
+// Create returns a builder for creating a UpstreamChangeEvent entity.
+func (c *UpstreamChangeEventClient) Create() *UpstreamChangeEventCreate {
+	mutation := newUpstreamChangeEventMutation(c.config, OpCreate)
+	return &UpstreamChangeEventCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of UpstreamChangeEvent entities.
+func (c *UpstreamChangeEventClient) CreateBulk(builders ...*UpstreamChangeEventCreate) *UpstreamChangeEventCreateBulk {
+	return &UpstreamChangeEventCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *UpstreamChangeEventClient) MapCreateBulk(slice any, setFunc func(*UpstreamChangeEventCreate, int)) *UpstreamChangeEventCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &UpstreamChangeEventCreateBulk{err: fmt.Errorf("calling to UpstreamChangeEventClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*UpstreamChangeEventCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &UpstreamChangeEventCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for UpstreamChangeEvent.
+func (c *UpstreamChangeEventClient) Update() *UpstreamChangeEventUpdate {
+	mutation := newUpstreamChangeEventMutation(c.config, OpUpdate)
+	return &UpstreamChangeEventUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *UpstreamChangeEventClient) UpdateOne(_m *UpstreamChangeEvent) *UpstreamChangeEventUpdateOne {
+	mutation := newUpstreamChangeEventMutation(c.config, OpUpdateOne, withUpstreamChangeEvent(_m))
+	return &UpstreamChangeEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *UpstreamChangeEventClient) UpdateOneID(id int64) *UpstreamChangeEventUpdateOne {
+	mutation := newUpstreamChangeEventMutation(c.config, OpUpdateOne, withUpstreamChangeEventID(id))
+	return &UpstreamChangeEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for UpstreamChangeEvent.
+func (c *UpstreamChangeEventClient) Delete() *UpstreamChangeEventDelete {
+	mutation := newUpstreamChangeEventMutation(c.config, OpDelete)
+	return &UpstreamChangeEventDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *UpstreamChangeEventClient) DeleteOne(_m *UpstreamChangeEvent) *UpstreamChangeEventDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *UpstreamChangeEventClient) DeleteOneID(id int64) *UpstreamChangeEventDeleteOne {
+	builder := c.Delete().Where(upstreamchangeevent.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &UpstreamChangeEventDeleteOne{builder}
+}
+
+// Query returns a query builder for UpstreamChangeEvent.
+func (c *UpstreamChangeEventClient) Query() *UpstreamChangeEventQuery {
+	return &UpstreamChangeEventQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeUpstreamChangeEvent},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a UpstreamChangeEvent entity by its id.
+func (c *UpstreamChangeEventClient) Get(ctx context.Context, id int64) (*UpstreamChangeEvent, error) {
+	return c.Query().Where(upstreamchangeevent.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *UpstreamChangeEventClient) GetX(ctx context.Context, id int64) *UpstreamChangeEvent {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *UpstreamChangeEventClient) Hooks() []Hook {
+	return c.hooks.UpstreamChangeEvent
+}
+
+// Interceptors returns the client interceptors.
+func (c *UpstreamChangeEventClient) Interceptors() []Interceptor {
+	return c.inters.UpstreamChangeEvent
+}
+
+func (c *UpstreamChangeEventClient) mutate(ctx context.Context, m *UpstreamChangeEventMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&UpstreamChangeEventCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&UpstreamChangeEventUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&UpstreamChangeEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&UpstreamChangeEventDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown UpstreamChangeEvent mutation op: %q", m.Op())
+	}
+}
+
+// UpstreamProviderClient is a client for the UpstreamProvider schema.
+type UpstreamProviderClient struct {
+	config
+}
+
+// NewUpstreamProviderClient returns a client for the UpstreamProvider from the given config.
+func NewUpstreamProviderClient(c config) *UpstreamProviderClient {
+	return &UpstreamProviderClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `upstreamprovider.Hooks(f(g(h())))`.
+func (c *UpstreamProviderClient) Use(hooks ...Hook) {
+	c.hooks.UpstreamProvider = append(c.hooks.UpstreamProvider, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `upstreamprovider.Intercept(f(g(h())))`.
+func (c *UpstreamProviderClient) Intercept(interceptors ...Interceptor) {
+	c.inters.UpstreamProvider = append(c.inters.UpstreamProvider, interceptors...)
+}
+
+// Create returns a builder for creating a UpstreamProvider entity.
+func (c *UpstreamProviderClient) Create() *UpstreamProviderCreate {
+	mutation := newUpstreamProviderMutation(c.config, OpCreate)
+	return &UpstreamProviderCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of UpstreamProvider entities.
+func (c *UpstreamProviderClient) CreateBulk(builders ...*UpstreamProviderCreate) *UpstreamProviderCreateBulk {
+	return &UpstreamProviderCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *UpstreamProviderClient) MapCreateBulk(slice any, setFunc func(*UpstreamProviderCreate, int)) *UpstreamProviderCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &UpstreamProviderCreateBulk{err: fmt.Errorf("calling to UpstreamProviderClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*UpstreamProviderCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &UpstreamProviderCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for UpstreamProvider.
+func (c *UpstreamProviderClient) Update() *UpstreamProviderUpdate {
+	mutation := newUpstreamProviderMutation(c.config, OpUpdate)
+	return &UpstreamProviderUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *UpstreamProviderClient) UpdateOne(_m *UpstreamProvider) *UpstreamProviderUpdateOne {
+	mutation := newUpstreamProviderMutation(c.config, OpUpdateOne, withUpstreamProvider(_m))
+	return &UpstreamProviderUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *UpstreamProviderClient) UpdateOneID(id int64) *UpstreamProviderUpdateOne {
+	mutation := newUpstreamProviderMutation(c.config, OpUpdateOne, withUpstreamProviderID(id))
+	return &UpstreamProviderUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for UpstreamProvider.
+func (c *UpstreamProviderClient) Delete() *UpstreamProviderDelete {
+	mutation := newUpstreamProviderMutation(c.config, OpDelete)
+	return &UpstreamProviderDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *UpstreamProviderClient) DeleteOne(_m *UpstreamProvider) *UpstreamProviderDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *UpstreamProviderClient) DeleteOneID(id int64) *UpstreamProviderDeleteOne {
+	builder := c.Delete().Where(upstreamprovider.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &UpstreamProviderDeleteOne{builder}
+}
+
+// Query returns a query builder for UpstreamProvider.
+func (c *UpstreamProviderClient) Query() *UpstreamProviderQuery {
+	return &UpstreamProviderQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeUpstreamProvider},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a UpstreamProvider entity by its id.
+func (c *UpstreamProviderClient) Get(ctx context.Context, id int64) (*UpstreamProvider, error) {
+	return c.Query().Where(upstreamprovider.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *UpstreamProviderClient) GetX(ctx context.Context, id int64) *UpstreamProvider {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryProxy queries the proxy edge of a UpstreamProvider.
+func (c *UpstreamProviderClient) QueryProxy(_m *UpstreamProvider) *ProxyQuery {
+	query := (&ProxyClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(upstreamprovider.Table, upstreamprovider.FieldID, id),
+			sqlgraph.To(proxy.Table, proxy.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, upstreamprovider.ProxyTable, upstreamprovider.ProxyColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *UpstreamProviderClient) Hooks() []Hook {
+	return c.hooks.UpstreamProvider
+}
+
+// Interceptors returns the client interceptors.
+func (c *UpstreamProviderClient) Interceptors() []Interceptor {
+	return c.inters.UpstreamProvider
+}
+
+func (c *UpstreamProviderClient) mutate(ctx context.Context, m *UpstreamProviderMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&UpstreamProviderCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&UpstreamProviderUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&UpstreamProviderUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&UpstreamProviderDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown UpstreamProvider mutation op: %q", m.Op())
+	}
+}
+
 // UsageCleanupTaskClient is a client for the UsageCleanupTask schema.
 type UsageCleanupTaskClient struct {
 	config
@@ -6338,9 +6779,10 @@ type (
 		AuthIdentityChannel, ChannelMonitor, ChannelMonitorDailyRollup,
 		ChannelMonitorHistory, ChannelMonitorRequestTemplate, ErrorPassthroughRule,
 		ExtensionConfig, Group, IdempotencyRecord, IdentityAdoptionDecision,
-		PaymentAuditLog, PaymentOrder, PaymentProviderInstance, PendingAuthSession,
-		PromoCode, PromoCodeUsage, Proxy, RedeemCode, SecuritySecret, Setting,
-		SubscriptionPlan, TLSFingerprintProfile, UsageCleanupTask, UsageLog, User,
+		NotifyChannel, PaymentAuditLog, PaymentOrder, PaymentProviderInstance,
+		PendingAuthSession, PromoCode, PromoCodeUsage, Proxy, RedeemCode,
+		SecuritySecret, Setting, SubscriptionPlan, TLSFingerprintProfile,
+		UpstreamChangeEvent, UpstreamProvider, UsageCleanupTask, UsageLog, User,
 		UserAllowedGroup, UserAttributeDefinition, UserAttributeValue,
 		UserPlatformQuota, UserSubscription []ent.Hook
 	}
@@ -6349,9 +6791,10 @@ type (
 		AuthIdentityChannel, ChannelMonitor, ChannelMonitorDailyRollup,
 		ChannelMonitorHistory, ChannelMonitorRequestTemplate, ErrorPassthroughRule,
 		ExtensionConfig, Group, IdempotencyRecord, IdentityAdoptionDecision,
-		PaymentAuditLog, PaymentOrder, PaymentProviderInstance, PendingAuthSession,
-		PromoCode, PromoCodeUsage, Proxy, RedeemCode, SecuritySecret, Setting,
-		SubscriptionPlan, TLSFingerprintProfile, UsageCleanupTask, UsageLog, User,
+		NotifyChannel, PaymentAuditLog, PaymentOrder, PaymentProviderInstance,
+		PendingAuthSession, PromoCode, PromoCodeUsage, Proxy, RedeemCode,
+		SecuritySecret, Setting, SubscriptionPlan, TLSFingerprintProfile,
+		UpstreamChangeEvent, UpstreamProvider, UsageCleanupTask, UsageLog, User,
 		UserAllowedGroup, UserAttributeDefinition, UserAttributeValue,
 		UserPlatformQuota, UserSubscription []ent.Interceptor
 	}

@@ -201,6 +201,18 @@ func (f IdentityAdoptionDecisionFunc) Mutate(ctx context.Context, m ent.Mutation
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.IdentityAdoptionDecisionMutation", m)
 }
 
+// The NotifyChannelFunc type is an adapter to allow the use of ordinary
+// function as NotifyChannel mutator.
+type NotifyChannelFunc func(context.Context, *ent.NotifyChannelMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f NotifyChannelFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.NotifyChannelMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.NotifyChannelMutation", m)
+}
+
 // The PaymentAuditLogFunc type is an adapter to allow the use of ordinary
 // function as PaymentAuditLog mutator.
 type PaymentAuditLogFunc func(context.Context, *ent.PaymentAuditLogMutation) (ent.Value, error)
@@ -343,6 +355,30 @@ func (f TLSFingerprintProfileFunc) Mutate(ctx context.Context, m ent.Mutation) (
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TLSFingerprintProfileMutation", m)
+}
+
+// The UpstreamChangeEventFunc type is an adapter to allow the use of ordinary
+// function as UpstreamChangeEvent mutator.
+type UpstreamChangeEventFunc func(context.Context, *ent.UpstreamChangeEventMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f UpstreamChangeEventFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.UpstreamChangeEventMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.UpstreamChangeEventMutation", m)
+}
+
+// The UpstreamProviderFunc type is an adapter to allow the use of ordinary
+// function as UpstreamProvider mutator.
+type UpstreamProviderFunc func(context.Context, *ent.UpstreamProviderMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f UpstreamProviderFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.UpstreamProviderMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.UpstreamProviderMutation", m)
 }
 
 // The UsageCleanupTaskFunc type is an adapter to allow the use of ordinary

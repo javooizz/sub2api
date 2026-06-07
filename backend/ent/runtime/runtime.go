@@ -21,6 +21,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/idempotencyrecord"
 	"github.com/Wei-Shaw/sub2api/ent/identityadoptiondecision"
+	"github.com/Wei-Shaw/sub2api/ent/notifychannel"
 	"github.com/Wei-Shaw/sub2api/ent/paymentauditlog"
 	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
 	"github.com/Wei-Shaw/sub2api/ent/paymentproviderinstance"
@@ -34,6 +35,8 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/setting"
 	"github.com/Wei-Shaw/sub2api/ent/subscriptionplan"
 	"github.com/Wei-Shaw/sub2api/ent/tlsfingerprintprofile"
+	"github.com/Wei-Shaw/sub2api/ent/upstreamchangeevent"
+	"github.com/Wei-Shaw/sub2api/ent/upstreamprovider"
 	"github.com/Wei-Shaw/sub2api/ent/usagecleanuptask"
 	"github.com/Wei-Shaw/sub2api/ent/usagelog"
 	"github.com/Wei-Shaw/sub2api/ent/user"
@@ -978,6 +981,55 @@ func init() {
 	identityadoptiondecisionDescDecidedAt := identityadoptiondecisionFields[4].Descriptor()
 	// identityadoptiondecision.DefaultDecidedAt holds the default value on creation for the decided_at field.
 	identityadoptiondecision.DefaultDecidedAt = identityadoptiondecisionDescDecidedAt.Default.(func() time.Time)
+	notifychannelMixin := schema.NotifyChannel{}.Mixin()
+	notifychannelMixinFields0 := notifychannelMixin[0].Fields()
+	_ = notifychannelMixinFields0
+	notifychannelFields := schema.NotifyChannel{}.Fields()
+	_ = notifychannelFields
+	// notifychannelDescCreatedAt is the schema descriptor for created_at field.
+	notifychannelDescCreatedAt := notifychannelMixinFields0[0].Descriptor()
+	// notifychannel.DefaultCreatedAt holds the default value on creation for the created_at field.
+	notifychannel.DefaultCreatedAt = notifychannelDescCreatedAt.Default.(func() time.Time)
+	// notifychannelDescUpdatedAt is the schema descriptor for updated_at field.
+	notifychannelDescUpdatedAt := notifychannelMixinFields0[1].Descriptor()
+	// notifychannel.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	notifychannel.DefaultUpdatedAt = notifychannelDescUpdatedAt.Default.(func() time.Time)
+	// notifychannel.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	notifychannel.UpdateDefaultUpdatedAt = notifychannelDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// notifychannelDescName is the schema descriptor for name field.
+	notifychannelDescName := notifychannelFields[0].Descriptor()
+	// notifychannel.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	notifychannel.NameValidator = func() func(string) error {
+		validators := notifychannelDescName.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(name string) error {
+			for _, fn := range fns {
+				if err := fn(name); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// notifychannelDescType is the schema descriptor for type field.
+	notifychannelDescType := notifychannelFields[1].Descriptor()
+	// notifychannel.TypeValidator is a validator for the "type" field. It is called by the builders before save.
+	notifychannel.TypeValidator = notifychannelDescType.Validators[0].(func(string) error)
+	// notifychannelDescScope is the schema descriptor for scope field.
+	notifychannelDescScope := notifychannelFields[2].Descriptor()
+	// notifychannel.ScopeValidator is a validator for the "scope" field. It is called by the builders before save.
+	notifychannel.ScopeValidator = notifychannelDescScope.Validators[0].(func(string) error)
+	// notifychannelDescEnabled is the schema descriptor for enabled field.
+	notifychannelDescEnabled := notifychannelFields[3].Descriptor()
+	// notifychannel.DefaultEnabled holds the default value on creation for the enabled field.
+	notifychannel.DefaultEnabled = notifychannelDescEnabled.Default.(bool)
+	// notifychannelDescLastError is the schema descriptor for last_error field.
+	notifychannelDescLastError := notifychannelFields[7].Descriptor()
+	// notifychannel.DefaultLastError holds the default value on creation for the last_error field.
+	notifychannel.DefaultLastError = notifychannelDescLastError.Default.(string)
 	paymentauditlogFields := schema.PaymentAuditLog{}.Fields()
 	_ = paymentauditlogFields
 	// paymentauditlogDescOrderID is the schema descriptor for order_id field.
@@ -1606,6 +1658,120 @@ func init() {
 	tlsfingerprintprofileDescEnableGrease := tlsfingerprintprofileFields[2].Descriptor()
 	// tlsfingerprintprofile.DefaultEnableGrease holds the default value on creation for the enable_grease field.
 	tlsfingerprintprofile.DefaultEnableGrease = tlsfingerprintprofileDescEnableGrease.Default.(bool)
+	upstreamchangeeventMixin := schema.UpstreamChangeEvent{}.Mixin()
+	upstreamchangeeventMixinFields0 := upstreamchangeeventMixin[0].Fields()
+	_ = upstreamchangeeventMixinFields0
+	upstreamchangeeventFields := schema.UpstreamChangeEvent{}.Fields()
+	_ = upstreamchangeeventFields
+	// upstreamchangeeventDescCreatedAt is the schema descriptor for created_at field.
+	upstreamchangeeventDescCreatedAt := upstreamchangeeventMixinFields0[0].Descriptor()
+	// upstreamchangeevent.DefaultCreatedAt holds the default value on creation for the created_at field.
+	upstreamchangeevent.DefaultCreatedAt = upstreamchangeeventDescCreatedAt.Default.(func() time.Time)
+	// upstreamchangeeventDescUpdatedAt is the schema descriptor for updated_at field.
+	upstreamchangeeventDescUpdatedAt := upstreamchangeeventMixinFields0[1].Descriptor()
+	// upstreamchangeevent.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	upstreamchangeevent.DefaultUpdatedAt = upstreamchangeeventDescUpdatedAt.Default.(func() time.Time)
+	// upstreamchangeevent.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	upstreamchangeevent.UpdateDefaultUpdatedAt = upstreamchangeeventDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// upstreamchangeeventDescType is the schema descriptor for type field.
+	upstreamchangeeventDescType := upstreamchangeeventFields[1].Descriptor()
+	// upstreamchangeevent.TypeValidator is a validator for the "type" field. It is called by the builders before save.
+	upstreamchangeevent.TypeValidator = upstreamchangeeventDescType.Validators[0].(func(string) error)
+	// upstreamchangeeventDescNotified is the schema descriptor for notified field.
+	upstreamchangeeventDescNotified := upstreamchangeeventFields[4].Descriptor()
+	// upstreamchangeevent.DefaultNotified holds the default value on creation for the notified field.
+	upstreamchangeevent.DefaultNotified = upstreamchangeeventDescNotified.Default.(bool)
+	upstreamproviderMixin := schema.UpstreamProvider{}.Mixin()
+	upstreamproviderMixinFields0 := upstreamproviderMixin[0].Fields()
+	_ = upstreamproviderMixinFields0
+	upstreamproviderFields := schema.UpstreamProvider{}.Fields()
+	_ = upstreamproviderFields
+	// upstreamproviderDescCreatedAt is the schema descriptor for created_at field.
+	upstreamproviderDescCreatedAt := upstreamproviderMixinFields0[0].Descriptor()
+	// upstreamprovider.DefaultCreatedAt holds the default value on creation for the created_at field.
+	upstreamprovider.DefaultCreatedAt = upstreamproviderDescCreatedAt.Default.(func() time.Time)
+	// upstreamproviderDescUpdatedAt is the schema descriptor for updated_at field.
+	upstreamproviderDescUpdatedAt := upstreamproviderMixinFields0[1].Descriptor()
+	// upstreamprovider.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	upstreamprovider.DefaultUpdatedAt = upstreamproviderDescUpdatedAt.Default.(func() time.Time)
+	// upstreamprovider.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	upstreamprovider.UpdateDefaultUpdatedAt = upstreamproviderDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// upstreamproviderDescName is the schema descriptor for name field.
+	upstreamproviderDescName := upstreamproviderFields[0].Descriptor()
+	// upstreamprovider.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	upstreamprovider.NameValidator = func() func(string) error {
+		validators := upstreamproviderDescName.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(name string) error {
+			for _, fn := range fns {
+				if err := fn(name); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// upstreamproviderDescType is the schema descriptor for type field.
+	upstreamproviderDescType := upstreamproviderFields[1].Descriptor()
+	// upstreamprovider.TypeValidator is a validator for the "type" field. It is called by the builders before save.
+	upstreamprovider.TypeValidator = upstreamproviderDescType.Validators[0].(func(string) error)
+	// upstreamproviderDescSiteURL is the schema descriptor for site_url field.
+	upstreamproviderDescSiteURL := upstreamproviderFields[2].Descriptor()
+	// upstreamprovider.SiteURLValidator is a validator for the "site_url" field. It is called by the builders before save.
+	upstreamprovider.SiteURLValidator = func() func(string) error {
+		validators := upstreamproviderDescSiteURL.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(site_url string) error {
+			for _, fn := range fns {
+				if err := fn(site_url); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// upstreamproviderDescAPIBaseURL is the schema descriptor for api_base_url field.
+	upstreamproviderDescAPIBaseURL := upstreamproviderFields[3].Descriptor()
+	// upstreamprovider.DefaultAPIBaseURL holds the default value on creation for the api_base_url field.
+	upstreamprovider.DefaultAPIBaseURL = upstreamproviderDescAPIBaseURL.Default.(string)
+	// upstreamprovider.APIBaseURLValidator is a validator for the "api_base_url" field. It is called by the builders before save.
+	upstreamprovider.APIBaseURLValidator = upstreamproviderDescAPIBaseURL.Validators[0].(func(string) error)
+	// upstreamproviderDescStatus is the schema descriptor for status field.
+	upstreamproviderDescStatus := upstreamproviderFields[4].Descriptor()
+	// upstreamprovider.DefaultStatus holds the default value on creation for the status field.
+	upstreamprovider.DefaultStatus = upstreamproviderDescStatus.Default.(string)
+	// upstreamprovider.StatusValidator is a validator for the "status" field. It is called by the builders before save.
+	upstreamprovider.StatusValidator = upstreamproviderDescStatus.Validators[0].(func(string) error)
+	// upstreamproviderDescNotifyOnPriceChange is the schema descriptor for notify_on_price_change field.
+	upstreamproviderDescNotifyOnPriceChange := upstreamproviderFields[8].Descriptor()
+	// upstreamprovider.DefaultNotifyOnPriceChange holds the default value on creation for the notify_on_price_change field.
+	upstreamprovider.DefaultNotifyOnPriceChange = upstreamproviderDescNotifyOnPriceChange.Default.(bool)
+	// upstreamproviderDescRefreshIntervalMinutes is the schema descriptor for refresh_interval_minutes field.
+	upstreamproviderDescRefreshIntervalMinutes := upstreamproviderFields[9].Descriptor()
+	// upstreamprovider.DefaultRefreshIntervalMinutes holds the default value on creation for the refresh_interval_minutes field.
+	upstreamprovider.DefaultRefreshIntervalMinutes = upstreamproviderDescRefreshIntervalMinutes.Default.(int)
+	// upstreamproviderDescLastError is the schema descriptor for last_error field.
+	upstreamproviderDescLastError := upstreamproviderFields[12].Descriptor()
+	// upstreamprovider.DefaultLastError holds the default value on creation for the last_error field.
+	upstreamprovider.DefaultLastError = upstreamproviderDescLastError.Default.(string)
+	// upstreamproviderDescConsecutiveFailures is the schema descriptor for consecutive_failures field.
+	upstreamproviderDescConsecutiveFailures := upstreamproviderFields[13].Descriptor()
+	// upstreamprovider.DefaultConsecutiveFailures holds the default value on creation for the consecutive_failures field.
+	upstreamprovider.DefaultConsecutiveFailures = upstreamproviderDescConsecutiveFailures.Default.(int)
+	// upstreamproviderDescBalanceAlerted is the schema descriptor for balance_alerted field.
+	upstreamproviderDescBalanceAlerted := upstreamproviderFields[14].Descriptor()
+	// upstreamprovider.DefaultBalanceAlerted holds the default value on creation for the balance_alerted field.
+	upstreamprovider.DefaultBalanceAlerted = upstreamproviderDescBalanceAlerted.Default.(bool)
+	// upstreamproviderDescRemark is the schema descriptor for remark field.
+	upstreamproviderDescRemark := upstreamproviderFields[16].Descriptor()
+	// upstreamprovider.DefaultRemark holds the default value on creation for the remark field.
+	upstreamprovider.DefaultRemark = upstreamproviderDescRemark.Default.(string)
 	usagecleanuptaskMixin := schema.UsageCleanupTask{}.Mixin()
 	usagecleanuptaskMixinFields0 := usagecleanuptaskMixin[0].Fields()
 	_ = usagecleanuptaskMixinFields0

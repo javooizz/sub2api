@@ -806,6 +806,33 @@ var (
 			},
 		},
 	}
+	// NotifyChannelsColumns holds the columns for the "notify_channels" table.
+	NotifyChannelsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "name", Type: field.TypeString, Size: 100},
+		{Name: "type", Type: field.TypeString, Size: 20},
+		{Name: "scope", Type: field.TypeString, Size: 40},
+		{Name: "enabled", Type: field.TypeBool, Default: true},
+		{Name: "events", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "config", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "last_sent_at", Type: field.TypeTime, Nullable: true},
+		{Name: "last_error", Type: field.TypeString, Default: "", SchemaType: map[string]string{"postgres": "text"}},
+	}
+	// NotifyChannelsTable holds the schema information for the "notify_channels" table.
+	NotifyChannelsTable = &schema.Table{
+		Name:       "notify_channels",
+		Columns:    NotifyChannelsColumns,
+		PrimaryKey: []*schema.Column{NotifyChannelsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "notifychannel_scope",
+				Unique:  false,
+				Columns: []*schema.Column{NotifyChannelsColumns[5]},
+			},
+		},
+	}
 	// PaymentAuditLogsColumns holds the columns for the "payment_audit_logs" table.
 	PaymentAuditLogsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
@@ -1280,6 +1307,74 @@ var (
 		Name:       "tls_fingerprint_profiles",
 		Columns:    TLSFingerprintProfilesColumns,
 		PrimaryKey: []*schema.Column{TLSFingerprintProfilesColumns[0]},
+	}
+	// UpstreamChangeEventsColumns holds the columns for the "upstream_change_events" table.
+	UpstreamChangeEventsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "provider_id", Type: field.TypeInt64},
+		{Name: "type", Type: field.TypeString, Size: 40},
+		{Name: "summary", Type: field.TypeString, SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "detail", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "notified", Type: field.TypeBool, Default: false},
+	}
+	// UpstreamChangeEventsTable holds the schema information for the "upstream_change_events" table.
+	UpstreamChangeEventsTable = &schema.Table{
+		Name:       "upstream_change_events",
+		Columns:    UpstreamChangeEventsColumns,
+		PrimaryKey: []*schema.Column{UpstreamChangeEventsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "upstreamchangeevent_provider_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{UpstreamChangeEventsColumns[3], UpstreamChangeEventsColumns[1]},
+			},
+		},
+	}
+	// UpstreamProvidersColumns holds the columns for the "upstream_providers" table.
+	UpstreamProvidersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "name", Type: field.TypeString, Size: 100},
+		{Name: "type", Type: field.TypeString, Size: 20},
+		{Name: "site_url", Type: field.TypeString, Size: 500},
+		{Name: "api_base_url", Type: field.TypeString, Nullable: true, Size: 500, Default: ""},
+		{Name: "status", Type: field.TypeString, Size: 30, Default: "active"},
+		{Name: "credentials", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "balance_threshold", Type: field.TypeFloat64, Nullable: true},
+		{Name: "notify_on_price_change", Type: field.TypeBool, Default: true},
+		{Name: "refresh_interval_minutes", Type: field.TypeInt, Default: 60},
+		{Name: "latest_snapshot", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "last_refreshed_at", Type: field.TypeTime, Nullable: true},
+		{Name: "last_error", Type: field.TypeString, Default: "", SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "consecutive_failures", Type: field.TypeInt, Default: 0},
+		{Name: "balance_alerted", Type: field.TypeBool, Default: false},
+		{Name: "refresh_started_at", Type: field.TypeTime, Nullable: true},
+		{Name: "remark", Type: field.TypeString, Default: "", SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "proxy_id", Type: field.TypeInt64, Nullable: true},
+	}
+	// UpstreamProvidersTable holds the schema information for the "upstream_providers" table.
+	UpstreamProvidersTable = &schema.Table{
+		Name:       "upstream_providers",
+		Columns:    UpstreamProvidersColumns,
+		PrimaryKey: []*schema.Column{UpstreamProvidersColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "upstream_providers_proxies_proxy",
+				Columns:    []*schema.Column{UpstreamProvidersColumns[19]},
+				RefColumns: []*schema.Column{ProxiesColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "upstreamprovider_status",
+				Unique:  false,
+				Columns: []*schema.Column{UpstreamProvidersColumns[7]},
+			},
+		},
 	}
 	// UsageCleanupTasksColumns holds the columns for the "usage_cleanup_tasks" table.
 	UsageCleanupTasksColumns = []*schema.Column{
@@ -1782,6 +1877,7 @@ var (
 		GroupsTable,
 		IdempotencyRecordsTable,
 		IdentityAdoptionDecisionsTable,
+		NotifyChannelsTable,
 		PaymentAuditLogsTable,
 		PaymentOrdersTable,
 		PaymentProviderInstancesTable,
@@ -1794,6 +1890,8 @@ var (
 		SettingsTable,
 		SubscriptionPlansTable,
 		TLSFingerprintProfilesTable,
+		UpstreamChangeEventsTable,
+		UpstreamProvidersTable,
 		UsageCleanupTasksTable,
 		UsageLogsTable,
 		UsersTable,
@@ -1868,6 +1966,9 @@ func init() {
 	IdentityAdoptionDecisionsTable.Annotation = &entsql.Annotation{
 		Table: "identity_adoption_decisions",
 	}
+	NotifyChannelsTable.Annotation = &entsql.Annotation{
+		Table: "notify_channels",
+	}
 	PaymentAuditLogsTable.Annotation = &entsql.Annotation{
 		Table: "payment_audit_logs",
 	}
@@ -1909,6 +2010,13 @@ func init() {
 	}
 	TLSFingerprintProfilesTable.Annotation = &entsql.Annotation{
 		Table: "tls_fingerprint_profiles",
+	}
+	UpstreamChangeEventsTable.Annotation = &entsql.Annotation{
+		Table: "upstream_change_events",
+	}
+	UpstreamProvidersTable.ForeignKeys[0].RefTable = ProxiesTable
+	UpstreamProvidersTable.Annotation = &entsql.Annotation{
+		Table: "upstream_providers",
 	}
 	UsageCleanupTasksTable.Annotation = &entsql.Annotation{
 		Table: "usage_cleanup_tasks",

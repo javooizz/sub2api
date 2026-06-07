@@ -24,6 +24,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/idempotencyrecord"
 	"github.com/Wei-Shaw/sub2api/ent/identityadoptiondecision"
+	"github.com/Wei-Shaw/sub2api/ent/notifychannel"
 	"github.com/Wei-Shaw/sub2api/ent/paymentauditlog"
 	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
 	"github.com/Wei-Shaw/sub2api/ent/paymentproviderinstance"
@@ -37,6 +38,8 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/setting"
 	"github.com/Wei-Shaw/sub2api/ent/subscriptionplan"
 	"github.com/Wei-Shaw/sub2api/ent/tlsfingerprintprofile"
+	"github.com/Wei-Shaw/sub2api/ent/upstreamchangeevent"
+	"github.com/Wei-Shaw/sub2api/ent/upstreamprovider"
 	"github.com/Wei-Shaw/sub2api/ent/usagecleanuptask"
 	"github.com/Wei-Shaw/sub2api/ent/usagelog"
 	"github.com/Wei-Shaw/sub2api/ent/user"
@@ -535,6 +538,33 @@ func (f TraverseIdentityAdoptionDecision) Traverse(ctx context.Context, q ent.Qu
 	return fmt.Errorf("unexpected query type %T. expect *ent.IdentityAdoptionDecisionQuery", q)
 }
 
+// The NotifyChannelFunc type is an adapter to allow the use of ordinary function as a Querier.
+type NotifyChannelFunc func(context.Context, *ent.NotifyChannelQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f NotifyChannelFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.NotifyChannelQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.NotifyChannelQuery", q)
+}
+
+// The TraverseNotifyChannel type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseNotifyChannel func(context.Context, *ent.NotifyChannelQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseNotifyChannel) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseNotifyChannel) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.NotifyChannelQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.NotifyChannelQuery", q)
+}
+
 // The PaymentAuditLogFunc type is an adapter to allow the use of ordinary function as a Querier.
 type PaymentAuditLogFunc func(context.Context, *ent.PaymentAuditLogQuery) (ent.Value, error)
 
@@ -859,6 +889,60 @@ func (f TraverseTLSFingerprintProfile) Traverse(ctx context.Context, q ent.Query
 	return fmt.Errorf("unexpected query type %T. expect *ent.TLSFingerprintProfileQuery", q)
 }
 
+// The UpstreamChangeEventFunc type is an adapter to allow the use of ordinary function as a Querier.
+type UpstreamChangeEventFunc func(context.Context, *ent.UpstreamChangeEventQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f UpstreamChangeEventFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.UpstreamChangeEventQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.UpstreamChangeEventQuery", q)
+}
+
+// The TraverseUpstreamChangeEvent type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseUpstreamChangeEvent func(context.Context, *ent.UpstreamChangeEventQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseUpstreamChangeEvent) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseUpstreamChangeEvent) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.UpstreamChangeEventQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.UpstreamChangeEventQuery", q)
+}
+
+// The UpstreamProviderFunc type is an adapter to allow the use of ordinary function as a Querier.
+type UpstreamProviderFunc func(context.Context, *ent.UpstreamProviderQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f UpstreamProviderFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.UpstreamProviderQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.UpstreamProviderQuery", q)
+}
+
+// The TraverseUpstreamProvider type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseUpstreamProvider func(context.Context, *ent.UpstreamProviderQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseUpstreamProvider) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseUpstreamProvider) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.UpstreamProviderQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.UpstreamProviderQuery", q)
+}
+
 // The UsageCleanupTaskFunc type is an adapter to allow the use of ordinary function as a Querier.
 type UsageCleanupTaskFunc func(context.Context, *ent.UsageCleanupTaskQuery) (ent.Value, error)
 
@@ -1110,6 +1194,8 @@ func NewQuery(q ent.Query) (Query, error) {
 		return &query[*ent.IdempotencyRecordQuery, predicate.IdempotencyRecord, idempotencyrecord.OrderOption]{typ: ent.TypeIdempotencyRecord, tq: q}, nil
 	case *ent.IdentityAdoptionDecisionQuery:
 		return &query[*ent.IdentityAdoptionDecisionQuery, predicate.IdentityAdoptionDecision, identityadoptiondecision.OrderOption]{typ: ent.TypeIdentityAdoptionDecision, tq: q}, nil
+	case *ent.NotifyChannelQuery:
+		return &query[*ent.NotifyChannelQuery, predicate.NotifyChannel, notifychannel.OrderOption]{typ: ent.TypeNotifyChannel, tq: q}, nil
 	case *ent.PaymentAuditLogQuery:
 		return &query[*ent.PaymentAuditLogQuery, predicate.PaymentAuditLog, paymentauditlog.OrderOption]{typ: ent.TypePaymentAuditLog, tq: q}, nil
 	case *ent.PaymentOrderQuery:
@@ -1134,6 +1220,10 @@ func NewQuery(q ent.Query) (Query, error) {
 		return &query[*ent.SubscriptionPlanQuery, predicate.SubscriptionPlan, subscriptionplan.OrderOption]{typ: ent.TypeSubscriptionPlan, tq: q}, nil
 	case *ent.TLSFingerprintProfileQuery:
 		return &query[*ent.TLSFingerprintProfileQuery, predicate.TLSFingerprintProfile, tlsfingerprintprofile.OrderOption]{typ: ent.TypeTLSFingerprintProfile, tq: q}, nil
+	case *ent.UpstreamChangeEventQuery:
+		return &query[*ent.UpstreamChangeEventQuery, predicate.UpstreamChangeEvent, upstreamchangeevent.OrderOption]{typ: ent.TypeUpstreamChangeEvent, tq: q}, nil
+	case *ent.UpstreamProviderQuery:
+		return &query[*ent.UpstreamProviderQuery, predicate.UpstreamProvider, upstreamprovider.OrderOption]{typ: ent.TypeUpstreamProvider, tq: q}, nil
 	case *ent.UsageCleanupTaskQuery:
 		return &query[*ent.UsageCleanupTaskQuery, predicate.UsageCleanupTask, usagecleanuptask.OrderOption]{typ: ent.TypeUsageCleanupTask, tq: q}, nil
 	case *ent.UsageLogQuery:

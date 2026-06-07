@@ -54,6 +54,9 @@ type IdempotencyRecord func(*sql.Selector)
 // IdentityAdoptionDecision is the predicate function for identityadoptiondecision builders.
 type IdentityAdoptionDecision func(*sql.Selector)
 
+// NotifyChannel is the predicate function for notifychannel builders.
+type NotifyChannel func(*sql.Selector)
+
 // PaymentAuditLog is the predicate function for paymentauditlog builders.
 type PaymentAuditLog func(*sql.Selector)
 
@@ -89,6 +92,12 @@ type SubscriptionPlan func(*sql.Selector)
 
 // TLSFingerprintProfile is the predicate function for tlsfingerprintprofile builders.
 type TLSFingerprintProfile func(*sql.Selector)
+
+// UpstreamChangeEvent is the predicate function for upstreamchangeevent builders.
+type UpstreamChangeEvent func(*sql.Selector)
+
+// UpstreamProvider is the predicate function for upstreamprovider builders.
+type UpstreamProvider func(*sql.Selector)
 
 // UsageCleanupTask is the predicate function for usagecleanuptask builders.
 type UsageCleanupTask func(*sql.Selector)
