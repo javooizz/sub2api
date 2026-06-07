@@ -37,7 +37,7 @@
         <nav
           class="flex gap-1 border-b border-gray-200 px-5 dark:border-gray-700"
           role="tablist"
-          :aria-label="t('admin.upstream.detail.tabs.overview')"
+          :aria-label="t('admin.upstream.detail.tabsLabel')"
         >
           <button
             v-for="tab in tabs"
@@ -473,6 +473,8 @@ async function loadMoreEvents() {
     })
     events.value = [...events.value, ...more]
     hasMoreEvents.value = more.length === EVENTS_PAGE
+  } catch {
+    appStore.showError(t('admin.upstream.loadFailed'))
   } finally {
     loadingMore.value = false
   }

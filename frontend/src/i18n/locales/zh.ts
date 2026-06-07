@@ -7528,6 +7528,7 @@ export default {
         },
       },
       detail: {
+        tabsLabel: '详情选项卡',
         tabs: {
           overview: '概览',
           pricing: '分组价格',

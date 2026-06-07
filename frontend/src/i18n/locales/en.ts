@@ -7349,6 +7349,7 @@ export default {
         },
       },
       detail: {
+        tabsLabel: 'Detail tabs',
         tabs: {
           overview: 'Overview',
           pricing: 'Group Pricing',
