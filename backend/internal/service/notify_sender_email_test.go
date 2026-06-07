@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -54,5 +55,18 @@ func TestEmailNotifySender_NoRecipientsIsError(t *testing.T) {
 	ch := &NotifyChannel{ID: 1, Config: map[string]any{}}
 	if err := s.Send(context.Background(), ch, NotifyEvent{Title: "t"}); err == nil {
 		t.Fatal("无收件人应返回错误")
+	}
+}
+
+func TestEmailNotifySender_ContinuesOnPartialFailure(t *testing.T) {
+	delivery := &fakeEmailDelivery{err: errors.New("smtp error")}
+	s := NewEmailNotifySender(delivery)
+	ch := &NotifyChannel{Config: map[string]any{"recipients": []any{"a@x.com", "b@x.com"}}}
+	err := s.Send(context.Background(), ch, NotifyEvent{Title: "t"})
+	if err == nil {
+		t.Fatal("有失败应返回错误")
+	}
+	if len(delivery.to) != 2 {
+		t.Fatalf("失败不应中断,两个收件人都应尝试,实际 %d", len(delivery.to))
 	}
 }

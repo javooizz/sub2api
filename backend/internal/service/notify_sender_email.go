@@ -72,7 +72,13 @@ func stringSliceFromConfig(cfg map[string]any, key string) []string {
 	}
 	switch v := raw.(type) {
 	case []string:
-		return v
+		out := make([]string, 0, len(v))
+		for _, s := range v {
+			if t := strings.TrimSpace(s); t != "" {
+				out = append(out, t)
+			}
+		}
+		return out
 	case []any:
 		out := make([]string, 0, len(v))
 		for _, item := range v {
