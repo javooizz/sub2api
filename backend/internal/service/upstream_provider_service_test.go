@@ -326,11 +326,12 @@ func TestProviderService_ResetTokens(t *testing.T) {
 	created, _ := svc.Create(context.Background(), &UpstreamProvider{
 		Name: "r", Type: domain.UpstreamTypeNewAPI, SiteURL: "https://a.com",
 		Credentials: map[string]any{
-			"username":        "admin",
-			"password":        "pass",
-			"access_token":    "tok123",
-			"cf_clearance":    "cf_val",
-			"cf_user_agent":   "ua",
+			"username":         "admin",
+			"password":         "pass",
+			"access_token":     "tok123",
+			"cf_clearance":     "cf_val",
+			"cf_user_agent":    "ua",
+			"cf_expires_at":    "2026-07-01T00:00:00Z",
 			"token_expires_at": "2024-01-01",
 		},
 	})
@@ -349,6 +350,9 @@ func TestProviderService_ResetTokens(t *testing.T) {
 	}
 	if _, ok := updated.Credentials["cf_user_agent"]; ok {
 		t.Fatal("cf_user_agent 应被删除")
+	}
+	if _, ok := updated.Credentials["cf_expires_at"]; ok {
+		t.Fatal("cf_expires_at 应被剥离")
 	}
 	if _, ok := updated.Credentials["token_expires_at"]; ok {
 		t.Fatal("token_expires_at 应被删除")

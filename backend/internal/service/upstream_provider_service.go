@@ -315,7 +315,7 @@ func (s *UpstreamProviderService) Events(ctx context.Context, providerID int64, 
 // ─────────────────────────────── ResetTokens ─────────────────────────────
 
 // resetTokenKeys 剥离的运行时 token 凭证键（Task 16 Relogin 前调用）。
-var resetTokenKeys = []string{"access_token", "cf_clearance", "cf_user_agent", "token_expires_at"}
+var resetTokenKeys = []string{"access_token", "cf_clearance", "cf_user_agent", "cf_expires_at", "token_expires_at"}
 
 // ResetTokens 剥离 access_token/cf_*/token_expires_at 后整体回写（Task 16 Relogin 用）。
 func (s *UpstreamProviderService) ResetTokens(ctx context.Context, id int64) error {
