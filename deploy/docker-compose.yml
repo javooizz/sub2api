@@ -256,6 +256,21 @@ services:
       start_period: 5s
     # 注意：不暴露端口到宿主机，应用通过内部网络连接
     # 如需调试，可临时添加：ports: ["127.0.0.1:6379:6379"]
+
+  # 可选：CloakBrowser 浏览器沙盒（上游管理过盾/自动登录用，spec §6）。
+  # 不启用时上游管理仍可用（纯 HTTP + 手动凭证），未配置 CDP 地址即降级。
+  # 启用：docker compose --profile browser up -d
+  # 启用后在后台「采集设置」中 CDP 地址填 ws://cloakbrowser:9222（容器内网）。
+  cloakbrowser:
+    image: cloakhq/cloakbrowser:latest
+    container_name: sub2api-cloakbrowser
+    command: cloakserve
+    profiles: ["browser"]
+    restart: unless-stopped
+    shm_size: 1gb
+    networks:
+      - sub2api-network
+    # 仅内网访问；如需宿主机调试可临时添加：ports: ["127.0.0.1:9222:9222"]
 # =============================================================================
 # Volumes
 # =============================================================================
