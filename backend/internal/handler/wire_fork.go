@@ -10,6 +10,7 @@ import (
 // 与 repository/wire_fork.go 同模式：与上游 ProviderSet 物理隔离，
 // 避免合并上游时的"列表追加"型冲突。
 var ForkProviderSet = wire.NewSet(
-	NewModelPlazaHandler,       // 用户侧模型广场
-	admin.NewModelPlazaHandler, // 管理侧模型清单
+	NewModelPlazaHandler,         // 用户侧模型广场
+	admin.NewModelPlazaHandler,   // 管理侧模型清单
+	admin.NewNotifyChannelHandler, // 管理侧通知渠道 CRUD + 测试发送
 )

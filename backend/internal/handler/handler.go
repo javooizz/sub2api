@@ -38,6 +38,7 @@ type AdminHandlers struct {
 	Affiliate              *admin.AffiliateHandler
 	ExtensionConfig        *admin.ExtensionConfigHandler
 	ModelPlaza             *admin.ModelPlazaHandler
+	NotifyChannel          *admin.NotifyChannelHandler
 }
 
 // Handlers contains all HTTP handlers

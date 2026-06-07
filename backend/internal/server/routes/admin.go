@@ -103,7 +103,21 @@ func RegisterAdminRoutes(
 
 		// 模型广场（模型清单聚合端点）
 		registerModelPlazaRoutes(admin, h)
+
+		// 通知渠道管理（上游变更通知，fork 新增）
+		registerNotifyChannelRoutes(admin, h)
 	}
+}
+
+// registerNotifyChannelRoutes 通知渠道管理(fork 新增)。
+// 上游变更事件通过这些渠道(email/webhook)推送，scope 当前固定 upstream。
+func registerNotifyChannelRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
+	nc := h.Admin.NotifyChannel
+	admin.GET("/notify-channels", nc.List)
+	admin.POST("/notify-channels", nc.Create)
+	admin.PUT("/notify-channels/:id", nc.Update)
+	admin.DELETE("/notify-channels/:id", nc.Delete)
+	admin.POST("/notify-channels/:id/test", nc.Test)
 }
 
 // registerExtensionConfigRoutes 注册"扩展配置/工作台"的管理员路由。

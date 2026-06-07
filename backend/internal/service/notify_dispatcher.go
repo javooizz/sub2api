@@ -4,6 +4,8 @@ import (
 	"context"
 	"log/slog"
 	"time"
+
+	"github.com/Wei-Shaw/sub2api/internal/domain"
 )
 
 // NotifyDispatcher 按 scope+enabled+events 过滤渠道并逐个发送(spec §8)。
@@ -98,4 +100,15 @@ func channelSubscribes(ch *NotifyChannel, eventTypes []string) bool {
 		}
 	}
 	return false
+}
+
+// ProvideNotifySenders 聚合各渠道 sender(wire 用)。
+// allowPrivate 读取设置项 upstream_notify_allow_private_webhook。
+func ProvideNotifySenders(emailService *EmailService, settingService *SettingService) map[string]NotifySender {
+	return map[string]NotifySender{
+		domain.NotifyChannelTypeEmail: NewEmailNotifySender(emailService),
+		domain.NotifyChannelTypeWebhook: NewWebhookNotifySender(func(ctx context.Context) bool {
+			return settingService.GetUpstreamManagementRuntime(ctx).AllowPrivateWebhook
+		}),
+	}
 }
