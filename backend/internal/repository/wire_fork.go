@@ -10,7 +10,9 @@ import "github.com/google/wire"
 //
 // 约定：fork 新增的 Repository Provider 一律加到这里，不要直接写进 wire.go 的 ProviderSet。
 var ForkProviderSet = wire.NewSet(
-	NewExtensionConfigRepository, // 浏览器扩展配置仓储
-	NewUserAllowedGroupLister,    // 用户可见分组列表
-	NewNotifyChannelRepository,   // 通知渠道仓储
+	NewExtensionConfigRepository,     // 浏览器扩展配置仓储
+	NewUserAllowedGroupLister,        // 用户可见分组列表
+	NewNotifyChannelRepository,       // 通知渠道仓储
+	NewUpstreamProviderRepository,    // 上游站点仓储
+	NewUpstreamChangeEventRepository, // 上游变更事件仓储
 )
