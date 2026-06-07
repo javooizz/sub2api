@@ -165,7 +165,5 @@ var (
 )
 
 // 确保包级 var 被引用(避免 lint 误报;实际在适配器实现中使用)。
-var _ = errUpstreamAuth
-var _ = errUpstreamCFChallenge
+// errUpstreamAuth/errUpstreamCFChallenge/errUpstreamTurnstile 已在适配器中真正使用,无需 lint 白名单。
 var _ = errUpstream2FA
-var _ = errUpstreamTurnstile
