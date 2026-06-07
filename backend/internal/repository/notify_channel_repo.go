@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"time"
+	"unicode/utf8"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/notifychannel"
@@ -41,7 +42,8 @@ func toServiceNotifyChannel(e *dbent.NotifyChannel) *service.NotifyChannel {
 
 // Create 新建通知渠道。
 func (r *notifyChannelRepository) Create(ctx context.Context, ch *service.NotifyChannel) (*service.NotifyChannel, error) {
-	created, err := r.client.NotifyChannel.Create().
+	client := clientFromContext(ctx, r.client)
+	created, err := client.NotifyChannel.Create().
 		SetName(ch.Name).
 		SetType(ch.Type).
 		SetScope(ch.Scope).
@@ -57,7 +59,8 @@ func (r *notifyChannelRepository) Create(ctx context.Context, ch *service.Notify
 
 // GetByID 按 ID 查询通知渠道；不存在返回 ErrNotifyChannelNotFound。
 func (r *notifyChannelRepository) GetByID(ctx context.Context, id int64) (*service.NotifyChannel, error) {
-	e, err := r.client.NotifyChannel.Get(ctx, id)
+	client := clientFromContext(ctx, r.client)
+	e, err := client.NotifyChannel.Get(ctx, id)
 	if err != nil {
 		if dbent.IsNotFound(err) {
 			return nil, service.ErrNotifyChannelNotFound
@@ -69,7 +72,8 @@ func (r *notifyChannelRepository) GetByID(ctx context.Context, id int64) (*servi
 
 // ListByScope 返回指定 scope 下所有通知渠道，按 ID 升序排列。
 func (r *notifyChannelRepository) ListByScope(ctx context.Context, scope string) ([]*service.NotifyChannel, error) {
-	rows, err := r.client.NotifyChannel.Query().
+	client := clientFromContext(ctx, r.client)
+	rows, err := client.NotifyChannel.Query().
 		Where(notifychannel.ScopeEQ(scope)).
 		Order(notifychannel.ByID()).
 		All(ctx)
@@ -84,8 +88,10 @@ func (r *notifyChannelRepository) ListByScope(ctx context.Context, scope string)
 }
 
 // Update 更新通知渠道可变字段；不存在返回 ErrNotifyChannelNotFound。
+// Scope 业务固定,不可更新。
 func (r *notifyChannelRepository) Update(ctx context.Context, ch *service.NotifyChannel) (*service.NotifyChannel, error) {
-	updated, err := r.client.NotifyChannel.UpdateOneID(ch.ID).
+	client := clientFromContext(ctx, r.client)
+	updated, err := client.NotifyChannel.UpdateOneID(ch.ID).
 		SetName(ch.Name).
 		SetType(ch.Type).
 		SetEnabled(ch.Enabled).
@@ -103,19 +109,24 @@ func (r *notifyChannelRepository) Update(ctx context.Context, ch *service.Notify
 
 // Delete 删除通知渠道；不存在返回 ErrNotifyChannelNotFound。
 func (r *notifyChannelRepository) Delete(ctx context.Context, id int64) error {
-	err := r.client.NotifyChannel.DeleteOneID(id).Exec(ctx)
-	if err != nil && dbent.IsNotFound(err) {
-		return service.ErrNotifyChannelNotFound
+	client := clientFromContext(ctx, r.client)
+	err := client.NotifyChannel.DeleteOneID(id).Exec(ctx)
+	if err != nil {
+		if dbent.IsNotFound(err) {
+			return service.ErrNotifyChannelNotFound
+		}
+		return err
 	}
-	return err
+	return nil
 }
 
 // MarkResult 记录发送结果。
 //
 //   - sentErr == nil：更新 last_sent_at 为当前时间，并清空 last_error。
-//   - sentErr != nil：仅写入 last_error（截断至 500 字符），不更新 last_sent_at。
+//   - sentErr != nil：仅写入 last_error（截断至 500 字节，UTF-8 安全），不更新 last_sent_at。
 func (r *notifyChannelRepository) MarkResult(ctx context.Context, id int64, sentErr error) error {
-	upd := r.client.NotifyChannel.UpdateOneID(id)
+	client := clientFromContext(ctx, r.client)
+	upd := client.NotifyChannel.UpdateOneID(id)
 	if sentErr == nil {
 		now := time.Now()
 		upd.SetLastSentAt(now).SetLastError("")
@@ -123,6 +134,9 @@ func (r *notifyChannelRepository) MarkResult(ctx context.Context, id int64, sent
 		msg := sentErr.Error()
 		if len(msg) > 500 {
 			msg = msg[:500]
+			for len(msg) > 0 && !utf8.ValidString(msg) {
+				msg = msg[:len(msg)-1]
+			}
 		}
 		upd.SetLastError(msg)
 	}
