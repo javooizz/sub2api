@@ -702,6 +702,19 @@ const routes: RouteRecordRaw[] = [
   },
 
 
+  {
+    path: '/admin/upstream-providers',
+    name: 'AdminUpstreamProviders',
+    component: () => import('@/views/admin/UpstreamProvidersView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Upstream Providers',
+      titleKey: 'admin.upstream.title',
+      descriptionKey: 'admin.upstream.description'
+    }
+  },
+
   // ==================== Payment Admin Routes ====================
   {
     path: '/admin/orders/dashboard',
