@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/chromedp/cdproto/network"
@@ -17,6 +19,9 @@ import (
 
 // ErrBrowserDisabled 未配置 CloakBrowser CDP 地址(spec §6:降级、人工兜底)。
 var ErrBrowserDisabled = errors.New("CloakBrowser 未配置")
+
+// 编译期断言:ChromedpBrowserSolver 实现 BrowserSolver 接口。
+var _ BrowserSolver = (*ChromedpBrowserSolver)(nil)
 
 const (
 	browserCFTimeout    = 60 * time.Second // 过盾上限(spec §6)
@@ -59,7 +64,7 @@ func (s *ChromedpBrowserSolver) cdpURLFor(ctx context.Context, p *UpstreamProvid
 	}
 	u := base + sep + "fingerprint-seed=upstream-" + strconv.FormatInt(p.ID, 10)
 	if p.ProxyURL != "" {
-		u += "&proxy=" + p.ProxyURL
+		u += "&proxy=" + url.QueryEscape(p.ProxyURL)
 	}
 	return u
 }
@@ -143,7 +148,7 @@ func (s *ChromedpBrowserSolver) AutoLogin(ctx context.Context, p *UpstreamProvid
 		case "sub2api":
 			var token string
 			_ = chromedp.Run(taskCtx, chromedp.Evaluate(
-				`localStorage.getItem('token') || ''`, &token))
+				`localStorage.getItem('auth_token') || ''`, &token))
 			if token != "" {
 				return map[string]any{"access_token": token}, nil
 			}
@@ -252,7 +257,7 @@ func pruneDiagnostics(dataDir string, providerID int64, keep int) error {
 	}
 	names := make([]string, 0, len(entries))
 	for _, e := range entries {
-		if !e.IsDir() {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".png") {
 			names = append(names, e.Name())
 		}
 	}
