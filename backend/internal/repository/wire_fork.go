@@ -15,4 +15,5 @@ var ForkProviderSet = wire.NewSet(
 	NewNotifyChannelRepository,       // 通知渠道仓储
 	NewUpstreamProviderRepository,    // 上游站点仓储
 	NewUpstreamChangeEventRepository, // 上游变更事件仓储
+	NewUpstreamAccountLister,         // 关联帐号列表（type=upstream 账号）
 )

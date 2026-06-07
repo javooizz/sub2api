@@ -5,6 +5,7 @@ import (
 	"time"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
+	"github.com/Wei-Shaw/sub2api/ent/account"
 	"github.com/Wei-Shaw/sub2api/ent/upstreamchangeevent"
 	"github.com/Wei-Shaw/sub2api/ent/upstreamprovider"
 	"github.com/Wei-Shaw/sub2api/internal/domain"
@@ -287,4 +288,38 @@ func (r *upstreamProviderRepository) MarkEventsNotified(ctx context.Context, eve
 		SetNotified(true).
 		Save(ctx)
 	return err
+}
+
+// ─────────────────────────── UpstreamAccountLister ───────────────────────────
+
+// upstreamAccountListerImpl 列出 type=upstream 的账号(关联帐号匹配用,spec §9)。
+type upstreamAccountListerImpl struct {
+	client *dbent.Client
+}
+
+// NewUpstreamAccountLister 构造 service.UpstreamAccountLister 实现(R2.3 导出接口)。
+func NewUpstreamAccountLister(client *dbent.Client) service.UpstreamAccountLister {
+	return &upstreamAccountListerImpl{client: client}
+}
+
+// ListUpstreamTypeAccounts 返回所有 type=upstream 的账号，credentials["base_url"] 映射为 BaseURL。
+func (r *upstreamAccountListerImpl) ListUpstreamTypeAccounts(ctx context.Context) ([]service.UpstreamLinkedAccount, error) {
+	rows, err := r.client.Account.Query().
+		Where(account.TypeEQ(domain.AccountTypeUpstream)).
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]service.UpstreamLinkedAccount, 0, len(rows))
+	for _, a := range rows {
+		baseURL, _ := a.Credentials["base_url"].(string)
+		out = append(out, service.UpstreamLinkedAccount{
+			ID:       a.ID,
+			Name:     a.Name,
+			Platform: a.Platform,
+			Status:   a.Status,
+			BaseURL:  baseURL,
+		})
+	}
+	return out, nil
 }
