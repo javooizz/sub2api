@@ -69,6 +69,7 @@
               type="password"
               autocomplete="new-password"
               class="input"
+              :placeholder="passwordPlaceholder"
             />
           </div>
         </div>
@@ -223,6 +224,12 @@ const tokenPlaceholder = computed(() => {
   const tail = props.provider?.credential_status?.access_token_tail
   return isEdit.value && props.provider?.credential_status?.has_access_token
     ? t('admin.upstream.form.accessTokenKept', { tail: tail ?? '****' })
+    : ''
+})
+
+const passwordPlaceholder = computed(() => {
+  return isEdit.value && props.provider?.credential_status?.has_password
+    ? t('admin.upstream.form.passwordKept')
     : ''
 })
 
