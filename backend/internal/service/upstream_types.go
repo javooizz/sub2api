@@ -164,6 +164,4 @@ var (
 	errUpstreamTurnstile = errors.New("upstream requires turnstile")
 )
 
-// 确保包级 var 被引用(避免 lint 误报;实际在适配器实现中使用)。
-// errUpstreamAuth/errUpstreamCFChallenge/errUpstreamTurnstile 已在适配器中真正使用,无需 lint 白名单。
-var _ = errUpstream2FA
+// errUpstreamAuth/errUpstreamCFChallenge/errUpstreamTurnstile/errUpstream2FA 均在各适配器实现中真正使用,无需 lint 白名单。
