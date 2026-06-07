@@ -249,7 +249,17 @@ func initializeApplication(buildInfo handler.BuildInfo) (*Application, error) {
 	notifyChannelRepository := repository.NewNotifyChannelRepository(client)
 	v := service.ProvideNotifySenders(emailService, settingService)
 	notifyChannelHandler := admin.NewNotifyChannelHandler(notifyChannelRepository, v)
-	adminHandlers := handler.ProvideAdminHandlers(dashboardHandler, adminUserHandler, groupHandler, accountHandler, adminAnnouncementHandler, dataManagementHandler, backupHandler, oAuthHandler, openAIOAuthHandler, geminiOAuthHandler, antigravityOAuthHandler, proxyHandler, adminRedeemHandler, promoHandler, settingHandler, opsHandler, systemHandler, adminSubscriptionHandler, adminUsageHandler, userAttributeHandler, errorPassthroughHandler, tlsFingerprintProfileHandler, adminAPIKeyHandler, scheduledTestHandler, channelHandler, channelMonitorHandler, channelMonitorRequestTemplateHandler, contentModerationHandler, paymentHandler, affiliateHandler, extensionConfigHandler, modelPlazaHandler, notifyChannelHandler)
+	upstreamProviderRepository := repository.NewUpstreamProviderRepository(client)
+	upstreamChangeEventRepository := repository.NewUpstreamChangeEventRepository(client)
+	upstreamAccountLister := repository.NewUpstreamAccountLister(client)
+	proxyService := service.NewProxyService(proxyRepository)
+	v2 := service.ProvideUpstreamAdapters()
+	upstreamProviderService := service.ProvideUpstreamProviderService(upstreamProviderRepository, upstreamChangeEventRepository, upstreamAccountLister, proxyService, v2, configConfig)
+	notifyDispatcher := service.NewNotifyDispatcher(notifyChannelRepository, v)
+	browserSolver := service.ProvideBrowserSolver(settingService, configConfig)
+	upstreamMonitorService := service.ProvideUpstreamMonitor(upstreamProviderRepository, v2, notifyDispatcher, browserSolver, proxyService)
+	upstreamProviderHandler := admin.NewUpstreamProviderHandler(upstreamProviderService, upstreamMonitorService, settingService, configConfig)
+	adminHandlers := handler.ProvideAdminHandlers(dashboardHandler, adminUserHandler, groupHandler, accountHandler, adminAnnouncementHandler, dataManagementHandler, backupHandler, oAuthHandler, openAIOAuthHandler, geminiOAuthHandler, antigravityOAuthHandler, proxyHandler, adminRedeemHandler, promoHandler, settingHandler, opsHandler, systemHandler, adminSubscriptionHandler, adminUsageHandler, userAttributeHandler, errorPassthroughHandler, tlsFingerprintProfileHandler, adminAPIKeyHandler, scheduledTestHandler, channelHandler, channelMonitorHandler, channelMonitorRequestTemplateHandler, contentModerationHandler, paymentHandler, affiliateHandler, extensionConfigHandler, modelPlazaHandler, notifyChannelHandler, upstreamProviderHandler)
 	usageRecordWorkerPool := service.NewUsageRecordWorkerPool(configConfig)
 	userMsgQueueCache := repository.NewUserMsgQueueCache(redisClient)
 	userMessageQueueService := service.ProvideUserMessageQueueService(userMsgQueueCache, rpmCache, configConfig)
@@ -282,10 +292,10 @@ func initializeApplication(buildInfo handler.BuildInfo) (*Application, error) {
 	paymentOrderExpiryService := service.ProvidePaymentOrderExpiryService(paymentService, leaderLockCache, db)
 	channelMonitorRunner := service.ProvideChannelMonitorRunner(channelMonitorService, settingService)
 	userPlatformQuotaUsageFlusher := service.ProvideUserPlatformQuotaUsageFlusher(configConfig, billingCache, serviceUserPlatformQuotaRepository, timingWheelService)
-	v2 := provideCleanup(client, redisClient, opsMetricsCollector, opsAggregationService, opsAlertEvaluatorService, opsCleanupService, opsScheduledReportService, opsSystemLogSink, schedulerSnapshotService, tokenRefreshService, accountExpiryService, subscriptionExpiryService, usageCleanupService, idempotencyCleanupService, pricingService, emailQueueService, billingCacheService, usageRecordWorkerPool, subscriptionService, oAuthService, openAIOAuthService, geminiOAuthService, antigravityOAuthService, openAIGatewayService, scheduledTestRunnerService, backupService, paymentOrderExpiryService, channelMonitorRunner, userPlatformQuotaUsageFlusher)
+	v3 := provideCleanup(client, redisClient, opsMetricsCollector, opsAggregationService, opsAlertEvaluatorService, opsCleanupService, opsScheduledReportService, opsSystemLogSink, schedulerSnapshotService, tokenRefreshService, accountExpiryService, subscriptionExpiryService, usageCleanupService, idempotencyCleanupService, pricingService, emailQueueService, billingCacheService, usageRecordWorkerPool, subscriptionService, oAuthService, openAIOAuthService, geminiOAuthService, antigravityOAuthService, openAIGatewayService, scheduledTestRunnerService, backupService, paymentOrderExpiryService, channelMonitorRunner, userPlatformQuotaUsageFlusher)
 	application := &Application{
 		Server:  httpServer,
-		Cleanup: v2,
+		Cleanup: v3,
 	}
 	return application, nil
 }

@@ -42,6 +42,7 @@ func ProvideAdminHandlers(
 	extensionConfigHandler *admin.ExtensionConfigHandler,
 	modelPlazaHandler *admin.ModelPlazaHandler,
 	notifyChannel *admin.NotifyChannelHandler,
+	upstreamProvider *admin.UpstreamProviderHandler,
 ) *AdminHandlers {
 	return &AdminHandlers{
 		Dashboard:              dashboardHandler,
@@ -77,6 +78,7 @@ func ProvideAdminHandlers(
 		ExtensionConfig:        extensionConfigHandler,
 		ModelPlaza:             modelPlazaHandler,
 		NotifyChannel:          notifyChannel,
+		UpstreamProvider:       upstreamProvider,
 	}
 }
 

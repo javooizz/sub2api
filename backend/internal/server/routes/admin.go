@@ -106,6 +106,9 @@ func RegisterAdminRoutes(
 
 		// 通知渠道管理（上游变更通知，fork 新增）
 		registerNotifyChannelRoutes(admin, h)
+
+		// 上游站点管理（fork 新增）
+		registerUpstreamProviderRoutes(admin, h)
 	}
 }
 
@@ -670,6 +673,27 @@ func registerChannelMonitorRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 		templates.GET("/:id/monitors", h.Admin.ChannelMonitorTemplate.AssociatedMonitors)
 		templates.POST("/:id/apply", h.Admin.ChannelMonitorTemplate.Apply)
 	}
+}
+
+// registerUpstreamProviderRoutes 上游站点管理（fork 新增）。
+func registerUpstreamProviderRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
+	up := h.Admin.UpstreamProvider
+	admin.GET("/upstream-providers", up.List)
+	admin.POST("/upstream-providers", up.Create)
+	// test 端点必须在 /:id 前注册，避免被参数路由吞掉
+	admin.POST("/upstream-providers/test", up.TestConnection)
+	admin.GET("/upstream-providers/:id", up.Get)
+	admin.PUT("/upstream-providers/:id", up.Update)
+	admin.DELETE("/upstream-providers/:id", up.Delete)
+	admin.POST("/upstream-providers/:id/refresh", up.Refresh)
+	admin.POST("/upstream-providers/:id/relogin", up.Relogin)
+	admin.GET("/upstream-providers/:id/linked-accounts", up.LinkedAccounts)
+	admin.GET("/upstream-providers/:id/tokens", up.ListTokens)
+	admin.POST("/upstream-providers/:id/tokens", up.CreateToken)
+	admin.GET("/upstream-providers/:id/events", up.Events)
+	admin.GET("/upstream-providers/:id/diagnostics/:file", up.Diagnostics)
+	admin.GET("/settings/upstream-management", up.GetSettings)
+	admin.PUT("/settings/upstream-management", up.UpdateSettings)
 }
 
 // registerAffiliateRoutes 注册邀请返利的管理端路由（专属用户配置）
