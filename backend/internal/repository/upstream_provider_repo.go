@@ -140,16 +140,15 @@ func (r *upstreamProviderRepository) Delete(ctx context.Context, id int64) error
 	if err != nil {
 		return err
 	}
+	defer func() { _ = tx.Rollback() }()
 	// 先级联删除该 provider 的所有变更事件
 	if _, err := tx.UpstreamChangeEvent.Delete().
 		Where(upstreamchangeevent.ProviderIDEQ(id)).
 		Exec(ctx); err != nil {
-		_ = tx.Rollback()
 		return err
 	}
 	// 再删除 provider 本身
 	if err := tx.UpstreamProvider.DeleteOneID(id).Exec(ctx); err != nil {
-		_ = tx.Rollback()
 		if dbent.IsNotFound(err) {
 			return service.ErrUpstreamProviderNotFound
 		}
@@ -214,6 +213,7 @@ func (r *upstreamProviderRepository) CommitRefresh(ctx context.Context, in servi
 	if err != nil {
 		return false, nil, err
 	}
+	defer func() { _ = tx.Rollback() }()
 
 	// 1) 条件更新 provider:乐观锁验证 + 状态写入
 	u := tx.UpstreamProvider.Update().
@@ -232,12 +232,10 @@ func (r *upstreamProviderRepository) CommitRefresh(ctx context.Context, in servi
 	}
 	n, err := u.Save(ctx)
 	if err != nil {
-		_ = tx.Rollback()
 		return false, nil, err
 	}
 	if n == 0 {
-		// 锁已被他人抢走(stale 误判):整体丢弃,不提交任何变更
-		_ = tx.Rollback()
+		// 锁已被他人抢走(stale 误判):整体丢弃,不提交任何变更;defer 负责 Rollback
 		return false, nil, nil
 	}
 
@@ -252,7 +250,6 @@ func (r *upstreamProviderRepository) CommitRefresh(ctx context.Context, in servi
 			SetNotified(false).
 			Save(ctx)
 		if err != nil {
-			_ = tx.Rollback()
 			return false, nil, err
 		}
 		inserted = append(inserted, service.UpstreamChangeEvent{
