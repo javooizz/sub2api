@@ -111,11 +111,19 @@ func TestNotifyDispatcher_SingleChannelFailureIsolated(t *testing.T) {
 	if len(sender.sent) != 2 {
 		t.Fatalf("渠道 1 失败不应阻断渠道 2,实际发送 %v", sender.sent)
 	}
-	if repo.marked[1] == nil {
+	err1, called1 := repo.marked[1]
+	if !called1 {
+		t.Fatal("渠道 1 应调用 MarkResult")
+	}
+	if err1 == nil {
 		t.Fatal("渠道 1 应记录 last_error")
 	}
-	if repo.marked[2] != nil {
-		t.Fatal("渠道 2 应记录成功")
+	err2, called2 := repo.marked[2]
+	if !called2 {
+		t.Fatal("渠道 2 应调用 MarkResult")
+	}
+	if err2 != nil {
+		t.Fatalf("渠道 2 应记录成功,实际 %v", err2)
 	}
 }
 

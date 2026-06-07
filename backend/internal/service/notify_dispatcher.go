@@ -43,9 +43,12 @@ func (d *NotifyDispatcher) Dispatch(ctx context.Context, ev NotifyEvent) {
 			continue
 		}
 
-		sendCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
-		sendErr := sender.Send(sendCtx, ch, ev)
-		cancel()
+		var sendErr error
+		func() {
+			sendCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+			defer cancel()
+			sendErr = sender.Send(sendCtx, ch, ev)
+		}()
 
 		if sendErr != nil {
 			slog.Warn("notify: 渠道发送失败", "channel_id", ch.ID, "type", ch.Type, "error", sendErr)
