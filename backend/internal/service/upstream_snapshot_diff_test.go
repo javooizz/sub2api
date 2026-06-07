@@ -184,3 +184,10 @@ func TestDiff_PartialNewSkipsAbsentSections(t *testing.T) {
 		t.Fatalf("partial 快照缺失部分应跳过 diff: %v", out.Events)
 	}
 }
+
+func TestDiff_NilNewSnapshotNoEvents(t *testing.T) {
+	out := DiffUpstreamSnapshots(DiffInput{Old: snap(f64(10), nil, nil), New: nil, BalanceThreshold: f64(5), NotifyOnPriceChange: true})
+	if len(out.Events) != 0 {
+		t.Fatalf("New 为 nil 应无事件,实际: %v", out.Events)
+	}
+}

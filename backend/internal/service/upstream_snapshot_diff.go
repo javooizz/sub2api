@@ -30,6 +30,10 @@ type DiffOutput struct {
 func DiffUpstreamSnapshots(in DiffInput) DiffOutput {
 	out := DiffOutput{BalanceAlerted: in.BalanceAlerted}
 
+	if in.New == nil {
+		return out
+	}
+
 	// —— 余额跨越式检测(首次快照也执行)——
 	if in.BalanceThreshold != nil && in.New.Balance != nil {
 		bal, th := *in.New.Balance, *in.BalanceThreshold
@@ -167,7 +171,7 @@ func jsonSemanticEqual(a, b []byte) bool {
 	return bytes.Equal(na, nb)
 }
 
-// canonicalize map 经 json.Marshal 已按键排序,递归处理即可。
+// canonicalize 是 identity 函数:json.Unmarshal→json.Marshal 已递归排序所有 map 键,无需额外处理。
 func canonicalize(v any) any { return v }
 
 func floatPtrEqual(a, b *float64) bool {
