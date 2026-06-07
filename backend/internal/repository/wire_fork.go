@@ -12,4 +12,5 @@ import "github.com/google/wire"
 var ForkProviderSet = wire.NewSet(
 	NewExtensionConfigRepository, // 浏览器扩展配置仓储
 	NewUserAllowedGroupLister,    // 用户可见分组列表
+	NewNotifyChannelRepository,   // 通知渠道仓储
 )
