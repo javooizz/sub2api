@@ -132,6 +132,8 @@ docs/*
 !docs/PAYMENT_CN.md
 !docs/UPSTREAM_MERGE.md
 !docs/ADMIN_PAYMENT_INTEGRATION_API.md
+!docs/上游管理/
+!docs/上游管理/**
 .serena/
 .codex/
 frontend/coverage/

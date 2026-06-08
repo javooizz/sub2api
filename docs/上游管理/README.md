@@ -1,0 +1,91 @@
+# 上游站点管理(Upstream Provider Management)
+
+> 管理员统一管理上游中转站点(sub2api / new-api):余额与分组价格监控告警、可用模型查看、快速创建上游 Token、关联帐号查看。采集走纯 HTTP,CloakBrowser 仅按需过盾。
+
+## 一、功能定位
+
+面向部署了 sub2api 的运营者:当你的账号体系背后接了若干**上游中转站**(自建的另一套 sub2api、或 new-api 实例),本模块把这些上游集中纳管:
+
+| 能力 | 说明 |
+|------|------|
+| 余额监控告警 | 定时采集上游余额,低于阈值发通知;跨越式告警(不重复、回升自动恢复) |
+| 分组价格监控 | 采集分组倍率与模型价格,变动时记录事件并按需通知 |
+| 可用模型查看 | 按分组展示上游可用模型清单 |
+| 快速创建 Token | 一键在上游创建 API Key,明文一次性返回 + 有效 API 地址 |
+| 关联帐号 | 把上游与本系统内 `type=upstream` 的账号按 URL 精确匹配关联 |
+| 凭证生命周期 | 凭证 401 自动续期(账密 Login → 必要时浏览器自动登录);CF 盾按需过盾 |
+| 通知渠道 | 独立通知模块:email / webhook(SSRF 防护 + 自定义模板) |
+
+## 二、技术架构
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  前端 (Vue3 + Vite + Tailwind + Pinia)                   │
+│  /admin/upstream-providers  列表页 + 详情抽屉(6 Tab)     │
+│  + 创建/编辑对话框 + 通知设置 + 采集设置                 │
+└───────────────────────────┬─────────────────────────────┘
+                            │ /api/v1/admin/*
+┌───────────────────────────▼─────────────────────────────┐
+│  后端 (Go 单体, gin + ent + wire)                        │
+│  ┌─────────────┐  ┌──────────────┐  ┌────────────────┐  │
+│  │ Handler     │→ │ Service       │→ │ Repository(ent)│  │
+│  │ admin API   │  │ ProviderSvc   │  │ 抢占锁/事务/   │  │
+│  │             │  │ MonitorSvc    │  │ 游标分页       │  │
+│  │             │  │ (定时 runner) │  └────────────────┘  │
+│  │             │  │ Adapter×2     │                      │
+│  │             │  │ NotifyDispatch│  ┌────────────────┐  │
+│  │             │  │ BrowserSolver─┼─→│ CloakBrowser   │  │
+│  └─────────────┘  └──────────────┘  │ (可选 CDP      │  │
+│                                      │  sidecar,过盾) │  │
+│         PostgreSQL ◀── 3 张新表      └────────────────┘  │
+└──────────────────────────────────────────────────────────┘
+```
+
+- **后端**:Go 单体内置全部业务逻辑。3 个新 ent 实体 + 两种上游适配器 + DB 抢占锁刷新编排 + 独立通知模块。
+- **CloakBrowser**:可选的 CDP sidecar(chromedp 连接),仅在上游套 Cloudflare 盾时按需过盾;未配置时降级为纯 HTTP + 手动凭证。
+- **前端**:Vue3 admin 列表页 + 详情抽屉。
+
+### 组件与端口
+
+| 组件 | 端口 | 说明 |
+|------|------|------|
+| 后端 | `8090` | `SERVER_PORT`(`deploy/.env`),gin |
+| 前端 dev | `3000` | `VITE_DEV_PORT`,vite HMR,代理 `/api`→8090 |
+| PostgreSQL | `5432` | `make dev-deps`(docker) |
+| Redis | `6379` | `make dev-deps`(docker) |
+| CloakBrowser | `9222` | 可选,`cloakhq/cloakbrowser cloakserve` 的 CDP 端点 |
+
+## 三、文档导航
+
+| 文档 | 内容 |
+|------|------|
+| [架构设计.md](架构设计.md) | 数据模型(3 表)、采集适配器、刷新编排与状态机、通知模块、凭证防泄、过盾机制、文件责任分配 |
+| [API参考.md](API参考.md) | 全部 admin 端点(上游 15 个 + 通知 5 个 + 设置 2 个)的请求/响应/示例 |
+| [本地测试与部署.md](本地测试与部署.md) | 三件套启动、自测本站、CloakBrowser 过盾配置、docker-compose、故障排查 |
+| [实施验证与已知问题.md](实施验证与已知问题.md) | 实施方法、自审修订、评审修复、端到端验证结果、已知问题 |
+
+## 四、快速开始(本地)
+
+```bash
+# 1. 起依赖(postgres + redis,docker)
+make dev-deps
+
+# 2. 起后端(go run,首次会自动应用 migration 149 建表)
+make dev-backend          # 监听 :8090,启动前自动清理被占端口
+
+# 3. 起前端(vite HMR)
+make dev-frontend         # :3000,启动前自动清理被占端口
+```
+
+打开 http://localhost:3000 → 管理员登录 → 侧边栏「上游管理」。
+
+**最简自测**(拿本站自己当上游,无需任何外部站点):
+1. 「添加上游」→ 类型 `sub2api`、官网地址 `http://localhost:8090`、凭证填管理员账密 → 「测试连接」看余额 → 保存
+2. 详情抽屉看分组/模型;编辑把余额阈值设到极高 → 刷新 → 「变更历史」出现余额告警
+
+详见 [本地测试与部署.md](本地测试与部署.md)。
+
+---
+
+**模块 spec**:`docs/superpowers/specs/2026-06-07-upstream-provider-management-design.md`(本地工作文档)
+**实现计划**:`docs/superpowers/plans/2026-06-08-upstream-provider-management.md`(本地工作文档)
