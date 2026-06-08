@@ -67,6 +67,9 @@ dev-deps-logs:
 
 dev-backend:
 	@set -a; [ -f $(DEV_ENV_FILE) ] && . ./$(DEV_ENV_FILE); set +a; \
+	 PORT=$${SERVER_PORT:-8090}; \
+	 PIDS=$$(lsof -ti tcp:$$PORT 2>/dev/null || true); \
+	 if [ -n "$$PIDS" ]; then echo "⚠ 端口 $$PORT 被占用，清理旧进程：$$PIDS"; kill -9 $$PIDS 2>/dev/null || true; sleep 1; fi; \
 	 cd backend && \
 	   DATABASE_HOST=127.0.0.1 \
 	   DATABASE_PORT=$${DATABASE_PORT:-5432} \
@@ -82,4 +85,8 @@ dev-backend:
 	   go run ./cmd/server/
 
 dev-frontend:
-	@pnpm --dir frontend dev
+	@set -a; [ -f $(DEV_ENV_FILE) ] && . ./$(DEV_ENV_FILE); set +a; \
+	 PORT=$${VITE_DEV_PORT:-3000}; \
+	 PIDS=$$(lsof -ti tcp:$$PORT 2>/dev/null || true); \
+	 if [ -n "$$PIDS" ]; then echo "⚠ 端口 $$PORT 被占用，清理旧进程：$$PIDS"; kill -9 $$PIDS 2>/dev/null || true; sleep 1; fi; \
+	 pnpm --dir frontend dev
