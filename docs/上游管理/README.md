@@ -14,6 +14,7 @@
 | 快速创建 Token | 一键在上游创建 API Key,明文一次性返回 + 有效 API 地址 |
 | 关联帐号 | 把上游与本系统内 `type=upstream` 的账号按 URL 精确匹配关联 |
 | 凭证生命周期 | 凭证 401 自动续期(账密 Login → 必要时浏览器自动登录);CF 盾按需过盾 |
+| 采集代理 | 「采集设置」全局代理(http/socks5,`socks://` 自动当 socks5),HTTP 采集与 CloakBrowser 过盾共用;过 CF 用干净出口 IP |
 | 通知渠道 | 独立通知模块:email / webhook(SSRF 防护 + 自定义模板) |
 
 ## 二、技术架构
