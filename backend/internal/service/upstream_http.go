@@ -11,6 +11,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/Wei-Shaw/sub2api/internal/pkg/proxyurl"
 )
 
 const (
@@ -33,9 +35,11 @@ func newUpstreamHTTPClient(p *UpstreamProvider) (*upstreamHTTPClient, error) {
 	}
 	transport := &http.Transport{}
 	if p.ProxyURL != "" {
-		proxyURL, err := url.Parse(p.ProxyURL)
+		// 统一经 proxyurl.Parse 校验(scheme 白名单 + socks5→socks5h 防 DNS 泄漏);
+		// 额外把用户常写的 socks:// 当作 socks5:// 别名(见 normalizeProxyAlias)。
+		_, proxyURL, err := proxyurl.Parse(normalizeProxyAlias(p.ProxyURL))
 		if err != nil {
-			return nil, fmt.Errorf("代理地址非法: %w", err)
+			return nil, fmt.Errorf("代理地址非法: %v", err) // proxyurl 错误已脱敏,不用 %w
 		}
 		transport.Proxy = http.ProxyURL(proxyURL)
 	}

@@ -65,8 +65,9 @@ func (s *ChromedpBrowserSolver) cdpURLFor(ctx context.Context, p *UpstreamProvid
 	}
 	u := base + sep + "fingerprint-seed=upstream-" + strconv.FormatInt(p.ID, 10)
 	// CloakBrowser 启动时使用「采集设置」配置的全局代理(过盾依赖干净出口 IP)。
+	// Chromium 只认 socks5(不识别 socks5h),socks:// 视作 socks5://(见 browserProxyScheme)。
 	if rt.ProxyURL != "" {
-		u += "&proxy=" + url.QueryEscape(rt.ProxyURL)
+		u += "&proxy=" + url.QueryEscape(browserProxyScheme(rt.ProxyURL))
 	}
 	return u
 }
