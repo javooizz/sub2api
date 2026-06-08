@@ -88,11 +88,7 @@
         </p>
       </fieldset>
 
-      <div class="grid grid-cols-3 gap-4">
-        <div>
-          <label class="input-label">{{ t('admin.upstream.form.proxy') }}</label>
-          <Select v-model="form.proxy_id" :options="proxyOptions" />
-        </div>
+      <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="input-label">{{ t('admin.upstream.form.refreshInterval') }}</label>
           <input
@@ -188,7 +184,6 @@ import { validateProviderForm, type ProviderFormErrors } from './upstreamValidat
 const props = defineProps<{
   show: boolean
   provider?: UpstreamProvider | null
-  proxyOptions: { label: string; value: number | null }[]
 }>()
 const emit = defineEmits<{ close: []; saved: [] }>()
 const { t } = useI18n()
@@ -208,7 +203,6 @@ const form = reactive({
   username: '',
   password: '',
   access_token: '',
-  proxy_id: null as number | null,
   balance_threshold: null as number | null,
   notify_on_price_change: true,
   refresh_interval_minutes: 60,
@@ -247,7 +241,6 @@ watch(
     form.username = (p?.credentials?.username as string) ?? ''
     form.password = '' // 敏感键不回显
     form.access_token = ''
-    form.proxy_id = p?.proxy_id ?? null
     form.balance_threshold = p?.balance_threshold ?? null
     form.notify_on_price_change = p?.notify_on_price_change ?? true
     form.refresh_interval_minutes = p?.refresh_interval_minutes ?? 60
@@ -275,7 +268,6 @@ function buildInput(): UpstreamProviderInput {
     site_url: form.site_url.trim(),
     api_base_url: form.api_base_url.trim(),
     credentials: buildCredentials(),
-    proxy_id: form.proxy_id,
     balance_threshold: form.balance_threshold,
     notify_on_price_change: form.notify_on_price_change,
     refresh_interval_minutes: form.refresh_interval_minutes,

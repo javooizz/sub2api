@@ -47,7 +47,6 @@ type upstreamProviderRequest struct {
 	SiteURL                string         `json:"site_url" binding:"required"`
 	APIBaseURL             string         `json:"api_base_url"`
 	Credentials            map[string]any `json:"credentials"`
-	ProxyID                *int64         `json:"proxy_id"`
 	BalanceThreshold       *float64       `json:"balance_threshold"`
 	NotifyOnPriceChange    *bool          `json:"notify_on_price_change"`
 	RefreshIntervalMinutes int            `json:"refresh_interval_minutes"`
@@ -66,7 +65,7 @@ func (r *upstreamProviderRequest) toService() *service.UpstreamProvider {
 	return &service.UpstreamProvider{
 		Name: r.Name, Type: r.Type,
 		SiteURL: r.SiteURL, APIBaseURL: r.APIBaseURL,
-		Credentials: creds, ProxyID: r.ProxyID,
+		Credentials: creds,
 		BalanceThreshold:       r.BalanceThreshold,
 		NotifyOnPriceChange:    notifyPrice,
 		RefreshIntervalMinutes: r.RefreshIntervalMinutes,
@@ -84,7 +83,6 @@ type upstreamProviderResponse struct {
 	Status                 string                           `json:"status"`
 	Credentials            map[string]any                   `json:"credentials"` // 已脱敏
 	CredentialStatus       service.UpstreamCredentialStatus `json:"credential_status"`
-	ProxyID                *int64                           `json:"proxy_id"`
 	BalanceThreshold       *float64                         `json:"balance_threshold"`
 	NotifyOnPriceChange    bool                             `json:"notify_on_price_change"`
 	RefreshIntervalMinutes int                              `json:"refresh_interval_minutes"`
@@ -111,7 +109,6 @@ func toUpstreamProviderResponse(p *service.UpstreamProvider, withSnapshot bool) 
 		Status:                 p.Status,
 		Credentials:            redacted,
 		CredentialStatus:       status,
-		ProxyID:                p.ProxyID,
 		BalanceThreshold:       p.BalanceThreshold,
 		NotifyOnPriceChange:    p.NotifyOnPriceChange,
 		RefreshIntervalMinutes: p.RefreshIntervalMinutes,
@@ -413,7 +410,9 @@ func (h *UpstreamProviderHandler) Diagnostics(c *gin.Context) {
 
 // GetSettings GET /admin/settings/upstream-management
 func (h *UpstreamProviderHandler) GetSettings(c *gin.Context) {
-	response.Success(c, h.settingService.GetUpstreamManagementRuntime(c.Request.Context()))
+	rt := h.settingService.GetUpstreamManagementRuntime(c.Request.Context())
+	rt.ProxyURL = service.MaskUpstreamProxyURL(rt.ProxyURL) // 响应脱敏:隐藏代理密码段
+	response.Success(c, rt)
 }
 
 // UpdateSettings PUT /admin/settings/upstream-management
@@ -423,6 +422,9 @@ func (h *UpstreamProviderHandler) UpdateSettings(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
+	// 代理 URL 合并:前端回传含 *** 的脱敏占位时保留旧值,避免把真实代理覆盖成掩码串。
+	existing := h.settingService.GetUpstreamManagementRuntime(c.Request.Context())
+	req.ProxyURL = service.MergeUpstreamProxyURL(existing.ProxyURL, req.ProxyURL)
 	if err := h.settingService.SetUpstreamManagementSettings(c.Request.Context(), req); err != nil {
 		response.ErrorFrom(c, err)
 		return

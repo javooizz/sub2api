@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
-	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/Wei-Shaw/sub2api/ent/predicate"
 )
 
@@ -88,11 +87,6 @@ func APIBaseURL(v string) predicate.UpstreamProvider {
 // Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
 func Status(v string) predicate.UpstreamProvider {
 	return predicate.UpstreamProvider(sql.FieldEQ(FieldStatus, v))
-}
-
-// ProxyID applies equality check predicate on the "proxy_id" field. It's identical to ProxyIDEQ.
-func ProxyID(v int64) predicate.UpstreamProvider {
-	return predicate.UpstreamProvider(sql.FieldEQ(FieldProxyID, v))
 }
 
 // BalanceThreshold applies equality check predicate on the "balance_threshold" field. It's identical to BalanceThresholdEQ.
@@ -545,36 +539,6 @@ func StatusContainsFold(v string) predicate.UpstreamProvider {
 	return predicate.UpstreamProvider(sql.FieldContainsFold(FieldStatus, v))
 }
 
-// ProxyIDEQ applies the EQ predicate on the "proxy_id" field.
-func ProxyIDEQ(v int64) predicate.UpstreamProvider {
-	return predicate.UpstreamProvider(sql.FieldEQ(FieldProxyID, v))
-}
-
-// ProxyIDNEQ applies the NEQ predicate on the "proxy_id" field.
-func ProxyIDNEQ(v int64) predicate.UpstreamProvider {
-	return predicate.UpstreamProvider(sql.FieldNEQ(FieldProxyID, v))
-}
-
-// ProxyIDIn applies the In predicate on the "proxy_id" field.
-func ProxyIDIn(vs ...int64) predicate.UpstreamProvider {
-	return predicate.UpstreamProvider(sql.FieldIn(FieldProxyID, vs...))
-}
-
-// ProxyIDNotIn applies the NotIn predicate on the "proxy_id" field.
-func ProxyIDNotIn(vs ...int64) predicate.UpstreamProvider {
-	return predicate.UpstreamProvider(sql.FieldNotIn(FieldProxyID, vs...))
-}
-
-// ProxyIDIsNil applies the IsNil predicate on the "proxy_id" field.
-func ProxyIDIsNil() predicate.UpstreamProvider {
-	return predicate.UpstreamProvider(sql.FieldIsNull(FieldProxyID))
-}
-
-// ProxyIDNotNil applies the NotNil predicate on the "proxy_id" field.
-func ProxyIDNotNil() predicate.UpstreamProvider {
-	return predicate.UpstreamProvider(sql.FieldNotNull(FieldProxyID))
-}
-
 // BalanceThresholdEQ applies the EQ predicate on the "balance_threshold" field.
 func BalanceThresholdEQ(v float64) predicate.UpstreamProvider {
 	return predicate.UpstreamProvider(sql.FieldEQ(FieldBalanceThreshold, v))
@@ -963,29 +927,6 @@ func RemarkEqualFold(v string) predicate.UpstreamProvider {
 // RemarkContainsFold applies the ContainsFold predicate on the "remark" field.
 func RemarkContainsFold(v string) predicate.UpstreamProvider {
 	return predicate.UpstreamProvider(sql.FieldContainsFold(FieldRemark, v))
-}
-
-// HasProxy applies the HasEdge predicate on the "proxy" edge.
-func HasProxy() predicate.UpstreamProvider {
-	return predicate.UpstreamProvider(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, ProxyTable, ProxyColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasProxyWith applies the HasEdge predicate on the "proxy" edge with a given conditions (other predicates).
-func HasProxyWith(preds ...predicate.Proxy) predicate.UpstreamProvider {
-	return predicate.UpstreamProvider(func(s *sql.Selector) {
-		step := newProxyStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
 }
 
 // And groups predicates with the AND operator between them.

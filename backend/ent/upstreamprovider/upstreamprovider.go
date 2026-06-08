@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
-	"entgo.io/ent/dialect/sql/sqlgraph"
 )
 
 const (
@@ -30,8 +29,6 @@ const (
 	FieldStatus = "status"
 	// FieldCredentials holds the string denoting the credentials field in the database.
 	FieldCredentials = "credentials"
-	// FieldProxyID holds the string denoting the proxy_id field in the database.
-	FieldProxyID = "proxy_id"
 	// FieldBalanceThreshold holds the string denoting the balance_threshold field in the database.
 	FieldBalanceThreshold = "balance_threshold"
 	// FieldNotifyOnPriceChange holds the string denoting the notify_on_price_change field in the database.
@@ -52,17 +49,8 @@ const (
 	FieldRefreshStartedAt = "refresh_started_at"
 	// FieldRemark holds the string denoting the remark field in the database.
 	FieldRemark = "remark"
-	// EdgeProxy holds the string denoting the proxy edge name in mutations.
-	EdgeProxy = "proxy"
 	// Table holds the table name of the upstreamprovider in the database.
 	Table = "upstream_providers"
-	// ProxyTable is the table that holds the proxy relation/edge.
-	ProxyTable = "upstream_providers"
-	// ProxyInverseTable is the table name for the Proxy entity.
-	// It exists in this package in order to avoid circular dependency with the "proxy" package.
-	ProxyInverseTable = "proxies"
-	// ProxyColumn is the table column denoting the proxy relation/edge.
-	ProxyColumn = "proxy_id"
 )
 
 // Columns holds all SQL columns for upstreamprovider fields.
@@ -76,7 +64,6 @@ var Columns = []string{
 	FieldAPIBaseURL,
 	FieldStatus,
 	FieldCredentials,
-	FieldProxyID,
 	FieldBalanceThreshold,
 	FieldNotifyOnPriceChange,
 	FieldRefreshIntervalMinutes,
@@ -177,11 +164,6 @@ func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatus, opts...).ToFunc()
 }
 
-// ByProxyID orders the results by the proxy_id field.
-func ByProxyID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldProxyID, opts...).ToFunc()
-}
-
 // ByBalanceThreshold orders the results by the balance_threshold field.
 func ByBalanceThreshold(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldBalanceThreshold, opts...).ToFunc()
@@ -225,18 +207,4 @@ func ByRefreshStartedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByRemark orders the results by the remark field.
 func ByRemark(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRemark, opts...).ToFunc()
-}
-
-// ByProxyField orders the results by proxy field.
-func ByProxyField(field string, opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newProxyStep(), sql.OrderByField(field, opts...))
-	}
-}
-func newProxyStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(ProxyInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, false, ProxyTable, ProxyColumn),
-	)
 }

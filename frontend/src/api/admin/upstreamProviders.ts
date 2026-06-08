@@ -40,7 +40,6 @@ export interface UpstreamProvider {
   status: 'active' | 'credential_error' | 'unreachable' | 'disabled'
   credentials: Record<string, unknown> // 已脱敏
   credential_status: UpstreamCredentialStatus
-  proxy_id: number | null
   balance_threshold: number | null
   notify_on_price_change: boolean
   refresh_interval_minutes: number
@@ -58,7 +57,6 @@ export interface UpstreamProviderInput {
   site_url: string
   api_base_url?: string
   credentials?: Record<string, unknown>
-  proxy_id?: number | null
   balance_threshold?: number | null
   notify_on_price_change?: boolean
   refresh_interval_minutes?: number
@@ -95,6 +93,7 @@ export interface UpstreamToken {
 
 export interface UpstreamManagementSettings {
   browser_cdp_url: string
+  proxy_url: string
   allow_private_webhook: boolean
 }
 

@@ -30,7 +30,7 @@ type UpstreamMonitorService struct {
 	adapters   map[string]UpstreamAdapter
 	dispatcher notifyDispatcher
 	browser    BrowserSolver
-	proxies    upstreamProxyResolver
+	settings   upstreamSettingsReader
 }
 
 // NewUpstreamMonitorService 构造 UpstreamMonitorService。
@@ -39,11 +39,11 @@ func NewUpstreamMonitorService(
 	adapters map[string]UpstreamAdapter,
 	dispatcher notifyDispatcher,
 	browser BrowserSolver,
-	proxies upstreamProxyResolver,
+	settings upstreamSettingsReader,
 ) *UpstreamMonitorService {
 	return &UpstreamMonitorService{
 		repo: repo, adapters: adapters,
-		dispatcher: dispatcher, browser: browser, proxies: proxies,
+		dispatcher: dispatcher, browser: browser, settings: settings,
 	}
 }
 
@@ -67,10 +67,9 @@ func (m *UpstreamMonitorService) RefreshProvider(ctx context.Context, id int64, 
 	if !ok {
 		return ErrUpstreamRefreshInProgress
 	}
-	if m.proxies != nil && p.ProxyID != nil {
-		if u, err := m.proxies.GetURL(ctx, *p.ProxyID); err == nil {
-			p.ProxyURL = u
-		}
+	// 全局采集代理(采集设置):供本次刷新的 HTTP 采集使用;浏览器过盾的代理在 cdpURLFor 内单独读取。
+	if m.settings != nil {
+		p.ProxyURL = m.settings.GetUpstreamManagementRuntime(ctx).ProxyURL
 	}
 
 	snapshot, fetchErr := m.fetchWithRecovery(ctx, p)
@@ -352,9 +351,9 @@ func ProvideUpstreamMonitor(
 	adapters map[string]UpstreamAdapter,
 	dispatcher *NotifyDispatcher,
 	browser BrowserSolver,
-	proxyService *ProxyService,
+	settingService *SettingService,
 ) *UpstreamMonitorService {
-	svc := NewUpstreamMonitorService(repo, adapters, dispatcher, browser, proxyService)
+	svc := NewUpstreamMonitorService(repo, adapters, dispatcher, browser, settingService)
 	runner := NewUpstreamMonitorRunner(svc, repo)
 	runner.Start()
 	return svc

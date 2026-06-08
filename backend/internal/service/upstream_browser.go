@@ -54,7 +54,8 @@ func (s *ChromedpBrowserSolver) Enabled(ctx context.Context) bool {
 
 // cdpURLFor 注入 per-provider 指纹种子与代理(CloakBrowser CDP query 参数约定)。
 func (s *ChromedpBrowserSolver) cdpURLFor(ctx context.Context, p *UpstreamProvider) string {
-	base := s.settings.GetUpstreamManagementRuntime(ctx).BrowserCDPURL
+	rt := s.settings.GetUpstreamManagementRuntime(ctx)
+	base := rt.BrowserCDPURL
 	sep := "?"
 	for i := 0; i < len(base); i++ {
 		if base[i] == '?' {
@@ -63,8 +64,9 @@ func (s *ChromedpBrowserSolver) cdpURLFor(ctx context.Context, p *UpstreamProvid
 		}
 	}
 	u := base + sep + "fingerprint-seed=upstream-" + strconv.FormatInt(p.ID, 10)
-	if p.ProxyURL != "" {
-		u += "&proxy=" + url.QueryEscape(p.ProxyURL)
+	// CloakBrowser 启动时使用「采集设置」配置的全局代理(过盾依赖干净出口 IP)。
+	if rt.ProxyURL != "" {
+		u += "&proxy=" + url.QueryEscape(rt.ProxyURL)
 	}
 	return u
 }

@@ -24,17 +24,12 @@ type UpstreamAccountLister interface {
 	ListUpstreamTypeAccounts(ctx context.Context) ([]UpstreamLinkedAccount, error)
 }
 
-// upstreamProxyResolver 代理 URL 解析(复用 ProxyService.GetURL)。
-type upstreamProxyResolver interface {
-	GetURL(ctx context.Context, id int64) (string, error)
-}
-
 // UpstreamProviderService 上游站点管理(spec §9 除刷新外的全部端点)。
 type UpstreamProviderService struct {
 	repo     UpstreamProviderRepository
 	events   UpstreamChangeEventRepository
 	accounts UpstreamAccountLister
-	proxies  upstreamProxyResolver
+	settings upstreamSettingsReader
 	adapters map[string]UpstreamAdapter
 	dataDir  string
 }
@@ -44,7 +39,7 @@ func NewUpstreamProviderService(
 	repo UpstreamProviderRepository,
 	events UpstreamChangeEventRepository,
 	accounts UpstreamAccountLister,
-	proxies upstreamProxyResolver,
+	settings upstreamSettingsReader,
 	adapters map[string]UpstreamAdapter,
 	dataDir string,
 ) *UpstreamProviderService {
@@ -52,7 +47,7 @@ func NewUpstreamProviderService(
 		repo:     repo,
 		events:   events,
 		accounts: accounts,
-		proxies:  proxies,
+		settings: settings,
 		adapters: adapters,
 		dataDir:  dataDir,
 	}
@@ -67,14 +62,12 @@ func (s *UpstreamProviderService) adapterFor(p *UpstreamProvider) (UpstreamAdapt
 	return a, nil
 }
 
-// resolveProxy 加载代理 URL 进 p.ProxyURL（采集/浏览器用）。
+// resolveProxy 从「采集设置」加载全局代理 URL 进 p.ProxyURL(HTTP 采集用;浏览器过盾在 cdpURLFor 内读取)。
 func (s *UpstreamProviderService) resolveProxy(ctx context.Context, p *UpstreamProvider) {
-	if p.ProxyID == nil || s.proxies == nil {
+	if s.settings == nil {
 		return
 	}
-	if u, err := s.proxies.GetURL(ctx, *p.ProxyID); err == nil {
-		p.ProxyURL = u
-	}
+	p.ProxyURL = s.settings.GetUpstreamManagementRuntime(ctx).ProxyURL
 }
 
 // validate 校验名称、类型、凭证（账密或 access_token 至少一组）。
@@ -351,9 +344,9 @@ func ProvideUpstreamProviderService(
 	repo UpstreamProviderRepository,
 	events UpstreamChangeEventRepository,
 	accounts UpstreamAccountLister,
-	proxyService *ProxyService,
+	settingService *SettingService,
 	adapters map[string]UpstreamAdapter,
 	cfg *config.Config,
 ) *UpstreamProviderService {
-	return NewUpstreamProviderService(repo, events, accounts, proxyService, adapters, cfg.Pricing.DataDir)
+	return NewUpstreamProviderService(repo, events, accounts, settingService, adapters, cfg.Pricing.DataDir)
 }

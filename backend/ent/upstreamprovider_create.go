@@ -11,7 +11,6 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/Wei-Shaw/sub2api/ent/proxy"
 	"github.com/Wei-Shaw/sub2api/ent/upstreamprovider"
 	"github.com/Wei-Shaw/sub2api/internal/domain"
 )
@@ -101,20 +100,6 @@ func (_c *UpstreamProviderCreate) SetNillableStatus(v *string) *UpstreamProvider
 // SetCredentials sets the "credentials" field.
 func (_c *UpstreamProviderCreate) SetCredentials(v map[string]interface{}) *UpstreamProviderCreate {
 	_c.mutation.SetCredentials(v)
-	return _c
-}
-
-// SetProxyID sets the "proxy_id" field.
-func (_c *UpstreamProviderCreate) SetProxyID(v int64) *UpstreamProviderCreate {
-	_c.mutation.SetProxyID(v)
-	return _c
-}
-
-// SetNillableProxyID sets the "proxy_id" field if the given value is not nil.
-func (_c *UpstreamProviderCreate) SetNillableProxyID(v *int64) *UpstreamProviderCreate {
-	if v != nil {
-		_c.SetProxyID(*v)
-	}
 	return _c
 }
 
@@ -248,11 +233,6 @@ func (_c *UpstreamProviderCreate) SetNillableRemark(v *string) *UpstreamProvider
 		_c.SetRemark(*v)
 	}
 	return _c
-}
-
-// SetProxy sets the "proxy" edge to the Proxy entity.
-func (_c *UpstreamProviderCreate) SetProxy(v *Proxy) *UpstreamProviderCreate {
-	return _c.SetProxyID(v.ID)
 }
 
 // Mutation returns the UpstreamProviderMutation object of the builder.
@@ -500,23 +480,6 @@ func (_c *UpstreamProviderCreate) createSpec() (*UpstreamProvider, *sqlgraph.Cre
 		_spec.SetField(upstreamprovider.FieldRemark, field.TypeString, value)
 		_node.Remark = value
 	}
-	if nodes := _c.mutation.ProxyIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: false,
-			Table:   upstreamprovider.ProxyTable,
-			Columns: []string{upstreamprovider.ProxyColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(proxy.FieldID, field.TypeInt64),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.ProxyID = &nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
-	}
 	return _node, _spec
 }
 
@@ -650,24 +613,6 @@ func (u *UpstreamProviderUpsert) SetCredentials(v map[string]interface{}) *Upstr
 // UpdateCredentials sets the "credentials" field to the value that was provided on create.
 func (u *UpstreamProviderUpsert) UpdateCredentials() *UpstreamProviderUpsert {
 	u.SetExcluded(upstreamprovider.FieldCredentials)
-	return u
-}
-
-// SetProxyID sets the "proxy_id" field.
-func (u *UpstreamProviderUpsert) SetProxyID(v int64) *UpstreamProviderUpsert {
-	u.Set(upstreamprovider.FieldProxyID, v)
-	return u
-}
-
-// UpdateProxyID sets the "proxy_id" field to the value that was provided on create.
-func (u *UpstreamProviderUpsert) UpdateProxyID() *UpstreamProviderUpsert {
-	u.SetExcluded(upstreamprovider.FieldProxyID)
-	return u
-}
-
-// ClearProxyID clears the value of the "proxy_id" field.
-func (u *UpstreamProviderUpsert) ClearProxyID() *UpstreamProviderUpsert {
-	u.SetNull(upstreamprovider.FieldProxyID)
 	return u
 }
 
@@ -973,27 +918,6 @@ func (u *UpstreamProviderUpsertOne) SetCredentials(v map[string]interface{}) *Up
 func (u *UpstreamProviderUpsertOne) UpdateCredentials() *UpstreamProviderUpsertOne {
 	return u.Update(func(s *UpstreamProviderUpsert) {
 		s.UpdateCredentials()
-	})
-}
-
-// SetProxyID sets the "proxy_id" field.
-func (u *UpstreamProviderUpsertOne) SetProxyID(v int64) *UpstreamProviderUpsertOne {
-	return u.Update(func(s *UpstreamProviderUpsert) {
-		s.SetProxyID(v)
-	})
-}
-
-// UpdateProxyID sets the "proxy_id" field to the value that was provided on create.
-func (u *UpstreamProviderUpsertOne) UpdateProxyID() *UpstreamProviderUpsertOne {
-	return u.Update(func(s *UpstreamProviderUpsert) {
-		s.UpdateProxyID()
-	})
-}
-
-// ClearProxyID clears the value of the "proxy_id" field.
-func (u *UpstreamProviderUpsertOne) ClearProxyID() *UpstreamProviderUpsertOne {
-	return u.Update(func(s *UpstreamProviderUpsert) {
-		s.ClearProxyID()
 	})
 }
 
@@ -1492,27 +1416,6 @@ func (u *UpstreamProviderUpsertBulk) SetCredentials(v map[string]interface{}) *U
 func (u *UpstreamProviderUpsertBulk) UpdateCredentials() *UpstreamProviderUpsertBulk {
 	return u.Update(func(s *UpstreamProviderUpsert) {
 		s.UpdateCredentials()
-	})
-}
-
-// SetProxyID sets the "proxy_id" field.
-func (u *UpstreamProviderUpsertBulk) SetProxyID(v int64) *UpstreamProviderUpsertBulk {
-	return u.Update(func(s *UpstreamProviderUpsert) {
-		s.SetProxyID(v)
-	})
-}
-
-// UpdateProxyID sets the "proxy_id" field to the value that was provided on create.
-func (u *UpstreamProviderUpsertBulk) UpdateProxyID() *UpstreamProviderUpsertBulk {
-	return u.Update(func(s *UpstreamProviderUpsert) {
-		s.UpdateProxyID()
-	})
-}
-
-// ClearProxyID clears the value of the "proxy_id" field.
-func (u *UpstreamProviderUpsertBulk) ClearProxyID() *UpstreamProviderUpsertBulk {
-	return u.Update(func(s *UpstreamProviderUpsert) {
-		s.ClearProxyID()
 	})
 }
 

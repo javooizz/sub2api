@@ -12,7 +12,6 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/Wei-Shaw/sub2api/ent/predicate"
-	"github.com/Wei-Shaw/sub2api/ent/proxy"
 	"github.com/Wei-Shaw/sub2api/ent/upstreamprovider"
 	"github.com/Wei-Shaw/sub2api/internal/domain"
 )
@@ -109,26 +108,6 @@ func (_u *UpstreamProviderUpdate) SetNillableStatus(v *string) *UpstreamProvider
 // SetCredentials sets the "credentials" field.
 func (_u *UpstreamProviderUpdate) SetCredentials(v map[string]interface{}) *UpstreamProviderUpdate {
 	_u.mutation.SetCredentials(v)
-	return _u
-}
-
-// SetProxyID sets the "proxy_id" field.
-func (_u *UpstreamProviderUpdate) SetProxyID(v int64) *UpstreamProviderUpdate {
-	_u.mutation.SetProxyID(v)
-	return _u
-}
-
-// SetNillableProxyID sets the "proxy_id" field if the given value is not nil.
-func (_u *UpstreamProviderUpdate) SetNillableProxyID(v *int64) *UpstreamProviderUpdate {
-	if v != nil {
-		_u.SetProxyID(*v)
-	}
-	return _u
-}
-
-// ClearProxyID clears the value of the "proxy_id" field.
-func (_u *UpstreamProviderUpdate) ClearProxyID() *UpstreamProviderUpdate {
-	_u.mutation.ClearProxyID()
 	return _u
 }
 
@@ -309,20 +288,9 @@ func (_u *UpstreamProviderUpdate) SetNillableRemark(v *string) *UpstreamProvider
 	return _u
 }
 
-// SetProxy sets the "proxy" edge to the Proxy entity.
-func (_u *UpstreamProviderUpdate) SetProxy(v *Proxy) *UpstreamProviderUpdate {
-	return _u.SetProxyID(v.ID)
-}
-
 // Mutation returns the UpstreamProviderMutation object of the builder.
 func (_u *UpstreamProviderUpdate) Mutation() *UpstreamProviderMutation {
 	return _u.mutation
-}
-
-// ClearProxy clears the "proxy" edge to the Proxy entity.
-func (_u *UpstreamProviderUpdate) ClearProxy() *UpstreamProviderUpdate {
-	_u.mutation.ClearProxy()
-	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -475,35 +443,6 @@ func (_u *UpstreamProviderUpdate) sqlSave(ctx context.Context) (_node int, err e
 	if value, ok := _u.mutation.Remark(); ok {
 		_spec.SetField(upstreamprovider.FieldRemark, field.TypeString, value)
 	}
-	if _u.mutation.ProxyCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: false,
-			Table:   upstreamprovider.ProxyTable,
-			Columns: []string{upstreamprovider.ProxyColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(proxy.FieldID, field.TypeInt64),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.ProxyIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: false,
-			Table:   upstreamprovider.ProxyTable,
-			Columns: []string{upstreamprovider.ProxyColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(proxy.FieldID, field.TypeInt64),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{upstreamprovider.Label}
@@ -603,26 +542,6 @@ func (_u *UpstreamProviderUpdateOne) SetNillableStatus(v *string) *UpstreamProvi
 // SetCredentials sets the "credentials" field.
 func (_u *UpstreamProviderUpdateOne) SetCredentials(v map[string]interface{}) *UpstreamProviderUpdateOne {
 	_u.mutation.SetCredentials(v)
-	return _u
-}
-
-// SetProxyID sets the "proxy_id" field.
-func (_u *UpstreamProviderUpdateOne) SetProxyID(v int64) *UpstreamProviderUpdateOne {
-	_u.mutation.SetProxyID(v)
-	return _u
-}
-
-// SetNillableProxyID sets the "proxy_id" field if the given value is not nil.
-func (_u *UpstreamProviderUpdateOne) SetNillableProxyID(v *int64) *UpstreamProviderUpdateOne {
-	if v != nil {
-		_u.SetProxyID(*v)
-	}
-	return _u
-}
-
-// ClearProxyID clears the value of the "proxy_id" field.
-func (_u *UpstreamProviderUpdateOne) ClearProxyID() *UpstreamProviderUpdateOne {
-	_u.mutation.ClearProxyID()
 	return _u
 }
 
@@ -803,20 +722,9 @@ func (_u *UpstreamProviderUpdateOne) SetNillableRemark(v *string) *UpstreamProvi
 	return _u
 }
 
-// SetProxy sets the "proxy" edge to the Proxy entity.
-func (_u *UpstreamProviderUpdateOne) SetProxy(v *Proxy) *UpstreamProviderUpdateOne {
-	return _u.SetProxyID(v.ID)
-}
-
 // Mutation returns the UpstreamProviderMutation object of the builder.
 func (_u *UpstreamProviderUpdateOne) Mutation() *UpstreamProviderMutation {
 	return _u.mutation
-}
-
-// ClearProxy clears the "proxy" edge to the Proxy entity.
-func (_u *UpstreamProviderUpdateOne) ClearProxy() *UpstreamProviderUpdateOne {
-	_u.mutation.ClearProxy()
-	return _u
 }
 
 // Where appends a list predicates to the UpstreamProviderUpdate builder.
@@ -998,35 +906,6 @@ func (_u *UpstreamProviderUpdateOne) sqlSave(ctx context.Context) (_node *Upstre
 	}
 	if value, ok := _u.mutation.Remark(); ok {
 		_spec.SetField(upstreamprovider.FieldRemark, field.TypeString, value)
-	}
-	if _u.mutation.ProxyCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: false,
-			Table:   upstreamprovider.ProxyTable,
-			Columns: []string{upstreamprovider.ProxyColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(proxy.FieldID, field.TypeInt64),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.ProxyIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: false,
-			Table:   upstreamprovider.ProxyTable,
-			Columns: []string{upstreamprovider.ProxyColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(proxy.FieldID, field.TypeInt64),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &UpstreamProvider{config: _u.config}
 	_spec.Assign = _node.assignValues

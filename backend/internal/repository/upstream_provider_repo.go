@@ -34,7 +34,6 @@ func toServiceUpstreamProvider(e *dbent.UpstreamProvider) *service.UpstreamProvi
 		APIBaseURL:             e.APIBaseURL,
 		Status:                 e.Status,
 		Credentials:            e.Credentials,
-		ProxyID:                e.ProxyID,
 		BalanceThreshold:       e.BalanceThreshold,
 		NotifyOnPriceChange:    e.NotifyOnPriceChange,
 		RefreshIntervalMinutes: e.RefreshIntervalMinutes,
@@ -50,7 +49,7 @@ func toServiceUpstreamProvider(e *dbent.UpstreamProvider) *service.UpstreamProvi
 	}
 }
 
-// Create 创建上游站点记录。Nillable 字段(ProxyID/BalanceThreshold)仅在非 nil 时 Set。
+// Create 创建上游站点记录。Nillable 字段(BalanceThreshold)仅在非 nil 时 Set。
 func (r *upstreamProviderRepository) Create(ctx context.Context, p *service.UpstreamProvider) (*service.UpstreamProvider, error) {
 	c := r.client.UpstreamProvider.Create().
 		SetName(p.Name).
@@ -62,9 +61,6 @@ func (r *upstreamProviderRepository) Create(ctx context.Context, p *service.Upst
 		SetNotifyOnPriceChange(p.NotifyOnPriceChange).
 		SetRefreshIntervalMinutes(p.RefreshIntervalMinutes).
 		SetRemark(p.Remark)
-	if p.ProxyID != nil {
-		c = c.SetProxyID(*p.ProxyID)
-	}
 	if p.BalanceThreshold != nil {
 		c = c.SetBalanceThreshold(*p.BalanceThreshold)
 	}
@@ -102,7 +98,7 @@ func (r *upstreamProviderRepository) List(ctx context.Context) ([]*service.Upstr
 	return out, nil
 }
 
-// Update 更新上游站点字段。ProxyID/BalanceThreshold 为 nil 时用 Clear* 清空。
+// Update 更新上游站点字段。BalanceThreshold 为 nil 时用 Clear* 清空。
 func (r *upstreamProviderRepository) Update(ctx context.Context, p *service.UpstreamProvider) (*service.UpstreamProvider, error) {
 	u := r.client.UpstreamProvider.UpdateOneID(p.ID).
 		SetName(p.Name).
@@ -114,11 +110,6 @@ func (r *upstreamProviderRepository) Update(ctx context.Context, p *service.Upst
 		SetNotifyOnPriceChange(p.NotifyOnPriceChange).
 		SetRefreshIntervalMinutes(p.RefreshIntervalMinutes).
 		SetRemark(p.Remark)
-	if p.ProxyID != nil {
-		u = u.SetProxyID(*p.ProxyID)
-	} else {
-		u = u.ClearProxyID()
-	}
 	if p.BalanceThreshold != nil {
 		u = u.SetBalanceThreshold(*p.BalanceThreshold)
 	} else {

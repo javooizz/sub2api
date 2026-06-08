@@ -10,7 +10,6 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/Wei-Shaw/sub2api/ent/proxy"
 	"github.com/Wei-Shaw/sub2api/ent/upstreamprovider"
 	"github.com/Wei-Shaw/sub2api/internal/domain"
 )
@@ -36,8 +35,6 @@ type UpstreamProvider struct {
 	Status string `json:"status,omitempty"`
 	// Credentials holds the value of the "credentials" field.
 	Credentials map[string]interface{} `json:"-"`
-	// ProxyID holds the value of the "proxy_id" field.
-	ProxyID *int64 `json:"proxy_id,omitempty"`
 	// BalanceThreshold holds the value of the "balance_threshold" field.
 	BalanceThreshold *float64 `json:"balance_threshold,omitempty"`
 	// NotifyOnPriceChange holds the value of the "notify_on_price_change" field.
@@ -57,31 +54,8 @@ type UpstreamProvider struct {
 	// RefreshStartedAt holds the value of the "refresh_started_at" field.
 	RefreshStartedAt *time.Time `json:"refresh_started_at,omitempty"`
 	// Remark holds the value of the "remark" field.
-	Remark string `json:"remark,omitempty"`
-	// Edges holds the relations/edges for other nodes in the graph.
-	// The values are being populated by the UpstreamProviderQuery when eager-loading is set.
-	Edges        UpstreamProviderEdges `json:"edges"`
+	Remark       string `json:"remark,omitempty"`
 	selectValues sql.SelectValues
-}
-
-// UpstreamProviderEdges holds the relations/edges for other nodes in the graph.
-type UpstreamProviderEdges struct {
-	// Proxy holds the value of the proxy edge.
-	Proxy *Proxy `json:"proxy,omitempty"`
-	// loadedTypes holds the information for reporting if a
-	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
-}
-
-// ProxyOrErr returns the Proxy value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e UpstreamProviderEdges) ProxyOrErr() (*Proxy, error) {
-	if e.Proxy != nil {
-		return e.Proxy, nil
-	} else if e.loadedTypes[0] {
-		return nil, &NotFoundError{label: proxy.Label}
-	}
-	return nil, &NotLoadedError{edge: "proxy"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -95,7 +69,7 @@ func (*UpstreamProvider) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case upstreamprovider.FieldBalanceThreshold:
 			values[i] = new(sql.NullFloat64)
-		case upstreamprovider.FieldID, upstreamprovider.FieldProxyID, upstreamprovider.FieldRefreshIntervalMinutes, upstreamprovider.FieldConsecutiveFailures:
+		case upstreamprovider.FieldID, upstreamprovider.FieldRefreshIntervalMinutes, upstreamprovider.FieldConsecutiveFailures:
 			values[i] = new(sql.NullInt64)
 		case upstreamprovider.FieldName, upstreamprovider.FieldType, upstreamprovider.FieldSiteURL, upstreamprovider.FieldAPIBaseURL, upstreamprovider.FieldStatus, upstreamprovider.FieldLastError, upstreamprovider.FieldRemark:
 			values[i] = new(sql.NullString)
@@ -171,13 +145,6 @@ func (_m *UpstreamProvider) assignValues(columns []string, values []any) error {
 				if err := json.Unmarshal(*value, &_m.Credentials); err != nil {
 					return fmt.Errorf("unmarshal field credentials: %w", err)
 				}
-			}
-		case upstreamprovider.FieldProxyID:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field proxy_id", values[i])
-			} else if value.Valid {
-				_m.ProxyID = new(int64)
-				*_m.ProxyID = value.Int64
 			}
 		case upstreamprovider.FieldBalanceThreshold:
 			if value, ok := values[i].(*sql.NullFloat64); !ok {
@@ -257,11 +224,6 @@ func (_m *UpstreamProvider) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
-// QueryProxy queries the "proxy" edge of the UpstreamProvider entity.
-func (_m *UpstreamProvider) QueryProxy() *ProxyQuery {
-	return NewUpstreamProviderClient(_m.config).QueryProxy(_m)
-}
-
 // Update returns a builder for updating this UpstreamProvider.
 // Note that you need to call UpstreamProvider.Unwrap() before calling this method if this UpstreamProvider
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -307,11 +269,6 @@ func (_m *UpstreamProvider) String() string {
 	builder.WriteString(_m.Status)
 	builder.WriteString(", ")
 	builder.WriteString("credentials=<sensitive>")
-	builder.WriteString(", ")
-	if v := _m.ProxyID; v != nil {
-		builder.WriteString("proxy_id=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
-	}
 	builder.WriteString(", ")
 	if v := _m.BalanceThreshold; v != nil {
 		builder.WriteString("balance_threshold=")

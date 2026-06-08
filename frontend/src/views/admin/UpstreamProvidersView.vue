@@ -164,7 +164,6 @@
   <UpstreamProviderFormDialog
     :show="showFormDialog"
     :provider="editingProvider"
-    :proxy-options="proxyOptions"
     @close="showFormDialog = false"
     @saved="load"
   />
@@ -208,7 +207,7 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import TablePageLayout from '@/components/layout/TablePageLayout.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import Icon from '@/components/icons/Icon.vue'
-import { adminAPI, upstreamProvidersAPI } from '@/api/admin'
+import { upstreamProvidersAPI } from '@/api/admin'
 import type { UpstreamProvider } from '@/api/admin/upstreamProviders'
 import UpstreamProviderFormDialog from '@/components/admin/upstream/UpstreamProviderFormDialog.vue'
 import UpstreamProviderDetailDrawer from '@/components/admin/upstream/UpstreamProviderDetailDrawer.vue'
@@ -222,7 +221,6 @@ const appStore = useAppStore()
 // 状态
 const loading = ref(false)
 const providers = ref<UpstreamProvider[]>([])
-const proxyOptions = ref<{ label: string; value: number | null }[]>([])
 
 // 对话框状态
 const showFormDialog = ref(false)
@@ -245,20 +243,6 @@ async function load() {
     appStore.showError(e.response?.data?.detail ?? t('admin.upstream.loadFailed'))
   } finally {
     loading.value = false
-  }
-}
-
-// 加载代理下拉(R3.6: adminAPI.proxies.list 返回 PaginatedResponse,用 .items)
-async function loadProxies() {
-  try {
-    const res = await adminAPI.proxies.list(1, 100)
-    const items = res.items ?? (Array.isArray(res) ? res : [])
-    proxyOptions.value = [
-      { label: t('admin.upstream.form.noProxy'), value: null },
-      ...items.map((p: { id: number; name: string }) => ({ label: p.name, value: p.id })),
-    ]
-  } catch {
-    proxyOptions.value = [{ label: t('admin.upstream.form.noProxy'), value: null }]
   }
 }
 
@@ -358,6 +342,5 @@ async function handleRefresh(p: UpstreamProvider) {
 
 onMounted(() => {
   void load()
-  void loadProxies()
 })
 </script>

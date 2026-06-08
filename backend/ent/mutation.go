@@ -35574,8 +35574,6 @@ type UpstreamProviderMutation struct {
 	refresh_started_at          *time.Time
 	remark                      *string
 	clearedFields               map[string]struct{}
-	proxy                       *int64
-	clearedproxy                bool
 	done                        bool
 	oldValue                    func(context.Context) (*UpstreamProvider, error)
 	predicates                  []predicate.UpstreamProvider
@@ -35965,55 +35963,6 @@ func (m *UpstreamProviderMutation) OldCredentials(ctx context.Context) (v map[st
 // ResetCredentials resets all changes to the "credentials" field.
 func (m *UpstreamProviderMutation) ResetCredentials() {
 	m.credentials = nil
-}
-
-// SetProxyID sets the "proxy_id" field.
-func (m *UpstreamProviderMutation) SetProxyID(i int64) {
-	m.proxy = &i
-}
-
-// ProxyID returns the value of the "proxy_id" field in the mutation.
-func (m *UpstreamProviderMutation) ProxyID() (r int64, exists bool) {
-	v := m.proxy
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldProxyID returns the old "proxy_id" field's value of the UpstreamProvider entity.
-// If the UpstreamProvider object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UpstreamProviderMutation) OldProxyID(ctx context.Context) (v *int64, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldProxyID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldProxyID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldProxyID: %w", err)
-	}
-	return oldValue.ProxyID, nil
-}
-
-// ClearProxyID clears the value of the "proxy_id" field.
-func (m *UpstreamProviderMutation) ClearProxyID() {
-	m.proxy = nil
-	m.clearedFields[upstreamprovider.FieldProxyID] = struct{}{}
-}
-
-// ProxyIDCleared returns if the "proxy_id" field was cleared in this mutation.
-func (m *UpstreamProviderMutation) ProxyIDCleared() bool {
-	_, ok := m.clearedFields[upstreamprovider.FieldProxyID]
-	return ok
-}
-
-// ResetProxyID resets all changes to the "proxy_id" field.
-func (m *UpstreamProviderMutation) ResetProxyID() {
-	m.proxy = nil
-	delete(m.clearedFields, upstreamprovider.FieldProxyID)
 }
 
 // SetBalanceThreshold sets the "balance_threshold" field.
@@ -36489,33 +36438,6 @@ func (m *UpstreamProviderMutation) ResetRemark() {
 	m.remark = nil
 }
 
-// ClearProxy clears the "proxy" edge to the Proxy entity.
-func (m *UpstreamProviderMutation) ClearProxy() {
-	m.clearedproxy = true
-	m.clearedFields[upstreamprovider.FieldProxyID] = struct{}{}
-}
-
-// ProxyCleared reports if the "proxy" edge to the Proxy entity was cleared.
-func (m *UpstreamProviderMutation) ProxyCleared() bool {
-	return m.ProxyIDCleared() || m.clearedproxy
-}
-
-// ProxyIDs returns the "proxy" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProxyID instead. It exists only for internal usage by the builders.
-func (m *UpstreamProviderMutation) ProxyIDs() (ids []int64) {
-	if id := m.proxy; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetProxy resets all changes to the "proxy" edge.
-func (m *UpstreamProviderMutation) ResetProxy() {
-	m.proxy = nil
-	m.clearedproxy = false
-}
-
 // Where appends a list predicates to the UpstreamProviderMutation builder.
 func (m *UpstreamProviderMutation) Where(ps ...predicate.UpstreamProvider) {
 	m.predicates = append(m.predicates, ps...)
@@ -36550,7 +36472,7 @@ func (m *UpstreamProviderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UpstreamProviderMutation) Fields() []string {
-	fields := make([]string, 0, 19)
+	fields := make([]string, 0, 18)
 	if m.created_at != nil {
 		fields = append(fields, upstreamprovider.FieldCreatedAt)
 	}
@@ -36574,9 +36496,6 @@ func (m *UpstreamProviderMutation) Fields() []string {
 	}
 	if m.credentials != nil {
 		fields = append(fields, upstreamprovider.FieldCredentials)
-	}
-	if m.proxy != nil {
-		fields = append(fields, upstreamprovider.FieldProxyID)
 	}
 	if m.balance_threshold != nil {
 		fields = append(fields, upstreamprovider.FieldBalanceThreshold)
@@ -36632,8 +36551,6 @@ func (m *UpstreamProviderMutation) Field(name string) (ent.Value, bool) {
 		return m.Status()
 	case upstreamprovider.FieldCredentials:
 		return m.Credentials()
-	case upstreamprovider.FieldProxyID:
-		return m.ProxyID()
 	case upstreamprovider.FieldBalanceThreshold:
 		return m.BalanceThreshold()
 	case upstreamprovider.FieldNotifyOnPriceChange:
@@ -36679,8 +36596,6 @@ func (m *UpstreamProviderMutation) OldField(ctx context.Context, name string) (e
 		return m.OldStatus(ctx)
 	case upstreamprovider.FieldCredentials:
 		return m.OldCredentials(ctx)
-	case upstreamprovider.FieldProxyID:
-		return m.OldProxyID(ctx)
 	case upstreamprovider.FieldBalanceThreshold:
 		return m.OldBalanceThreshold(ctx)
 	case upstreamprovider.FieldNotifyOnPriceChange:
@@ -36765,13 +36680,6 @@ func (m *UpstreamProviderMutation) SetField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCredentials(v)
-		return nil
-	case upstreamprovider.FieldProxyID:
-		v, ok := value.(int64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetProxyID(v)
 		return nil
 	case upstreamprovider.FieldBalanceThreshold:
 		v, ok := value.(float64)
@@ -36912,9 +36820,6 @@ func (m *UpstreamProviderMutation) AddField(name string, value ent.Value) error 
 // mutation.
 func (m *UpstreamProviderMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(upstreamprovider.FieldProxyID) {
-		fields = append(fields, upstreamprovider.FieldProxyID)
-	}
 	if m.FieldCleared(upstreamprovider.FieldBalanceThreshold) {
 		fields = append(fields, upstreamprovider.FieldBalanceThreshold)
 	}
@@ -36941,9 +36846,6 @@ func (m *UpstreamProviderMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *UpstreamProviderMutation) ClearField(name string) error {
 	switch name {
-	case upstreamprovider.FieldProxyID:
-		m.ClearProxyID()
-		return nil
 	case upstreamprovider.FieldBalanceThreshold:
 		m.ClearBalanceThreshold()
 		return nil
@@ -36988,9 +36890,6 @@ func (m *UpstreamProviderMutation) ResetField(name string) error {
 	case upstreamprovider.FieldCredentials:
 		m.ResetCredentials()
 		return nil
-	case upstreamprovider.FieldProxyID:
-		m.ResetProxyID()
-		return nil
 	case upstreamprovider.FieldBalanceThreshold:
 		m.ResetBalanceThreshold()
 		return nil
@@ -37027,28 +36926,19 @@ func (m *UpstreamProviderMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UpstreamProviderMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.proxy != nil {
-		edges = append(edges, upstreamprovider.EdgeProxy)
-	}
+	edges := make([]string, 0, 0)
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *UpstreamProviderMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case upstreamprovider.EdgeProxy:
-		if id := m.proxy; id != nil {
-			return []ent.Value{*id}
-		}
-	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UpstreamProviderMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 0)
 	return edges
 }
 
@@ -37060,42 +36950,25 @@ func (m *UpstreamProviderMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UpstreamProviderMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.clearedproxy {
-		edges = append(edges, upstreamprovider.EdgeProxy)
-	}
+	edges := make([]string, 0, 0)
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *UpstreamProviderMutation) EdgeCleared(name string) bool {
-	switch name {
-	case upstreamprovider.EdgeProxy:
-		return m.clearedproxy
-	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *UpstreamProviderMutation) ClearEdge(name string) error {
-	switch name {
-	case upstreamprovider.EdgeProxy:
-		m.ClearProxy()
-		return nil
-	}
 	return fmt.Errorf("unknown UpstreamProvider unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *UpstreamProviderMutation) ResetEdge(name string) error {
-	switch name {
-	case upstreamprovider.EdgeProxy:
-		m.ResetProxy()
-		return nil
-	}
 	return fmt.Errorf("unknown UpstreamProvider edge %s", name)
 }
 

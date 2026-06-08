@@ -19,6 +19,21 @@
         </p>
       </div>
 
+      <!-- 全局代理 URL(同时用于 HTTP 采集与 CloakBrowser 过盾) -->
+      <div>
+        <label for="proxy-url" class="input-label">{{ t('admin.upstream.settings.proxyUrl') }}</label>
+        <input
+          id="proxy-url"
+          v-model="form.proxy_url"
+          type="text"
+          :placeholder="t('admin.upstream.settings.proxyUrlPlaceholder')"
+          class="input font-mono text-xs"
+        />
+        <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+          {{ t('admin.upstream.settings.proxyUrlHint') }}
+        </p>
+      </div>
+
       <!-- 私网 Webhook 开关 -->
       <div class="flex items-center gap-2 min-h-[44px]">
         <input
@@ -70,6 +85,7 @@ const saving = ref(false)
 const saveError = ref('')
 const form = ref({
   browser_cdp_url: '',
+  proxy_url: '',
   allow_private_webhook: false,
 })
 

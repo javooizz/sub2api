@@ -18,8 +18,7 @@ type UpstreamProvider struct {
 	APIBaseURL             string // 空 = 同 SiteURL
 	Status                 string
 	Credentials            map[string]any
-	ProxyID                *int64
-	ProxyURL               string // repo 加载时按 ProxyID 解析,不落库
+	ProxyURL               string // 全局采集代理:resolveProxy 从「采集设置」加载,不落库(仅 HTTP 采集用)
 	BalanceThreshold       *float64
 	NotifyOnPriceChange    bool
 	RefreshIntervalMinutes int

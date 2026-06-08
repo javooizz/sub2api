@@ -8,7 +8,6 @@ import (
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
-	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 )
@@ -41,7 +40,6 @@ func (UpstreamProvider) Fields() []ent.Field {
 		field.JSON("credentials", map[string]any{}).
 			SchemaType(map[string]string{dialect.Postgres: "jsonb"}).
 			Sensitive(),
-		field.Int64("proxy_id").Optional().Nillable(),
 		field.Float("balance_threshold").Optional().Nillable(),
 		field.Bool("notify_on_price_change").Default(true),
 		field.Int("refresh_interval_minutes").Default(60),
@@ -55,13 +53,6 @@ func (UpstreamProvider) Fields() []ent.Field {
 		// 刷新抢占锁(spec §7.1):非空=刷新进行中,5 分钟 stale 可重抢
 		field.Time("refresh_started_at").Optional().Nillable(),
 		field.String("remark").Default("").SchemaType(map[string]string{dialect.Postgres: "text"}),
-	}
-}
-
-func (UpstreamProvider) Edges() []ent.Edge {
-	return []ent.Edge{
-		// 同 account 惯例:可选代理
-		edge.To("proxy", Proxy.Type).Unique().Field("proxy_id"),
 	}
 }
 

@@ -1353,21 +1353,12 @@ var (
 		{Name: "balance_alerted", Type: field.TypeBool, Default: false},
 		{Name: "refresh_started_at", Type: field.TypeTime, Nullable: true},
 		{Name: "remark", Type: field.TypeString, Default: "", SchemaType: map[string]string{"postgres": "text"}},
-		{Name: "proxy_id", Type: field.TypeInt64, Nullable: true},
 	}
 	// UpstreamProvidersTable holds the schema information for the "upstream_providers" table.
 	UpstreamProvidersTable = &schema.Table{
 		Name:       "upstream_providers",
 		Columns:    UpstreamProvidersColumns,
 		PrimaryKey: []*schema.Column{UpstreamProvidersColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "upstream_providers_proxies_proxy",
-				Columns:    []*schema.Column{UpstreamProvidersColumns[19]},
-				RefColumns: []*schema.Column{ProxiesColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "upstreamprovider_status",
@@ -2014,7 +2005,6 @@ func init() {
 	UpstreamChangeEventsTable.Annotation = &entsql.Annotation{
 		Table: "upstream_change_events",
 	}
-	UpstreamProvidersTable.ForeignKeys[0].RefTable = ProxiesTable
 	UpstreamProvidersTable.Annotation = &entsql.Annotation{
 		Table: "upstream_providers",
 	}

@@ -1805,27 +1805,27 @@ func init() {
 	// upstreamprovider.StatusValidator is a validator for the "status" field. It is called by the builders before save.
 	upstreamprovider.StatusValidator = upstreamproviderDescStatus.Validators[0].(func(string) error)
 	// upstreamproviderDescNotifyOnPriceChange is the schema descriptor for notify_on_price_change field.
-	upstreamproviderDescNotifyOnPriceChange := upstreamproviderFields[8].Descriptor()
+	upstreamproviderDescNotifyOnPriceChange := upstreamproviderFields[7].Descriptor()
 	// upstreamprovider.DefaultNotifyOnPriceChange holds the default value on creation for the notify_on_price_change field.
 	upstreamprovider.DefaultNotifyOnPriceChange = upstreamproviderDescNotifyOnPriceChange.Default.(bool)
 	// upstreamproviderDescRefreshIntervalMinutes is the schema descriptor for refresh_interval_minutes field.
-	upstreamproviderDescRefreshIntervalMinutes := upstreamproviderFields[9].Descriptor()
+	upstreamproviderDescRefreshIntervalMinutes := upstreamproviderFields[8].Descriptor()
 	// upstreamprovider.DefaultRefreshIntervalMinutes holds the default value on creation for the refresh_interval_minutes field.
 	upstreamprovider.DefaultRefreshIntervalMinutes = upstreamproviderDescRefreshIntervalMinutes.Default.(int)
 	// upstreamproviderDescLastError is the schema descriptor for last_error field.
-	upstreamproviderDescLastError := upstreamproviderFields[12].Descriptor()
+	upstreamproviderDescLastError := upstreamproviderFields[11].Descriptor()
 	// upstreamprovider.DefaultLastError holds the default value on creation for the last_error field.
 	upstreamprovider.DefaultLastError = upstreamproviderDescLastError.Default.(string)
 	// upstreamproviderDescConsecutiveFailures is the schema descriptor for consecutive_failures field.
-	upstreamproviderDescConsecutiveFailures := upstreamproviderFields[13].Descriptor()
+	upstreamproviderDescConsecutiveFailures := upstreamproviderFields[12].Descriptor()
 	// upstreamprovider.DefaultConsecutiveFailures holds the default value on creation for the consecutive_failures field.
 	upstreamprovider.DefaultConsecutiveFailures = upstreamproviderDescConsecutiveFailures.Default.(int)
 	// upstreamproviderDescBalanceAlerted is the schema descriptor for balance_alerted field.
-	upstreamproviderDescBalanceAlerted := upstreamproviderFields[14].Descriptor()
+	upstreamproviderDescBalanceAlerted := upstreamproviderFields[13].Descriptor()
 	// upstreamprovider.DefaultBalanceAlerted holds the default value on creation for the balance_alerted field.
 	upstreamprovider.DefaultBalanceAlerted = upstreamproviderDescBalanceAlerted.Default.(bool)
 	// upstreamproviderDescRemark is the schema descriptor for remark field.
-	upstreamproviderDescRemark := upstreamproviderFields[16].Descriptor()
+	upstreamproviderDescRemark := upstreamproviderFields[15].Descriptor()
 	// upstreamprovider.DefaultRemark holds the default value on creation for the remark field.
 	upstreamprovider.DefaultRemark = upstreamproviderDescRemark.Default.(string)
 	usagecleanuptaskMixin := schema.UsageCleanupTask{}.Mixin()

@@ -5244,22 +5244,6 @@ func (c *UpstreamProviderClient) GetX(ctx context.Context, id int64) *UpstreamPr
 	return obj
 }
 
-// QueryProxy queries the proxy edge of a UpstreamProvider.
-func (c *UpstreamProviderClient) QueryProxy(_m *UpstreamProvider) *ProxyQuery {
-	query := (&ProxyClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(upstreamprovider.Table, upstreamprovider.FieldID, id),
-			sqlgraph.To(proxy.Table, proxy.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, upstreamprovider.ProxyTable, upstreamprovider.ProxyColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // Hooks returns the client hooks.
 func (c *UpstreamProviderClient) Hooks() []Hook {
 	return c.hooks.UpstreamProvider
