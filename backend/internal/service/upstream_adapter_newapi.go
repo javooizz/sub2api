@@ -81,10 +81,15 @@ func (a *NewAPIAdapter) Login(ctx context.Context, p *UpstreamProvider, turnstil
 		return nil, fmt.Errorf("登录响应缺少用户 ID")
 	}
 	// session → system access token
+	// 注意:部分 new-api fork 要求 /api/user/token 带 New-Api-User 头(即便已有 session cookie),否则 401。
 	var tokEnv newapiEnvelope
-	_, err = client.doJSON(ctx, http.MethodGet, "/api/user/token", nil, nil, &tokEnv)
-	if err != nil || !tokEnv.Success {
-		return nil, fmt.Errorf("兑换 access token 失败")
+	_, err = client.doJSON(ctx, http.MethodGet, "/api/user/token", nil,
+		map[string]string{"New-Api-User": strconv.FormatInt(user.ID, 10)}, &tokEnv)
+	if err != nil {
+		return nil, fmt.Errorf("兑换 access token 失败: %w", err) // err 仅含状态码,不含响应原文(spec §4.1.1)
+	}
+	if !tokEnv.Success {
+		return nil, fmt.Errorf("兑换 access token 失败(success=false)")
 	}
 	var accessToken string
 	if err := json.Unmarshal(tokEnv.Data, &accessToken); err != nil {
