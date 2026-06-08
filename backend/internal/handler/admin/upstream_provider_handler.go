@@ -254,7 +254,13 @@ func (h *UpstreamProviderHandler) Refresh(c *gin.Context) {
 			response.Error(c, http.StatusConflict, "正在刷新中，请稍候")
 			return
 		}
-		response.ErrorFrom(c, err)
+		// provider 不存在 → 404；其余(采集/过盾/凭证失败)→ 400 + 友好信息
+		// (失败状态与 last_error 已在 commitFailure 持久化,前端从详情可见)
+		if errors.Is(err, service.ErrUpstreamProviderNotFound) {
+			response.ErrorFrom(c, err)
+			return
+		}
+		response.BadRequest(c, err.Error())
 		return
 	}
 	p, gerr := h.svc.Get(c.Request.Context(), id)
