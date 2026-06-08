@@ -14,6 +14,20 @@ var upstreamSensitiveKeySet = func() map[string]struct{} {
 	return m
 }()
 
+// UpstreamIdentityCredentialKeys 非敏感、但属于「账号身份/续期凭证」的键。
+// 合并时与敏感键一样:incoming 未提供则保留 existing。原因:自动续期(Login/CF 过盾)
+// 只回传 {access_token,user_id} / {cf_*} 等部分产物、从不含 username,若按"非敏感键由
+// incoming 决定"的旧语义合并,会把 username 抹掉,导致此后再也无法自动登录续期、永久
+// credential_error。注意:这些键不脱敏,RedactUpstreamCredentials 仍照常返回前端。
+var UpstreamIdentityCredentialKeys = []string{"username", "user_id"}
+
+// upstreamPreserveWhenOmittedKeys 合并时 incoming 未提供即保留 existing 的键集合
+// = 敏感键 ∪ 身份键。
+var upstreamPreserveWhenOmittedKeys = append(
+	append([]string{}, UpstreamSensitiveCredentialKeys...),
+	UpstreamIdentityCredentialKeys...,
+)
+
 // UpstreamCredentialStatus 脱敏响应附带的状态信息(spec §9)。
 type UpstreamCredentialStatus struct {
 	HasPassword     bool   `json:"has_password"`
@@ -43,14 +57,14 @@ func RedactUpstreamCredentials(in map[string]any) (map[string]any, UpstreamCrede
 	return out, status
 }
 
-// MergeUpstreamCredentials PUT 合并:敏感键 incoming 未提供则保留 existing,
-// 显式提供则覆盖;非敏感键完全由 incoming 决定。返回新 map。
+// MergeUpstreamCredentials PUT/续期合并:敏感键与身份键(username/user_id)在 incoming
+// 未提供时保留 existing、显式提供则覆盖;其余非敏感键完全由 incoming 决定。返回新 map。
 func MergeUpstreamCredentials(existing, incoming map[string]any) map[string]any {
-	out := make(map[string]any, len(incoming)+len(UpstreamSensitiveCredentialKeys))
+	out := make(map[string]any, len(incoming)+len(upstreamPreserveWhenOmittedKeys))
 	for k, v := range incoming {
 		out[k] = v
 	}
-	for _, key := range UpstreamSensitiveCredentialKeys {
+	for _, key := range upstreamPreserveWhenOmittedKeys {
 		if _, hasIncoming := incoming[key]; hasIncoming {
 			continue
 		}

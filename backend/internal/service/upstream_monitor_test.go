@@ -163,6 +163,11 @@ func TestMonitor_AuthFailureRetriesLoginOnce(t *testing.T) {
 	if repo.credsUpdated["access_token"] != "fresh" {
 		t.Fatal("新凭证应回写")
 	}
+	// 根因守护:续期产物 {access_token} 不含 username,合并回写不得把身份键 username 抹掉,
+	// 否则下一次续期会因缺 username 而永久 credential_error。
+	if repo.credsUpdated["username"] != "u" {
+		t.Fatalf("续期回写不得丢失 username,实得: %v", repo.credsUpdated["username"])
+	}
 	if repo.committed.Status != domain.UpstreamStatusActive {
 		t.Fatal("最终状态应 active")
 	}
