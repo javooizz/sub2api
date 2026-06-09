@@ -35,6 +35,7 @@ func toServiceUpstreamProvider(e *dbent.UpstreamProvider) *service.UpstreamProvi
 		Status:                 e.Status,
 		Credentials:            e.Credentials,
 		BalanceThreshold:       e.BalanceThreshold,
+		RechargeRatio:          e.RechargeRatio,
 		NotifyOnPriceChange:    e.NotifyOnPriceChange,
 		RefreshIntervalMinutes: e.RefreshIntervalMinutes,
 		LatestSnapshot:         e.LatestSnapshot,
@@ -51,6 +52,9 @@ func toServiceUpstreamProvider(e *dbent.UpstreamProvider) *service.UpstreamProvi
 
 // Create 创建上游站点记录。Nillable 字段(BalanceThreshold)仅在非 nil 时 Set。
 func (r *upstreamProviderRepository) Create(ctx context.Context, p *service.UpstreamProvider) (*service.UpstreamProvider, error) {
+	if p.RechargeRatio <= 0 {
+		p.RechargeRatio = 1
+	}
 	c := r.client.UpstreamProvider.Create().
 		SetName(p.Name).
 		SetType(p.Type).
@@ -60,6 +64,7 @@ func (r *upstreamProviderRepository) Create(ctx context.Context, p *service.Upst
 		SetCredentials(p.Credentials).
 		SetNotifyOnPriceChange(p.NotifyOnPriceChange).
 		SetRefreshIntervalMinutes(p.RefreshIntervalMinutes).
+		SetRechargeRatio(p.RechargeRatio).
 		SetRemark(p.Remark)
 	if p.BalanceThreshold != nil {
 		c = c.SetBalanceThreshold(*p.BalanceThreshold)
@@ -109,6 +114,7 @@ func (r *upstreamProviderRepository) Update(ctx context.Context, p *service.Upst
 		SetCredentials(p.Credentials).
 		SetNotifyOnPriceChange(p.NotifyOnPriceChange).
 		SetRefreshIntervalMinutes(p.RefreshIntervalMinutes).
+		SetRechargeRatio(p.RechargeRatio).
 		SetRemark(p.Remark)
 	if p.BalanceThreshold != nil {
 		u = u.SetBalanceThreshold(*p.BalanceThreshold)

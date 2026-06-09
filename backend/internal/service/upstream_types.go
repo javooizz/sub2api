@@ -20,6 +20,7 @@ type UpstreamProvider struct {
 	Credentials            map[string]any
 	ProxyURL               string // 全局采集代理:resolveProxy 从「采集设置」加载,不落库(仅 HTTP 采集用)
 	BalanceThreshold       *float64
+	RechargeRatio          float64
 	NotifyOnPriceChange    bool
 	RefreshIntervalMinutes int
 	LatestSnapshot         *domain.UpstreamSnapshot
