@@ -21,6 +21,7 @@ var ForkProviderSet = wire.NewSet(
 	ProvideUpstreamMonitor,          // 刷新编排 + 定时 runner(Task 15)
 	ProvideUpstreamUsageFetchers,    // 上游消耗采集适配器 map
 	ProvideUpstreamUsageCollector,   // 上游消耗采集器(内部启动 runner)
+	ProvideUpstreamUsageService,     // 上游消耗读取服务(summary/breakdown)
 )
 
 // ProvideBrowserSolver wire 组装 BrowserSolver。
