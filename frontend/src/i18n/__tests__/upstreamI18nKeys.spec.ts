@@ -17,6 +17,9 @@ describe('upstream i18n keys', () => {
       expect(u.notify.title).toBeTypeOf('string')
       expect(u.settings.title).toBeTypeOf('string')
       expect(u.form.errors.nameRequired).toBeTypeOf('string')
+      expect(u.usage.month).toBeTypeOf('string')
+      expect(u.usage.unsupportedGroup).toBeTypeOf('string')
+      expect(u.columns.usage).toBeTypeOf('string')
     })
   }
 })
