@@ -61,6 +61,9 @@
 
           <!-- ===== 概览 ===== -->
           <div v-if="activeTab === 'overview'" class="space-y-4">
+            <!-- 消耗总览(4 窗口) -->
+            <UsageSummaryCards :summary="provider.usage_summary" />
+
             <!-- partial 提示 -->
             <div
               v-if="provider.latest_snapshot?.partial"
@@ -121,34 +124,20 @@
             </div>
           </div>
 
-          <!-- ===== 分组价格 ===== -->
-          <div v-else-if="activeTab === 'pricing'">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="border-b border-gray-200 text-left dark:border-gray-700">
-                  <th class="py-2 pr-3 font-medium text-gray-500 dark:text-gray-400">{{ t('admin.upstream.detail.pricing.group') }}</th>
-                  <th class="py-2 pr-3 text-right font-medium text-gray-500 dark:text-gray-400">{{ t('admin.upstream.detail.pricing.ratio') }}</th>
-                  <th class="py-2 text-right font-medium text-gray-500 dark:text-gray-400">{{ t('admin.upstream.detail.pricing.modelCount') }}</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                <tr v-for="g in groups" :key="g.name">
-                  <td class="py-2 pr-3 text-gray-900 dark:text-gray-100">
-                    {{ g.name }}
-                    <span
-                      v-if="recentlyChangedGroups.has(g.name)"
-                      class="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-amber-500"
-                      :title="t('admin.upstream.detail.pricing.changedRecently')"
-                    />
-                  </td>
-                  <td class="py-2 pr-3 text-right tabular-nums text-gray-900 dark:text-gray-100">{{ g.ratio ?? '—' }}</td>
-                  <td class="py-2 text-right tabular-nums text-gray-900 dark:text-gray-100">{{ g.models?.length ?? 0 }}</td>
-                </tr>
-                <tr v-if="!groups.length">
-                  <td colspan="3" class="py-8 text-center text-sm text-gray-400">—</td>
-                </tr>
-              </tbody>
-            </table>
+          <!-- ===== 分组价格 + 消耗 ===== -->
+          <div v-else-if="activeTab === 'pricing'" class="space-y-3">
+            <div class="flex items-center justify-between">
+              <UsageWindowSwitcher v-model="usageWindow" />
+            </div>
+            <UsageBreakdownTable
+              :rows="groupRows"
+              :supported="groupSupported"
+              :loading="usageLoading"
+              :name-label="t('admin.upstream.detail.pricing.group')"
+            />
+            <p v-if="provider.type === 'newapi'" class="text-[10px] text-gray-400">
+              {{ t('admin.upstream.usage.renamedGroupNote') }}
+            </p>
           </div>
 
           <!-- ===== 可用模型 ===== -->
@@ -200,21 +189,16 @@
               </button>
             </form>
 
-            <!-- Token 列表 -->
-            <div v-if="tokensLoading" class="py-8 text-center">
-              <div class="mx-auto h-6 w-6 animate-spin rounded-full border-b-2 border-primary-600" />
+            <!-- 消耗明细(实时密钥 ∪ breakdown) -->
+            <div class="flex items-center justify-between">
+              <UsageWindowSwitcher v-model="usageWindow" />
             </div>
-            <table v-else-if="tokens.length" class="w-full text-sm">
-              <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                <tr v-for="tok in tokens" :key="String(tok.id)">
-                  <td class="py-2 pr-3 font-medium text-gray-900 dark:text-gray-100">{{ tok.name }}</td>
-                  <td class="py-2 text-gray-500 dark:text-gray-400">{{ tok.group ?? '' }}</td>
-                </tr>
-              </tbody>
-            </table>
-            <p v-else class="py-8 text-center text-sm text-gray-400">
-              {{ t('admin.upstream.detail.tokens.empty') }}
-            </p>
+            <UsageBreakdownTable
+              :rows="keyRows"
+              :supported="keySupported"
+              :loading="usageLoading"
+              :name-label="t('admin.upstream.usage.keyName')"
+            />
           </div>
 
           <!-- ===== 关联帐号 ===== -->
@@ -332,12 +316,18 @@ import BaseDialog from '@/components/common/BaseDialog.vue'
 import Select from '@/components/common/Select.vue'
 import Icon from '@/components/icons/Icon.vue'
 import UpstreamStatusBadge from './UpstreamStatusBadge.vue'
+import UsageSummaryCards from './UsageSummaryCards.vue'
+import UsageWindowSwitcher from './UsageWindowSwitcher.vue'
+import UsageBreakdownTable from './UsageBreakdownTable.vue'
+import { mergeUsageRows } from './usageView'
+import type { UsageWindow, MergedUsageRow, LiveScopeItem } from './usageView'
 import { upstreamProvidersAPI } from '@/api/admin'
 import type {
   UpstreamProvider,
   UpstreamChangeEvent,
   UpstreamLinkedAccount,
   UpstreamToken,
+  UsageBreakdown,
 } from '@/api/admin/upstreamProviders'
 import { useClipboard } from '@/composables/useClipboard'
 import { useAppStore } from '@/stores/app'
@@ -372,6 +362,17 @@ const EVENTS_PAGE = 20
 
 const relogining = ref(false)
 
+// ---- 消耗(密钥/分组 breakdown) ----
+const usageWindow = ref<UsageWindow>('month')
+// 缓存键 `${scope}:${window}` → 该 scope+window 的 breakdown(含 supported)
+const breakdownCache = ref(new Map<string, UsageBreakdown>())
+const usageLoading = ref(false)
+
+const keyRows = ref<MergedUsageRow[]>([])
+const keySupported = ref(true)
+const groupRows = ref<MergedUsageRow[]>([])
+const groupSupported = ref(true)
+
 // ---- computed ----
 const groups = computed(() => props.provider?.latest_snapshot?.groups ?? [])
 
@@ -383,18 +384,6 @@ const groupOptions = computed(() => [
 const balanceText = computed(() => {
   const b = props.provider?.latest_snapshot?.balance
   return b == null ? '—' : `$${b.toFixed(2)}`
-})
-
-// R2.4: snake_case — ev.detail?.group
-const recentlyChangedGroups = computed(() => {
-  const cutoff = Date.now() - 7 * 86_400_000
-  const set = new Set<string>()
-  for (const ev of events.value) {
-    if (new Date(ev.created_at).getTime() < cutoff) continue
-    const g = ev.detail?.group
-    if (typeof g === 'string') set.add(g)
-  }
-  return set
 })
 
 // R2.2: 截图文件名从 last_error 中提取
@@ -413,6 +402,13 @@ watch(
     accounts.value = []
     events.value = []
     hasMoreEvents.value = false
+    // 消耗:换 provider 必清缓存与行,窗口回默认,杜绝串数据
+    breakdownCache.value = new Map()
+    usageWindow.value = 'month'
+    keyRows.value = []
+    groupRows.value = []
+    keySupported.value = true
+    groupSupported.value = true
     // events 概览页就要（近 7 天高亮依赖），并行拉
     void loadEvents(id)
     void loadAccounts(id)
@@ -423,7 +419,16 @@ watch(
 watch(activeTab, (tab) => {
   const id = props.provider?.id
   if (!id) return
-  if (tab === 'tokens' && tokens.value.length === 0) void loadTokens(id)
+  if (tab === 'tokens') void loadKeyUsage(id)
+  if (tab === 'pricing') void loadGroupUsage(id)
+})
+
+// 窗口切换:重算当前 Tab(命中缓存则瞬时)
+watch(usageWindow, () => {
+  const id = props.provider?.id
+  if (!id) return
+  if (activeTab.value === 'tokens') void loadKeyUsage(id)
+  if (activeTab.value === 'pricing') void loadGroupUsage(id)
 })
 
 // ---- loaders ----
@@ -459,6 +464,60 @@ async function loadEvents(id: number) {
   }
 }
 
+// 取 breakdown(命中缓存则不请求)
+async function fetchBreakdown(id: number, scope: 'key' | 'group', window: UsageWindow): Promise<UsageBreakdown | null> {
+  const cacheKey = `${scope}:${window}`
+  const hit = breakdownCache.value.get(cacheKey)
+  if (hit) return hit
+  try {
+    const bd = await upstreamProvidersAPI.usage(id, { scope, window })
+    breakdownCache.value.set(cacheKey, bd)
+    return bd
+  } catch {
+    return null
+  }
+}
+
+// 密钥明细:实时 tokens ∪ key breakdown
+async function loadKeyUsage(id: number, reloadTokens = false) {
+  usageLoading.value = true
+  try {
+    if (reloadTokens || tokens.value.length === 0) await loadTokens(id)
+    const bd = await fetchBreakdown(id, 'key', usageWindow.value)
+    keySupported.value = bd?.supported ?? true
+    const live: LiveScopeItem[] = tokens.value.map((tok) => ({
+      scope_key: upstreamTokenIdString(tok.id),
+      scope_name: tok.name,
+      meta: tok.group || undefined,
+    }))
+    keyRows.value = mergeUsageRows(live, bd?.items ?? [])
+  } finally {
+    usageLoading.value = false
+  }
+}
+
+// 分组明细:实时 groups ∪ group breakdown(sub2api → supported:false)
+async function loadGroupUsage(id: number) {
+  usageLoading.value = true
+  try {
+    const bd = await fetchBreakdown(id, 'group', usageWindow.value)
+    groupSupported.value = bd?.supported ?? true
+    const live: LiveScopeItem[] = groups.value.map((g) => ({
+      scope_key: g.name,
+      scope_name: g.name,
+      meta: g.ratio != null ? `×${g.ratio}` : undefined,
+    }))
+    groupRows.value = groupSupported.value ? mergeUsageRows(live, bd?.items ?? []) : []
+  } finally {
+    usageLoading.value = false
+  }
+}
+
+// token id → 字符串(与后端 scope_key 对齐:数字 id 转字符串)
+function upstreamTokenIdString(id: unknown): string {
+  return id == null ? '' : String(id)
+}
+
 // R2.4: 游标字段 before_created_at / before_id (snake_case)
 async function loadMoreEvents() {
   const id = props.provider?.id
@@ -491,7 +550,7 @@ async function handleCreateToken() {
       group: tokenForm.value.group || undefined,
     })
     tokenForm.value = { name: '', group: '' }
-    void loadTokens(id)
+    void loadKeyUsage(id, true)
   } catch {
     appStore.showError(t('common.unknownError', 'Failed to create token'))
   } finally {
