@@ -978,8 +978,19 @@ func (s *SettingService) GetModelPlazaRuntime(ctx context.Context) ModelPlazaRun
 // SetModelPlazaEnabled persists the model-plaza feature switch.
 // 专项端点（PUT /admin/settings/model-plaza）是唯一写入口——该 key 故意不进
 // SystemSettings/UpdateSettings 全量链路，避免被系统设置页全量保存意外覆盖。
+//
+// 但该 key 同时是 public settings 注入（window.__APP_CONFIG__）的字段，会被渲染并
+// 缓存进 index.html。因此写库成功后必须像 UpdateSettings 一样触发 onUpdate 回调
+// （在 router.go 中绑定了 frontendServer.InvalidateCache()），否则缓存的注入快照会
+// 冻结在切换前的旧值，导致"开关已开却前端永不展示"。
 func (s *SettingService) SetModelPlazaEnabled(ctx context.Context, enabled bool) error {
-	return s.settingRepo.Set(ctx, SettingKeyModelPlazaEnabled, strconv.FormatBool(enabled))
+	if err := s.settingRepo.Set(ctx, SettingKeyModelPlazaEnabled, strconv.FormatBool(enabled)); err != nil {
+		return err
+	}
+	if s.onUpdate != nil {
+		s.onUpdate() // 失效前端 HTML 缓存，使注入快照重新读取新开关值
+	}
+	return nil
 }
 
 // IsUserErrorViewAllowed reads the user-facing error-requests visibility switch
