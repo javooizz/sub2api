@@ -6857,8 +6857,6 @@ export default {
         spent: 'Spent (CNY)',
         quota: 'Quota',
         requests: 'Reqs',
-        group: 'Group',
-        sortByCost: 'Sort by cost',
         deleted: 'Deleted',
         empty: 'No usage data yet',
         partial: 'Collection incomplete, figures may be low',

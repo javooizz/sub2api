@@ -7012,8 +7012,6 @@ export default {
         spent: '消耗(实付)',
         quota: '额度',
         requests: '请求',
-        group: '分组',
-        sortByCost: '按消耗排序',
         deleted: '已删除',
         empty: '暂无消耗数据',
         partial: '采集未完整,数据可能偏低',

@@ -381,7 +381,6 @@ const activeTab = ref<Tab>('overview')
 
 // ---- 状态 ----
 const tokens = ref<UpstreamToken[]>([])
-const tokensLoading = ref(false)
 const creatingToken = ref(false)
 const tokenForm = ref({ name: '', group: '' })
 const createdToken = ref<{ token: UpstreamToken; api_base_url: string } | null>(null)
@@ -479,13 +478,10 @@ watch(usageWindow, () => {
 
 // ---- loaders ----
 async function loadTokens(id: number) {
-  tokensLoading.value = true
   try {
     tokens.value = await upstreamProvidersAPI.listTokens(id)
   } catch {
     // 失败不弹 toast，列表显示空态即可
-  } finally {
-    tokensLoading.value = false
   }
 }
 
