@@ -12,6 +12,7 @@
 | 分组价格监控 | 采集分组倍率与模型价格,变动时记录事件并按需通知 |
 | 可用模型查看 | 按分组展示上游可用模型清单 |
 | **消耗采集统计**(fork 新增) | 采集上游消耗按日落 rollup,按 密钥/分组/模型/总量 × 今日/本周/本月/历史 统计;充值比例(1:N)换算真实成本(¥)。详见[架构设计 §八](架构设计.md) |
+| **消耗前端展示**(fork 新增) | 列表页新增「消耗」堆叠列(本月 ¥ 主显 + 今日/本周/历史副字,悬停显 $ 额度与请求数);详情抽屉概览 Tab 新增 4 窗口总览卡片(今日/本周/本月/历史 实付 ¥);原「Token」Tab 更名**「密钥管理」**,升级为密钥消耗明细表(窗口切换器 + 实付¥/额度$/请求数);分组价格 Tab 新增「消耗 ¥」列(随窗口切换)。 |
 | 快速创建 Token | 一键在上游创建 API Key,明文一次性返回 + 有效 API 地址 |
 | 关联帐号 | 把上游与本系统内 `type=upstream` 的账号按 URL 精确匹配关联 |
 | 凭证生命周期 | 凭证 401 自动续期(账密 Login → 必要时浏览器自动登录);CF 盾按需过盾 |
@@ -90,5 +91,5 @@ make dev-frontend         # :3000,启动前自动清理被占端口
 
 ---
 
-**模块 spec**:`docs/superpowers/specs/2026-06-07-upstream-provider-management-design.md`、`2026-06-09-上游消耗采集地基-design.md`(本地工作文档)
-**实现计划**:`docs/superpowers/plans/2026-06-08-upstream-provider-management.md`、`2026-06-09-上游消耗采集地基.md`(本地工作文档)
+**模块 spec**:`docs/superpowers/specs/2026-06-07-upstream-provider-management-design.md`、`2026-06-09-上游消耗采集地基-design.md`、`2026-06-09-上游消耗前端展示-design.md`(本地工作文档)
+**实现计划**:`docs/superpowers/plans/2026-06-08-upstream-provider-management.md`、`2026-06-09-上游消耗采集地基.md`、`2026-06-09-上游消耗前端展示.md`(本地工作文档)

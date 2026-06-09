@@ -86,6 +86,7 @@ temp/
 .cache/
 .dev/
 .serena/
+.superpowers/
 
 # ===================
 # 构建产物
