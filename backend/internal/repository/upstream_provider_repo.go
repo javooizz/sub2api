@@ -8,6 +8,8 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/account"
 	"github.com/Wei-Shaw/sub2api/ent/upstreamchangeevent"
 	"github.com/Wei-Shaw/sub2api/ent/upstreamprovider"
+	upstreamusagecursor "github.com/Wei-Shaw/sub2api/ent/upstreamusagecursor"
+	upstreamusagedaily "github.com/Wei-Shaw/sub2api/ent/upstreamusagedaily"
 	"github.com/Wei-Shaw/sub2api/internal/domain"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 )
@@ -143,6 +145,15 @@ func (r *upstreamProviderRepository) Delete(ctx context.Context, id int64) error
 	if _, err := tx.UpstreamChangeEvent.Delete().
 		Where(upstreamchangeevent.ProviderIDEQ(id)).
 		Exec(ctx); err != nil {
+		return err
+	}
+	// 级联删除消耗 rollup 与采集游标(无 DB FK,手写事务)
+	if _, err := tx.UpstreamUsageDaily.Delete().
+		Where(upstreamusagedaily.ProviderIDEQ(id)).Exec(ctx); err != nil {
+		return err
+	}
+	if _, err := tx.UpstreamUsageCursor.Delete().
+		Where(upstreamusagecursor.ProviderIDEQ(id)).Exec(ctx); err != nil {
 		return err
 	}
 	// 再删除 provider 本身
