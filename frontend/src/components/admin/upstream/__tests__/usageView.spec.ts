@@ -51,6 +51,7 @@ describe('format helpers', () => {
   })
   it('formatRequests 千位转 k', () => {
     expect(formatRequests(920)).toBe('920')
+    expect(formatRequests(1000)).toBe('1.0k')
     expect(formatRequests(3100)).toBe('3.1k')
   })
 })

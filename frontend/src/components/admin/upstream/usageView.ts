@@ -4,6 +4,7 @@ import type { UsageBreakdownRow } from '@/api/admin/upstreamProviders'
 export type UsageWindow = 'today' | 'week' | 'month' | 'total'
 
 // 明细表行:统一形状。meta = 名称下方小字(密钥→所属分组;分组→倍率文本)。
+// 刻意不含 tokens:Phase 2 口径只展示 ¥(实付)/ $(额度)/ 请求数,不展示 token 量(spec §3 决策表)。
 export interface MergedUsageRow {
   scope_key: string
   scope_name: string
@@ -42,6 +43,7 @@ export function mergeUsageRows(live: LiveScopeItem[], breakdown: UsageBreakdownR
   for (const l of live) {
     const existing = byKey.get(l.scope_key)
     if (existing) {
+      // live 名非空才覆盖(空名则保留 breakdown 的最新快照名),防御性 falsy 判断
       if (l.scope_name) existing.scope_name = l.scope_name
       if (l.meta !== undefined) existing.meta = l.meta
       existing.deleted = false // 实时列表中存在 → 必然未删除
@@ -61,8 +63,9 @@ export function mergeUsageRows(live: LiveScopeItem[], breakdown: UsageBreakdownR
 }
 
 // 未删除按 cost_cny 降序在前;已删除置底(组内同样按 cost_cny 降序)。
+// 返回新数组(不原地修改入参),保持纯函数语义。
 export function sortUsageRows(rows: MergedUsageRow[]): MergedUsageRow[] {
-  return rows.sort((a, b) => {
+  return [...rows].sort((a, b) => {
     if (a.deleted !== b.deleted) return a.deleted ? 1 : -1
     return b.cost_cny - a.cost_cny
   })
