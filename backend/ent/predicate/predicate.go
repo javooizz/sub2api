@@ -99,6 +99,12 @@ type UpstreamChangeEvent func(*sql.Selector)
 // UpstreamProvider is the predicate function for upstreamprovider builders.
 type UpstreamProvider func(*sql.Selector)
 
+// UpstreamUsageCursor is the predicate function for upstreamusagecursor builders.
+type UpstreamUsageCursor func(*sql.Selector)
+
+// UpstreamUsageDaily is the predicate function for upstreamusagedaily builders.
+type UpstreamUsageDaily func(*sql.Selector)
+
 // UsageCleanupTask is the predicate function for usagecleanuptask builders.
 type UsageCleanupTask func(*sql.Selector)
 

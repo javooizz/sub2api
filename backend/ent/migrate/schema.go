@@ -1345,6 +1345,7 @@ var (
 		{Name: "credentials", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
 		{Name: "balance_threshold", Type: field.TypeFloat64, Nullable: true},
 		{Name: "notify_on_price_change", Type: field.TypeBool, Default: true},
+		{Name: "recharge_ratio", Type: field.TypeFloat64, Default: 1},
 		{Name: "refresh_interval_minutes", Type: field.TypeInt, Default: 60},
 		{Name: "latest_snapshot", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
 		{Name: "last_refreshed_at", Type: field.TypeTime, Nullable: true},
@@ -1364,6 +1365,66 @@ var (
 				Name:    "upstreamprovider_status",
 				Unique:  false,
 				Columns: []*schema.Column{UpstreamProvidersColumns[7]},
+			},
+		},
+	}
+	// UpstreamUsageCursorColumns holds the columns for the "upstream_usage_cursor" table.
+	UpstreamUsageCursorColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "provider_id", Type: field.TypeInt64, Unique: true},
+		{Name: "collect_started_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "collected_through_day", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "backfill_done", Type: field.TypeBool, Default: false},
+		{Name: "backfill_oldest_day", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "last_collected_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "last_error", Type: field.TypeString, Default: "", SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "last_partial", Type: field.TypeBool, Default: false},
+		{Name: "partial_reason", Type: field.TypeString, Size: 200, Default: ""},
+	}
+	// UpstreamUsageCursorTable holds the schema information for the "upstream_usage_cursor" table.
+	UpstreamUsageCursorTable = &schema.Table{
+		Name:       "upstream_usage_cursor",
+		Columns:    UpstreamUsageCursorColumns,
+		PrimaryKey: []*schema.Column{UpstreamUsageCursorColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "upstreamusagecursor_provider_id",
+				Unique:  true,
+				Columns: []*schema.Column{UpstreamUsageCursorColumns[3]},
+			},
+		},
+	}
+	// UpstreamUsageDailyColumns holds the columns for the "upstream_usage_daily" table.
+	UpstreamUsageDailyColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "provider_id", Type: field.TypeInt64},
+		{Name: "day", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "scope_type", Type: field.TypeString, Size: 16},
+		{Name: "scope_key", Type: field.TypeString, Size: 128, Default: ""},
+		{Name: "scope_name", Type: field.TypeString, Size: 200, Default: ""},
+		{Name: "requests", Type: field.TypeInt, Default: 0},
+		{Name: "tokens", Type: field.TypeInt64, Default: 0},
+		{Name: "cost_usd", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,10)"}},
+	}
+	// UpstreamUsageDailyTable holds the schema information for the "upstream_usage_daily" table.
+	UpstreamUsageDailyTable = &schema.Table{
+		Name:       "upstream_usage_daily",
+		Columns:    UpstreamUsageDailyColumns,
+		PrimaryKey: []*schema.Column{UpstreamUsageDailyColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "upstreamusagedaily_provider_id_day_scope_type_scope_key",
+				Unique:  true,
+				Columns: []*schema.Column{UpstreamUsageDailyColumns[3], UpstreamUsageDailyColumns[4], UpstreamUsageDailyColumns[5], UpstreamUsageDailyColumns[6]},
+			},
+			{
+				Name:    "upstreamusagedaily_provider_id_scope_type_day",
+				Unique:  false,
+				Columns: []*schema.Column{UpstreamUsageDailyColumns[3], UpstreamUsageDailyColumns[5], UpstreamUsageDailyColumns[4]},
 			},
 		},
 	}
@@ -1883,6 +1944,8 @@ var (
 		TLSFingerprintProfilesTable,
 		UpstreamChangeEventsTable,
 		UpstreamProvidersTable,
+		UpstreamUsageCursorTable,
+		UpstreamUsageDailyTable,
 		UsageCleanupTasksTable,
 		UsageLogsTable,
 		UsersTable,
@@ -2007,6 +2070,12 @@ func init() {
 	}
 	UpstreamProvidersTable.Annotation = &entsql.Annotation{
 		Table: "upstream_providers",
+	}
+	UpstreamUsageCursorTable.Annotation = &entsql.Annotation{
+		Table: "upstream_usage_cursor",
+	}
+	UpstreamUsageDailyTable.Annotation = &entsql.Annotation{
+		Table: "upstream_usage_daily",
 	}
 	UsageCleanupTasksTable.Annotation = &entsql.Annotation{
 		Table: "usage_cleanup_tasks",

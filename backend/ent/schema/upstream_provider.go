@@ -42,6 +42,8 @@ func (UpstreamProvider) Fields() []ent.Field {
 			Sensitive(),
 		field.Float("balance_threshold").Optional().Nillable(),
 		field.Bool("notify_on_price_change").Default(true),
+		// recharge_ratio: 充值比例 N(1:N,¥1 充得 $N 额度)。真实成本(¥)=cost_usd÷N。
+		field.Float("recharge_ratio").Default(1),
 		field.Int("refresh_interval_minutes").Default(60),
 		field.JSON("latest_snapshot", &domain.UpstreamSnapshot{}).
 			SchemaType(map[string]string{dialect.Postgres: "jsonb"}).

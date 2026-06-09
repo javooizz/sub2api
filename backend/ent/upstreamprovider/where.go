@@ -99,6 +99,11 @@ func NotifyOnPriceChange(v bool) predicate.UpstreamProvider {
 	return predicate.UpstreamProvider(sql.FieldEQ(FieldNotifyOnPriceChange, v))
 }
 
+// RechargeRatio applies equality check predicate on the "recharge_ratio" field. It's identical to RechargeRatioEQ.
+func RechargeRatio(v float64) predicate.UpstreamProvider {
+	return predicate.UpstreamProvider(sql.FieldEQ(FieldRechargeRatio, v))
+}
+
 // RefreshIntervalMinutes applies equality check predicate on the "refresh_interval_minutes" field. It's identical to RefreshIntervalMinutesEQ.
 func RefreshIntervalMinutes(v int) predicate.UpstreamProvider {
 	return predicate.UpstreamProvider(sql.FieldEQ(FieldRefreshIntervalMinutes, v))
@@ -597,6 +602,46 @@ func NotifyOnPriceChangeEQ(v bool) predicate.UpstreamProvider {
 // NotifyOnPriceChangeNEQ applies the NEQ predicate on the "notify_on_price_change" field.
 func NotifyOnPriceChangeNEQ(v bool) predicate.UpstreamProvider {
 	return predicate.UpstreamProvider(sql.FieldNEQ(FieldNotifyOnPriceChange, v))
+}
+
+// RechargeRatioEQ applies the EQ predicate on the "recharge_ratio" field.
+func RechargeRatioEQ(v float64) predicate.UpstreamProvider {
+	return predicate.UpstreamProvider(sql.FieldEQ(FieldRechargeRatio, v))
+}
+
+// RechargeRatioNEQ applies the NEQ predicate on the "recharge_ratio" field.
+func RechargeRatioNEQ(v float64) predicate.UpstreamProvider {
+	return predicate.UpstreamProvider(sql.FieldNEQ(FieldRechargeRatio, v))
+}
+
+// RechargeRatioIn applies the In predicate on the "recharge_ratio" field.
+func RechargeRatioIn(vs ...float64) predicate.UpstreamProvider {
+	return predicate.UpstreamProvider(sql.FieldIn(FieldRechargeRatio, vs...))
+}
+
+// RechargeRatioNotIn applies the NotIn predicate on the "recharge_ratio" field.
+func RechargeRatioNotIn(vs ...float64) predicate.UpstreamProvider {
+	return predicate.UpstreamProvider(sql.FieldNotIn(FieldRechargeRatio, vs...))
+}
+
+// RechargeRatioGT applies the GT predicate on the "recharge_ratio" field.
+func RechargeRatioGT(v float64) predicate.UpstreamProvider {
+	return predicate.UpstreamProvider(sql.FieldGT(FieldRechargeRatio, v))
+}
+
+// RechargeRatioGTE applies the GTE predicate on the "recharge_ratio" field.
+func RechargeRatioGTE(v float64) predicate.UpstreamProvider {
+	return predicate.UpstreamProvider(sql.FieldGTE(FieldRechargeRatio, v))
+}
+
+// RechargeRatioLT applies the LT predicate on the "recharge_ratio" field.
+func RechargeRatioLT(v float64) predicate.UpstreamProvider {
+	return predicate.UpstreamProvider(sql.FieldLT(FieldRechargeRatio, v))
+}
+
+// RechargeRatioLTE applies the LTE predicate on the "recharge_ratio" field.
+func RechargeRatioLTE(v float64) predicate.UpstreamProvider {
+	return predicate.UpstreamProvider(sql.FieldLTE(FieldRechargeRatio, v))
 }
 
 // RefreshIntervalMinutesEQ applies the EQ predicate on the "refresh_interval_minutes" field.

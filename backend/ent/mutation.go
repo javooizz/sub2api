@@ -44,6 +44,8 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/tlsfingerprintprofile"
 	"github.com/Wei-Shaw/sub2api/ent/upstreamchangeevent"
 	"github.com/Wei-Shaw/sub2api/ent/upstreamprovider"
+	"github.com/Wei-Shaw/sub2api/ent/upstreamusagecursor"
+	"github.com/Wei-Shaw/sub2api/ent/upstreamusagedaily"
 	"github.com/Wei-Shaw/sub2api/ent/usagecleanuptask"
 	"github.com/Wei-Shaw/sub2api/ent/usagelog"
 	"github.com/Wei-Shaw/sub2api/ent/user"
@@ -95,6 +97,8 @@ const (
 	TypeTLSFingerprintProfile         = "TLSFingerprintProfile"
 	TypeUpstreamChangeEvent           = "UpstreamChangeEvent"
 	TypeUpstreamProvider              = "UpstreamProvider"
+	TypeUpstreamUsageCursor           = "UpstreamUsageCursor"
+	TypeUpstreamUsageDaily            = "UpstreamUsageDaily"
 	TypeUsageCleanupTask              = "UsageCleanupTask"
 	TypeUsageLog                      = "UsageLog"
 	TypeUser                          = "User"
@@ -35563,6 +35567,8 @@ type UpstreamProviderMutation struct {
 	balance_threshold           *float64
 	addbalance_threshold        *float64
 	notify_on_price_change      *bool
+	recharge_ratio              *float64
+	addrecharge_ratio           *float64
 	refresh_interval_minutes    *int
 	addrefresh_interval_minutes *int
 	latest_snapshot             **domain.UpstreamSnapshot
@@ -36071,6 +36077,62 @@ func (m *UpstreamProviderMutation) ResetNotifyOnPriceChange() {
 	m.notify_on_price_change = nil
 }
 
+// SetRechargeRatio sets the "recharge_ratio" field.
+func (m *UpstreamProviderMutation) SetRechargeRatio(f float64) {
+	m.recharge_ratio = &f
+	m.addrecharge_ratio = nil
+}
+
+// RechargeRatio returns the value of the "recharge_ratio" field in the mutation.
+func (m *UpstreamProviderMutation) RechargeRatio() (r float64, exists bool) {
+	v := m.recharge_ratio
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRechargeRatio returns the old "recharge_ratio" field's value of the UpstreamProvider entity.
+// If the UpstreamProvider object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamProviderMutation) OldRechargeRatio(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRechargeRatio is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRechargeRatio requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRechargeRatio: %w", err)
+	}
+	return oldValue.RechargeRatio, nil
+}
+
+// AddRechargeRatio adds f to the "recharge_ratio" field.
+func (m *UpstreamProviderMutation) AddRechargeRatio(f float64) {
+	if m.addrecharge_ratio != nil {
+		*m.addrecharge_ratio += f
+	} else {
+		m.addrecharge_ratio = &f
+	}
+}
+
+// AddedRechargeRatio returns the value that was added to the "recharge_ratio" field in this mutation.
+func (m *UpstreamProviderMutation) AddedRechargeRatio() (r float64, exists bool) {
+	v := m.addrecharge_ratio
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetRechargeRatio resets all changes to the "recharge_ratio" field.
+func (m *UpstreamProviderMutation) ResetRechargeRatio() {
+	m.recharge_ratio = nil
+	m.addrecharge_ratio = nil
+}
+
 // SetRefreshIntervalMinutes sets the "refresh_interval_minutes" field.
 func (m *UpstreamProviderMutation) SetRefreshIntervalMinutes(i int) {
 	m.refresh_interval_minutes = &i
@@ -36472,7 +36534,7 @@ func (m *UpstreamProviderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UpstreamProviderMutation) Fields() []string {
-	fields := make([]string, 0, 18)
+	fields := make([]string, 0, 19)
 	if m.created_at != nil {
 		fields = append(fields, upstreamprovider.FieldCreatedAt)
 	}
@@ -36502,6 +36564,9 @@ func (m *UpstreamProviderMutation) Fields() []string {
 	}
 	if m.notify_on_price_change != nil {
 		fields = append(fields, upstreamprovider.FieldNotifyOnPriceChange)
+	}
+	if m.recharge_ratio != nil {
+		fields = append(fields, upstreamprovider.FieldRechargeRatio)
 	}
 	if m.refresh_interval_minutes != nil {
 		fields = append(fields, upstreamprovider.FieldRefreshIntervalMinutes)
@@ -36555,6 +36620,8 @@ func (m *UpstreamProviderMutation) Field(name string) (ent.Value, bool) {
 		return m.BalanceThreshold()
 	case upstreamprovider.FieldNotifyOnPriceChange:
 		return m.NotifyOnPriceChange()
+	case upstreamprovider.FieldRechargeRatio:
+		return m.RechargeRatio()
 	case upstreamprovider.FieldRefreshIntervalMinutes:
 		return m.RefreshIntervalMinutes()
 	case upstreamprovider.FieldLatestSnapshot:
@@ -36600,6 +36667,8 @@ func (m *UpstreamProviderMutation) OldField(ctx context.Context, name string) (e
 		return m.OldBalanceThreshold(ctx)
 	case upstreamprovider.FieldNotifyOnPriceChange:
 		return m.OldNotifyOnPriceChange(ctx)
+	case upstreamprovider.FieldRechargeRatio:
+		return m.OldRechargeRatio(ctx)
 	case upstreamprovider.FieldRefreshIntervalMinutes:
 		return m.OldRefreshIntervalMinutes(ctx)
 	case upstreamprovider.FieldLatestSnapshot:
@@ -36695,6 +36764,13 @@ func (m *UpstreamProviderMutation) SetField(name string, value ent.Value) error 
 		}
 		m.SetNotifyOnPriceChange(v)
 		return nil
+	case upstreamprovider.FieldRechargeRatio:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRechargeRatio(v)
+		return nil
 	case upstreamprovider.FieldRefreshIntervalMinutes:
 		v, ok := value.(int)
 		if !ok {
@@ -36762,6 +36838,9 @@ func (m *UpstreamProviderMutation) AddedFields() []string {
 	if m.addbalance_threshold != nil {
 		fields = append(fields, upstreamprovider.FieldBalanceThreshold)
 	}
+	if m.addrecharge_ratio != nil {
+		fields = append(fields, upstreamprovider.FieldRechargeRatio)
+	}
 	if m.addrefresh_interval_minutes != nil {
 		fields = append(fields, upstreamprovider.FieldRefreshIntervalMinutes)
 	}
@@ -36778,6 +36857,8 @@ func (m *UpstreamProviderMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case upstreamprovider.FieldBalanceThreshold:
 		return m.AddedBalanceThreshold()
+	case upstreamprovider.FieldRechargeRatio:
+		return m.AddedRechargeRatio()
 	case upstreamprovider.FieldRefreshIntervalMinutes:
 		return m.AddedRefreshIntervalMinutes()
 	case upstreamprovider.FieldConsecutiveFailures:
@@ -36797,6 +36878,13 @@ func (m *UpstreamProviderMutation) AddField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddBalanceThreshold(v)
+		return nil
+	case upstreamprovider.FieldRechargeRatio:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddRechargeRatio(v)
 		return nil
 	case upstreamprovider.FieldRefreshIntervalMinutes:
 		v, ok := value.(int)
@@ -36896,6 +36984,9 @@ func (m *UpstreamProviderMutation) ResetField(name string) error {
 	case upstreamprovider.FieldNotifyOnPriceChange:
 		m.ResetNotifyOnPriceChange()
 		return nil
+	case upstreamprovider.FieldRechargeRatio:
+		m.ResetRechargeRatio()
+		return nil
 	case upstreamprovider.FieldRefreshIntervalMinutes:
 		m.ResetRefreshIntervalMinutes()
 		return nil
@@ -36970,6 +37061,1934 @@ func (m *UpstreamProviderMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *UpstreamProviderMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown UpstreamProvider edge %s", name)
+}
+
+// UpstreamUsageCursorMutation represents an operation that mutates the UpstreamUsageCursor nodes in the graph.
+type UpstreamUsageCursorMutation struct {
+	config
+	op                    Op
+	typ                   string
+	id                    *int64
+	created_at            *time.Time
+	updated_at            *time.Time
+	provider_id           *int64
+	addprovider_id        *int64
+	collect_started_at    *time.Time
+	collected_through_day *time.Time
+	backfill_done         *bool
+	backfill_oldest_day   *time.Time
+	last_collected_at     *time.Time
+	last_error            *string
+	last_partial          *bool
+	partial_reason        *string
+	clearedFields         map[string]struct{}
+	done                  bool
+	oldValue              func(context.Context) (*UpstreamUsageCursor, error)
+	predicates            []predicate.UpstreamUsageCursor
+}
+
+var _ ent.Mutation = (*UpstreamUsageCursorMutation)(nil)
+
+// upstreamusagecursorOption allows management of the mutation configuration using functional options.
+type upstreamusagecursorOption func(*UpstreamUsageCursorMutation)
+
+// newUpstreamUsageCursorMutation creates new mutation for the UpstreamUsageCursor entity.
+func newUpstreamUsageCursorMutation(c config, op Op, opts ...upstreamusagecursorOption) *UpstreamUsageCursorMutation {
+	m := &UpstreamUsageCursorMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeUpstreamUsageCursor,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withUpstreamUsageCursorID sets the ID field of the mutation.
+func withUpstreamUsageCursorID(id int64) upstreamusagecursorOption {
+	return func(m *UpstreamUsageCursorMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *UpstreamUsageCursor
+		)
+		m.oldValue = func(ctx context.Context) (*UpstreamUsageCursor, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().UpstreamUsageCursor.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withUpstreamUsageCursor sets the old UpstreamUsageCursor of the mutation.
+func withUpstreamUsageCursor(node *UpstreamUsageCursor) upstreamusagecursorOption {
+	return func(m *UpstreamUsageCursorMutation) {
+		m.oldValue = func(context.Context) (*UpstreamUsageCursor, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m UpstreamUsageCursorMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m UpstreamUsageCursorMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *UpstreamUsageCursorMutation) ID() (id int64, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *UpstreamUsageCursorMutation) IDs(ctx context.Context) ([]int64, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int64{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().UpstreamUsageCursor.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *UpstreamUsageCursorMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *UpstreamUsageCursorMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the UpstreamUsageCursor entity.
+// If the UpstreamUsageCursor object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamUsageCursorMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *UpstreamUsageCursorMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *UpstreamUsageCursorMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *UpstreamUsageCursorMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the UpstreamUsageCursor entity.
+// If the UpstreamUsageCursor object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamUsageCursorMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *UpstreamUsageCursorMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetProviderID sets the "provider_id" field.
+func (m *UpstreamUsageCursorMutation) SetProviderID(i int64) {
+	m.provider_id = &i
+	m.addprovider_id = nil
+}
+
+// ProviderID returns the value of the "provider_id" field in the mutation.
+func (m *UpstreamUsageCursorMutation) ProviderID() (r int64, exists bool) {
+	v := m.provider_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProviderID returns the old "provider_id" field's value of the UpstreamUsageCursor entity.
+// If the UpstreamUsageCursor object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamUsageCursorMutation) OldProviderID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProviderID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProviderID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProviderID: %w", err)
+	}
+	return oldValue.ProviderID, nil
+}
+
+// AddProviderID adds i to the "provider_id" field.
+func (m *UpstreamUsageCursorMutation) AddProviderID(i int64) {
+	if m.addprovider_id != nil {
+		*m.addprovider_id += i
+	} else {
+		m.addprovider_id = &i
+	}
+}
+
+// AddedProviderID returns the value that was added to the "provider_id" field in this mutation.
+func (m *UpstreamUsageCursorMutation) AddedProviderID() (r int64, exists bool) {
+	v := m.addprovider_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetProviderID resets all changes to the "provider_id" field.
+func (m *UpstreamUsageCursorMutation) ResetProviderID() {
+	m.provider_id = nil
+	m.addprovider_id = nil
+}
+
+// SetCollectStartedAt sets the "collect_started_at" field.
+func (m *UpstreamUsageCursorMutation) SetCollectStartedAt(t time.Time) {
+	m.collect_started_at = &t
+}
+
+// CollectStartedAt returns the value of the "collect_started_at" field in the mutation.
+func (m *UpstreamUsageCursorMutation) CollectStartedAt() (r time.Time, exists bool) {
+	v := m.collect_started_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCollectStartedAt returns the old "collect_started_at" field's value of the UpstreamUsageCursor entity.
+// If the UpstreamUsageCursor object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamUsageCursorMutation) OldCollectStartedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCollectStartedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCollectStartedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCollectStartedAt: %w", err)
+	}
+	return oldValue.CollectStartedAt, nil
+}
+
+// ClearCollectStartedAt clears the value of the "collect_started_at" field.
+func (m *UpstreamUsageCursorMutation) ClearCollectStartedAt() {
+	m.collect_started_at = nil
+	m.clearedFields[upstreamusagecursor.FieldCollectStartedAt] = struct{}{}
+}
+
+// CollectStartedAtCleared returns if the "collect_started_at" field was cleared in this mutation.
+func (m *UpstreamUsageCursorMutation) CollectStartedAtCleared() bool {
+	_, ok := m.clearedFields[upstreamusagecursor.FieldCollectStartedAt]
+	return ok
+}
+
+// ResetCollectStartedAt resets all changes to the "collect_started_at" field.
+func (m *UpstreamUsageCursorMutation) ResetCollectStartedAt() {
+	m.collect_started_at = nil
+	delete(m.clearedFields, upstreamusagecursor.FieldCollectStartedAt)
+}
+
+// SetCollectedThroughDay sets the "collected_through_day" field.
+func (m *UpstreamUsageCursorMutation) SetCollectedThroughDay(t time.Time) {
+	m.collected_through_day = &t
+}
+
+// CollectedThroughDay returns the value of the "collected_through_day" field in the mutation.
+func (m *UpstreamUsageCursorMutation) CollectedThroughDay() (r time.Time, exists bool) {
+	v := m.collected_through_day
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCollectedThroughDay returns the old "collected_through_day" field's value of the UpstreamUsageCursor entity.
+// If the UpstreamUsageCursor object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamUsageCursorMutation) OldCollectedThroughDay(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCollectedThroughDay is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCollectedThroughDay requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCollectedThroughDay: %w", err)
+	}
+	return oldValue.CollectedThroughDay, nil
+}
+
+// ClearCollectedThroughDay clears the value of the "collected_through_day" field.
+func (m *UpstreamUsageCursorMutation) ClearCollectedThroughDay() {
+	m.collected_through_day = nil
+	m.clearedFields[upstreamusagecursor.FieldCollectedThroughDay] = struct{}{}
+}
+
+// CollectedThroughDayCleared returns if the "collected_through_day" field was cleared in this mutation.
+func (m *UpstreamUsageCursorMutation) CollectedThroughDayCleared() bool {
+	_, ok := m.clearedFields[upstreamusagecursor.FieldCollectedThroughDay]
+	return ok
+}
+
+// ResetCollectedThroughDay resets all changes to the "collected_through_day" field.
+func (m *UpstreamUsageCursorMutation) ResetCollectedThroughDay() {
+	m.collected_through_day = nil
+	delete(m.clearedFields, upstreamusagecursor.FieldCollectedThroughDay)
+}
+
+// SetBackfillDone sets the "backfill_done" field.
+func (m *UpstreamUsageCursorMutation) SetBackfillDone(b bool) {
+	m.backfill_done = &b
+}
+
+// BackfillDone returns the value of the "backfill_done" field in the mutation.
+func (m *UpstreamUsageCursorMutation) BackfillDone() (r bool, exists bool) {
+	v := m.backfill_done
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBackfillDone returns the old "backfill_done" field's value of the UpstreamUsageCursor entity.
+// If the UpstreamUsageCursor object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamUsageCursorMutation) OldBackfillDone(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBackfillDone is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBackfillDone requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBackfillDone: %w", err)
+	}
+	return oldValue.BackfillDone, nil
+}
+
+// ResetBackfillDone resets all changes to the "backfill_done" field.
+func (m *UpstreamUsageCursorMutation) ResetBackfillDone() {
+	m.backfill_done = nil
+}
+
+// SetBackfillOldestDay sets the "backfill_oldest_day" field.
+func (m *UpstreamUsageCursorMutation) SetBackfillOldestDay(t time.Time) {
+	m.backfill_oldest_day = &t
+}
+
+// BackfillOldestDay returns the value of the "backfill_oldest_day" field in the mutation.
+func (m *UpstreamUsageCursorMutation) BackfillOldestDay() (r time.Time, exists bool) {
+	v := m.backfill_oldest_day
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBackfillOldestDay returns the old "backfill_oldest_day" field's value of the UpstreamUsageCursor entity.
+// If the UpstreamUsageCursor object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamUsageCursorMutation) OldBackfillOldestDay(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBackfillOldestDay is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBackfillOldestDay requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBackfillOldestDay: %w", err)
+	}
+	return oldValue.BackfillOldestDay, nil
+}
+
+// ClearBackfillOldestDay clears the value of the "backfill_oldest_day" field.
+func (m *UpstreamUsageCursorMutation) ClearBackfillOldestDay() {
+	m.backfill_oldest_day = nil
+	m.clearedFields[upstreamusagecursor.FieldBackfillOldestDay] = struct{}{}
+}
+
+// BackfillOldestDayCleared returns if the "backfill_oldest_day" field was cleared in this mutation.
+func (m *UpstreamUsageCursorMutation) BackfillOldestDayCleared() bool {
+	_, ok := m.clearedFields[upstreamusagecursor.FieldBackfillOldestDay]
+	return ok
+}
+
+// ResetBackfillOldestDay resets all changes to the "backfill_oldest_day" field.
+func (m *UpstreamUsageCursorMutation) ResetBackfillOldestDay() {
+	m.backfill_oldest_day = nil
+	delete(m.clearedFields, upstreamusagecursor.FieldBackfillOldestDay)
+}
+
+// SetLastCollectedAt sets the "last_collected_at" field.
+func (m *UpstreamUsageCursorMutation) SetLastCollectedAt(t time.Time) {
+	m.last_collected_at = &t
+}
+
+// LastCollectedAt returns the value of the "last_collected_at" field in the mutation.
+func (m *UpstreamUsageCursorMutation) LastCollectedAt() (r time.Time, exists bool) {
+	v := m.last_collected_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastCollectedAt returns the old "last_collected_at" field's value of the UpstreamUsageCursor entity.
+// If the UpstreamUsageCursor object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamUsageCursorMutation) OldLastCollectedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastCollectedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastCollectedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastCollectedAt: %w", err)
+	}
+	return oldValue.LastCollectedAt, nil
+}
+
+// ClearLastCollectedAt clears the value of the "last_collected_at" field.
+func (m *UpstreamUsageCursorMutation) ClearLastCollectedAt() {
+	m.last_collected_at = nil
+	m.clearedFields[upstreamusagecursor.FieldLastCollectedAt] = struct{}{}
+}
+
+// LastCollectedAtCleared returns if the "last_collected_at" field was cleared in this mutation.
+func (m *UpstreamUsageCursorMutation) LastCollectedAtCleared() bool {
+	_, ok := m.clearedFields[upstreamusagecursor.FieldLastCollectedAt]
+	return ok
+}
+
+// ResetLastCollectedAt resets all changes to the "last_collected_at" field.
+func (m *UpstreamUsageCursorMutation) ResetLastCollectedAt() {
+	m.last_collected_at = nil
+	delete(m.clearedFields, upstreamusagecursor.FieldLastCollectedAt)
+}
+
+// SetLastError sets the "last_error" field.
+func (m *UpstreamUsageCursorMutation) SetLastError(s string) {
+	m.last_error = &s
+}
+
+// LastError returns the value of the "last_error" field in the mutation.
+func (m *UpstreamUsageCursorMutation) LastError() (r string, exists bool) {
+	v := m.last_error
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastError returns the old "last_error" field's value of the UpstreamUsageCursor entity.
+// If the UpstreamUsageCursor object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamUsageCursorMutation) OldLastError(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastError is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastError requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastError: %w", err)
+	}
+	return oldValue.LastError, nil
+}
+
+// ResetLastError resets all changes to the "last_error" field.
+func (m *UpstreamUsageCursorMutation) ResetLastError() {
+	m.last_error = nil
+}
+
+// SetLastPartial sets the "last_partial" field.
+func (m *UpstreamUsageCursorMutation) SetLastPartial(b bool) {
+	m.last_partial = &b
+}
+
+// LastPartial returns the value of the "last_partial" field in the mutation.
+func (m *UpstreamUsageCursorMutation) LastPartial() (r bool, exists bool) {
+	v := m.last_partial
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastPartial returns the old "last_partial" field's value of the UpstreamUsageCursor entity.
+// If the UpstreamUsageCursor object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamUsageCursorMutation) OldLastPartial(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastPartial is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastPartial requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastPartial: %w", err)
+	}
+	return oldValue.LastPartial, nil
+}
+
+// ResetLastPartial resets all changes to the "last_partial" field.
+func (m *UpstreamUsageCursorMutation) ResetLastPartial() {
+	m.last_partial = nil
+}
+
+// SetPartialReason sets the "partial_reason" field.
+func (m *UpstreamUsageCursorMutation) SetPartialReason(s string) {
+	m.partial_reason = &s
+}
+
+// PartialReason returns the value of the "partial_reason" field in the mutation.
+func (m *UpstreamUsageCursorMutation) PartialReason() (r string, exists bool) {
+	v := m.partial_reason
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPartialReason returns the old "partial_reason" field's value of the UpstreamUsageCursor entity.
+// If the UpstreamUsageCursor object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamUsageCursorMutation) OldPartialReason(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPartialReason is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPartialReason requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPartialReason: %w", err)
+	}
+	return oldValue.PartialReason, nil
+}
+
+// ResetPartialReason resets all changes to the "partial_reason" field.
+func (m *UpstreamUsageCursorMutation) ResetPartialReason() {
+	m.partial_reason = nil
+}
+
+// Where appends a list predicates to the UpstreamUsageCursorMutation builder.
+func (m *UpstreamUsageCursorMutation) Where(ps ...predicate.UpstreamUsageCursor) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the UpstreamUsageCursorMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *UpstreamUsageCursorMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.UpstreamUsageCursor, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *UpstreamUsageCursorMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *UpstreamUsageCursorMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (UpstreamUsageCursor).
+func (m *UpstreamUsageCursorMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *UpstreamUsageCursorMutation) Fields() []string {
+	fields := make([]string, 0, 11)
+	if m.created_at != nil {
+		fields = append(fields, upstreamusagecursor.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, upstreamusagecursor.FieldUpdatedAt)
+	}
+	if m.provider_id != nil {
+		fields = append(fields, upstreamusagecursor.FieldProviderID)
+	}
+	if m.collect_started_at != nil {
+		fields = append(fields, upstreamusagecursor.FieldCollectStartedAt)
+	}
+	if m.collected_through_day != nil {
+		fields = append(fields, upstreamusagecursor.FieldCollectedThroughDay)
+	}
+	if m.backfill_done != nil {
+		fields = append(fields, upstreamusagecursor.FieldBackfillDone)
+	}
+	if m.backfill_oldest_day != nil {
+		fields = append(fields, upstreamusagecursor.FieldBackfillOldestDay)
+	}
+	if m.last_collected_at != nil {
+		fields = append(fields, upstreamusagecursor.FieldLastCollectedAt)
+	}
+	if m.last_error != nil {
+		fields = append(fields, upstreamusagecursor.FieldLastError)
+	}
+	if m.last_partial != nil {
+		fields = append(fields, upstreamusagecursor.FieldLastPartial)
+	}
+	if m.partial_reason != nil {
+		fields = append(fields, upstreamusagecursor.FieldPartialReason)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *UpstreamUsageCursorMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case upstreamusagecursor.FieldCreatedAt:
+		return m.CreatedAt()
+	case upstreamusagecursor.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case upstreamusagecursor.FieldProviderID:
+		return m.ProviderID()
+	case upstreamusagecursor.FieldCollectStartedAt:
+		return m.CollectStartedAt()
+	case upstreamusagecursor.FieldCollectedThroughDay:
+		return m.CollectedThroughDay()
+	case upstreamusagecursor.FieldBackfillDone:
+		return m.BackfillDone()
+	case upstreamusagecursor.FieldBackfillOldestDay:
+		return m.BackfillOldestDay()
+	case upstreamusagecursor.FieldLastCollectedAt:
+		return m.LastCollectedAt()
+	case upstreamusagecursor.FieldLastError:
+		return m.LastError()
+	case upstreamusagecursor.FieldLastPartial:
+		return m.LastPartial()
+	case upstreamusagecursor.FieldPartialReason:
+		return m.PartialReason()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *UpstreamUsageCursorMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case upstreamusagecursor.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case upstreamusagecursor.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case upstreamusagecursor.FieldProviderID:
+		return m.OldProviderID(ctx)
+	case upstreamusagecursor.FieldCollectStartedAt:
+		return m.OldCollectStartedAt(ctx)
+	case upstreamusagecursor.FieldCollectedThroughDay:
+		return m.OldCollectedThroughDay(ctx)
+	case upstreamusagecursor.FieldBackfillDone:
+		return m.OldBackfillDone(ctx)
+	case upstreamusagecursor.FieldBackfillOldestDay:
+		return m.OldBackfillOldestDay(ctx)
+	case upstreamusagecursor.FieldLastCollectedAt:
+		return m.OldLastCollectedAt(ctx)
+	case upstreamusagecursor.FieldLastError:
+		return m.OldLastError(ctx)
+	case upstreamusagecursor.FieldLastPartial:
+		return m.OldLastPartial(ctx)
+	case upstreamusagecursor.FieldPartialReason:
+		return m.OldPartialReason(ctx)
+	}
+	return nil, fmt.Errorf("unknown UpstreamUsageCursor field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *UpstreamUsageCursorMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case upstreamusagecursor.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case upstreamusagecursor.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case upstreamusagecursor.FieldProviderID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProviderID(v)
+		return nil
+	case upstreamusagecursor.FieldCollectStartedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCollectStartedAt(v)
+		return nil
+	case upstreamusagecursor.FieldCollectedThroughDay:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCollectedThroughDay(v)
+		return nil
+	case upstreamusagecursor.FieldBackfillDone:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBackfillDone(v)
+		return nil
+	case upstreamusagecursor.FieldBackfillOldestDay:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBackfillOldestDay(v)
+		return nil
+	case upstreamusagecursor.FieldLastCollectedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastCollectedAt(v)
+		return nil
+	case upstreamusagecursor.FieldLastError:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastError(v)
+		return nil
+	case upstreamusagecursor.FieldLastPartial:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastPartial(v)
+		return nil
+	case upstreamusagecursor.FieldPartialReason:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPartialReason(v)
+		return nil
+	}
+	return fmt.Errorf("unknown UpstreamUsageCursor field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *UpstreamUsageCursorMutation) AddedFields() []string {
+	var fields []string
+	if m.addprovider_id != nil {
+		fields = append(fields, upstreamusagecursor.FieldProviderID)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *UpstreamUsageCursorMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case upstreamusagecursor.FieldProviderID:
+		return m.AddedProviderID()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *UpstreamUsageCursorMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case upstreamusagecursor.FieldProviderID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddProviderID(v)
+		return nil
+	}
+	return fmt.Errorf("unknown UpstreamUsageCursor numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *UpstreamUsageCursorMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(upstreamusagecursor.FieldCollectStartedAt) {
+		fields = append(fields, upstreamusagecursor.FieldCollectStartedAt)
+	}
+	if m.FieldCleared(upstreamusagecursor.FieldCollectedThroughDay) {
+		fields = append(fields, upstreamusagecursor.FieldCollectedThroughDay)
+	}
+	if m.FieldCleared(upstreamusagecursor.FieldBackfillOldestDay) {
+		fields = append(fields, upstreamusagecursor.FieldBackfillOldestDay)
+	}
+	if m.FieldCleared(upstreamusagecursor.FieldLastCollectedAt) {
+		fields = append(fields, upstreamusagecursor.FieldLastCollectedAt)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *UpstreamUsageCursorMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *UpstreamUsageCursorMutation) ClearField(name string) error {
+	switch name {
+	case upstreamusagecursor.FieldCollectStartedAt:
+		m.ClearCollectStartedAt()
+		return nil
+	case upstreamusagecursor.FieldCollectedThroughDay:
+		m.ClearCollectedThroughDay()
+		return nil
+	case upstreamusagecursor.FieldBackfillOldestDay:
+		m.ClearBackfillOldestDay()
+		return nil
+	case upstreamusagecursor.FieldLastCollectedAt:
+		m.ClearLastCollectedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown UpstreamUsageCursor nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *UpstreamUsageCursorMutation) ResetField(name string) error {
+	switch name {
+	case upstreamusagecursor.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case upstreamusagecursor.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case upstreamusagecursor.FieldProviderID:
+		m.ResetProviderID()
+		return nil
+	case upstreamusagecursor.FieldCollectStartedAt:
+		m.ResetCollectStartedAt()
+		return nil
+	case upstreamusagecursor.FieldCollectedThroughDay:
+		m.ResetCollectedThroughDay()
+		return nil
+	case upstreamusagecursor.FieldBackfillDone:
+		m.ResetBackfillDone()
+		return nil
+	case upstreamusagecursor.FieldBackfillOldestDay:
+		m.ResetBackfillOldestDay()
+		return nil
+	case upstreamusagecursor.FieldLastCollectedAt:
+		m.ResetLastCollectedAt()
+		return nil
+	case upstreamusagecursor.FieldLastError:
+		m.ResetLastError()
+		return nil
+	case upstreamusagecursor.FieldLastPartial:
+		m.ResetLastPartial()
+		return nil
+	case upstreamusagecursor.FieldPartialReason:
+		m.ResetPartialReason()
+		return nil
+	}
+	return fmt.Errorf("unknown UpstreamUsageCursor field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *UpstreamUsageCursorMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *UpstreamUsageCursorMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *UpstreamUsageCursorMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *UpstreamUsageCursorMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *UpstreamUsageCursorMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *UpstreamUsageCursorMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *UpstreamUsageCursorMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown UpstreamUsageCursor unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *UpstreamUsageCursorMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown UpstreamUsageCursor edge %s", name)
+}
+
+// UpstreamUsageDailyMutation represents an operation that mutates the UpstreamUsageDaily nodes in the graph.
+type UpstreamUsageDailyMutation struct {
+	config
+	op             Op
+	typ            string
+	id             *int64
+	created_at     *time.Time
+	updated_at     *time.Time
+	provider_id    *int64
+	addprovider_id *int64
+	day            *time.Time
+	scope_type     *string
+	scope_key      *string
+	scope_name     *string
+	requests       *int
+	addrequests    *int
+	tokens         *int64
+	addtokens      *int64
+	cost_usd       *float64
+	addcost_usd    *float64
+	clearedFields  map[string]struct{}
+	done           bool
+	oldValue       func(context.Context) (*UpstreamUsageDaily, error)
+	predicates     []predicate.UpstreamUsageDaily
+}
+
+var _ ent.Mutation = (*UpstreamUsageDailyMutation)(nil)
+
+// upstreamusagedailyOption allows management of the mutation configuration using functional options.
+type upstreamusagedailyOption func(*UpstreamUsageDailyMutation)
+
+// newUpstreamUsageDailyMutation creates new mutation for the UpstreamUsageDaily entity.
+func newUpstreamUsageDailyMutation(c config, op Op, opts ...upstreamusagedailyOption) *UpstreamUsageDailyMutation {
+	m := &UpstreamUsageDailyMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeUpstreamUsageDaily,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withUpstreamUsageDailyID sets the ID field of the mutation.
+func withUpstreamUsageDailyID(id int64) upstreamusagedailyOption {
+	return func(m *UpstreamUsageDailyMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *UpstreamUsageDaily
+		)
+		m.oldValue = func(ctx context.Context) (*UpstreamUsageDaily, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().UpstreamUsageDaily.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withUpstreamUsageDaily sets the old UpstreamUsageDaily of the mutation.
+func withUpstreamUsageDaily(node *UpstreamUsageDaily) upstreamusagedailyOption {
+	return func(m *UpstreamUsageDailyMutation) {
+		m.oldValue = func(context.Context) (*UpstreamUsageDaily, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m UpstreamUsageDailyMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m UpstreamUsageDailyMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *UpstreamUsageDailyMutation) ID() (id int64, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *UpstreamUsageDailyMutation) IDs(ctx context.Context) ([]int64, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int64{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().UpstreamUsageDaily.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *UpstreamUsageDailyMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *UpstreamUsageDailyMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the UpstreamUsageDaily entity.
+// If the UpstreamUsageDaily object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamUsageDailyMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *UpstreamUsageDailyMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *UpstreamUsageDailyMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *UpstreamUsageDailyMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the UpstreamUsageDaily entity.
+// If the UpstreamUsageDaily object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamUsageDailyMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *UpstreamUsageDailyMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetProviderID sets the "provider_id" field.
+func (m *UpstreamUsageDailyMutation) SetProviderID(i int64) {
+	m.provider_id = &i
+	m.addprovider_id = nil
+}
+
+// ProviderID returns the value of the "provider_id" field in the mutation.
+func (m *UpstreamUsageDailyMutation) ProviderID() (r int64, exists bool) {
+	v := m.provider_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProviderID returns the old "provider_id" field's value of the UpstreamUsageDaily entity.
+// If the UpstreamUsageDaily object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamUsageDailyMutation) OldProviderID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProviderID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProviderID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProviderID: %w", err)
+	}
+	return oldValue.ProviderID, nil
+}
+
+// AddProviderID adds i to the "provider_id" field.
+func (m *UpstreamUsageDailyMutation) AddProviderID(i int64) {
+	if m.addprovider_id != nil {
+		*m.addprovider_id += i
+	} else {
+		m.addprovider_id = &i
+	}
+}
+
+// AddedProviderID returns the value that was added to the "provider_id" field in this mutation.
+func (m *UpstreamUsageDailyMutation) AddedProviderID() (r int64, exists bool) {
+	v := m.addprovider_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetProviderID resets all changes to the "provider_id" field.
+func (m *UpstreamUsageDailyMutation) ResetProviderID() {
+	m.provider_id = nil
+	m.addprovider_id = nil
+}
+
+// SetDay sets the "day" field.
+func (m *UpstreamUsageDailyMutation) SetDay(t time.Time) {
+	m.day = &t
+}
+
+// Day returns the value of the "day" field in the mutation.
+func (m *UpstreamUsageDailyMutation) Day() (r time.Time, exists bool) {
+	v := m.day
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDay returns the old "day" field's value of the UpstreamUsageDaily entity.
+// If the UpstreamUsageDaily object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamUsageDailyMutation) OldDay(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDay is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDay requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDay: %w", err)
+	}
+	return oldValue.Day, nil
+}
+
+// ResetDay resets all changes to the "day" field.
+func (m *UpstreamUsageDailyMutation) ResetDay() {
+	m.day = nil
+}
+
+// SetScopeType sets the "scope_type" field.
+func (m *UpstreamUsageDailyMutation) SetScopeType(s string) {
+	m.scope_type = &s
+}
+
+// ScopeType returns the value of the "scope_type" field in the mutation.
+func (m *UpstreamUsageDailyMutation) ScopeType() (r string, exists bool) {
+	v := m.scope_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldScopeType returns the old "scope_type" field's value of the UpstreamUsageDaily entity.
+// If the UpstreamUsageDaily object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamUsageDailyMutation) OldScopeType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldScopeType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldScopeType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldScopeType: %w", err)
+	}
+	return oldValue.ScopeType, nil
+}
+
+// ResetScopeType resets all changes to the "scope_type" field.
+func (m *UpstreamUsageDailyMutation) ResetScopeType() {
+	m.scope_type = nil
+}
+
+// SetScopeKey sets the "scope_key" field.
+func (m *UpstreamUsageDailyMutation) SetScopeKey(s string) {
+	m.scope_key = &s
+}
+
+// ScopeKey returns the value of the "scope_key" field in the mutation.
+func (m *UpstreamUsageDailyMutation) ScopeKey() (r string, exists bool) {
+	v := m.scope_key
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldScopeKey returns the old "scope_key" field's value of the UpstreamUsageDaily entity.
+// If the UpstreamUsageDaily object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamUsageDailyMutation) OldScopeKey(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldScopeKey is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldScopeKey requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldScopeKey: %w", err)
+	}
+	return oldValue.ScopeKey, nil
+}
+
+// ResetScopeKey resets all changes to the "scope_key" field.
+func (m *UpstreamUsageDailyMutation) ResetScopeKey() {
+	m.scope_key = nil
+}
+
+// SetScopeName sets the "scope_name" field.
+func (m *UpstreamUsageDailyMutation) SetScopeName(s string) {
+	m.scope_name = &s
+}
+
+// ScopeName returns the value of the "scope_name" field in the mutation.
+func (m *UpstreamUsageDailyMutation) ScopeName() (r string, exists bool) {
+	v := m.scope_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldScopeName returns the old "scope_name" field's value of the UpstreamUsageDaily entity.
+// If the UpstreamUsageDaily object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamUsageDailyMutation) OldScopeName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldScopeName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldScopeName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldScopeName: %w", err)
+	}
+	return oldValue.ScopeName, nil
+}
+
+// ResetScopeName resets all changes to the "scope_name" field.
+func (m *UpstreamUsageDailyMutation) ResetScopeName() {
+	m.scope_name = nil
+}
+
+// SetRequests sets the "requests" field.
+func (m *UpstreamUsageDailyMutation) SetRequests(i int) {
+	m.requests = &i
+	m.addrequests = nil
+}
+
+// Requests returns the value of the "requests" field in the mutation.
+func (m *UpstreamUsageDailyMutation) Requests() (r int, exists bool) {
+	v := m.requests
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRequests returns the old "requests" field's value of the UpstreamUsageDaily entity.
+// If the UpstreamUsageDaily object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamUsageDailyMutation) OldRequests(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRequests is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRequests requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRequests: %w", err)
+	}
+	return oldValue.Requests, nil
+}
+
+// AddRequests adds i to the "requests" field.
+func (m *UpstreamUsageDailyMutation) AddRequests(i int) {
+	if m.addrequests != nil {
+		*m.addrequests += i
+	} else {
+		m.addrequests = &i
+	}
+}
+
+// AddedRequests returns the value that was added to the "requests" field in this mutation.
+func (m *UpstreamUsageDailyMutation) AddedRequests() (r int, exists bool) {
+	v := m.addrequests
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetRequests resets all changes to the "requests" field.
+func (m *UpstreamUsageDailyMutation) ResetRequests() {
+	m.requests = nil
+	m.addrequests = nil
+}
+
+// SetTokens sets the "tokens" field.
+func (m *UpstreamUsageDailyMutation) SetTokens(i int64) {
+	m.tokens = &i
+	m.addtokens = nil
+}
+
+// Tokens returns the value of the "tokens" field in the mutation.
+func (m *UpstreamUsageDailyMutation) Tokens() (r int64, exists bool) {
+	v := m.tokens
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTokens returns the old "tokens" field's value of the UpstreamUsageDaily entity.
+// If the UpstreamUsageDaily object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamUsageDailyMutation) OldTokens(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTokens is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTokens requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTokens: %w", err)
+	}
+	return oldValue.Tokens, nil
+}
+
+// AddTokens adds i to the "tokens" field.
+func (m *UpstreamUsageDailyMutation) AddTokens(i int64) {
+	if m.addtokens != nil {
+		*m.addtokens += i
+	} else {
+		m.addtokens = &i
+	}
+}
+
+// AddedTokens returns the value that was added to the "tokens" field in this mutation.
+func (m *UpstreamUsageDailyMutation) AddedTokens() (r int64, exists bool) {
+	v := m.addtokens
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetTokens resets all changes to the "tokens" field.
+func (m *UpstreamUsageDailyMutation) ResetTokens() {
+	m.tokens = nil
+	m.addtokens = nil
+}
+
+// SetCostUsd sets the "cost_usd" field.
+func (m *UpstreamUsageDailyMutation) SetCostUsd(f float64) {
+	m.cost_usd = &f
+	m.addcost_usd = nil
+}
+
+// CostUsd returns the value of the "cost_usd" field in the mutation.
+func (m *UpstreamUsageDailyMutation) CostUsd() (r float64, exists bool) {
+	v := m.cost_usd
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCostUsd returns the old "cost_usd" field's value of the UpstreamUsageDaily entity.
+// If the UpstreamUsageDaily object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamUsageDailyMutation) OldCostUsd(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCostUsd is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCostUsd requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCostUsd: %w", err)
+	}
+	return oldValue.CostUsd, nil
+}
+
+// AddCostUsd adds f to the "cost_usd" field.
+func (m *UpstreamUsageDailyMutation) AddCostUsd(f float64) {
+	if m.addcost_usd != nil {
+		*m.addcost_usd += f
+	} else {
+		m.addcost_usd = &f
+	}
+}
+
+// AddedCostUsd returns the value that was added to the "cost_usd" field in this mutation.
+func (m *UpstreamUsageDailyMutation) AddedCostUsd() (r float64, exists bool) {
+	v := m.addcost_usd
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCostUsd resets all changes to the "cost_usd" field.
+func (m *UpstreamUsageDailyMutation) ResetCostUsd() {
+	m.cost_usd = nil
+	m.addcost_usd = nil
+}
+
+// Where appends a list predicates to the UpstreamUsageDailyMutation builder.
+func (m *UpstreamUsageDailyMutation) Where(ps ...predicate.UpstreamUsageDaily) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the UpstreamUsageDailyMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *UpstreamUsageDailyMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.UpstreamUsageDaily, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *UpstreamUsageDailyMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *UpstreamUsageDailyMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (UpstreamUsageDaily).
+func (m *UpstreamUsageDailyMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *UpstreamUsageDailyMutation) Fields() []string {
+	fields := make([]string, 0, 10)
+	if m.created_at != nil {
+		fields = append(fields, upstreamusagedaily.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, upstreamusagedaily.FieldUpdatedAt)
+	}
+	if m.provider_id != nil {
+		fields = append(fields, upstreamusagedaily.FieldProviderID)
+	}
+	if m.day != nil {
+		fields = append(fields, upstreamusagedaily.FieldDay)
+	}
+	if m.scope_type != nil {
+		fields = append(fields, upstreamusagedaily.FieldScopeType)
+	}
+	if m.scope_key != nil {
+		fields = append(fields, upstreamusagedaily.FieldScopeKey)
+	}
+	if m.scope_name != nil {
+		fields = append(fields, upstreamusagedaily.FieldScopeName)
+	}
+	if m.requests != nil {
+		fields = append(fields, upstreamusagedaily.FieldRequests)
+	}
+	if m.tokens != nil {
+		fields = append(fields, upstreamusagedaily.FieldTokens)
+	}
+	if m.cost_usd != nil {
+		fields = append(fields, upstreamusagedaily.FieldCostUsd)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *UpstreamUsageDailyMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case upstreamusagedaily.FieldCreatedAt:
+		return m.CreatedAt()
+	case upstreamusagedaily.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case upstreamusagedaily.FieldProviderID:
+		return m.ProviderID()
+	case upstreamusagedaily.FieldDay:
+		return m.Day()
+	case upstreamusagedaily.FieldScopeType:
+		return m.ScopeType()
+	case upstreamusagedaily.FieldScopeKey:
+		return m.ScopeKey()
+	case upstreamusagedaily.FieldScopeName:
+		return m.ScopeName()
+	case upstreamusagedaily.FieldRequests:
+		return m.Requests()
+	case upstreamusagedaily.FieldTokens:
+		return m.Tokens()
+	case upstreamusagedaily.FieldCostUsd:
+		return m.CostUsd()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *UpstreamUsageDailyMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case upstreamusagedaily.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case upstreamusagedaily.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case upstreamusagedaily.FieldProviderID:
+		return m.OldProviderID(ctx)
+	case upstreamusagedaily.FieldDay:
+		return m.OldDay(ctx)
+	case upstreamusagedaily.FieldScopeType:
+		return m.OldScopeType(ctx)
+	case upstreamusagedaily.FieldScopeKey:
+		return m.OldScopeKey(ctx)
+	case upstreamusagedaily.FieldScopeName:
+		return m.OldScopeName(ctx)
+	case upstreamusagedaily.FieldRequests:
+		return m.OldRequests(ctx)
+	case upstreamusagedaily.FieldTokens:
+		return m.OldTokens(ctx)
+	case upstreamusagedaily.FieldCostUsd:
+		return m.OldCostUsd(ctx)
+	}
+	return nil, fmt.Errorf("unknown UpstreamUsageDaily field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *UpstreamUsageDailyMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case upstreamusagedaily.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case upstreamusagedaily.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case upstreamusagedaily.FieldProviderID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProviderID(v)
+		return nil
+	case upstreamusagedaily.FieldDay:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDay(v)
+		return nil
+	case upstreamusagedaily.FieldScopeType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetScopeType(v)
+		return nil
+	case upstreamusagedaily.FieldScopeKey:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetScopeKey(v)
+		return nil
+	case upstreamusagedaily.FieldScopeName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetScopeName(v)
+		return nil
+	case upstreamusagedaily.FieldRequests:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRequests(v)
+		return nil
+	case upstreamusagedaily.FieldTokens:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTokens(v)
+		return nil
+	case upstreamusagedaily.FieldCostUsd:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCostUsd(v)
+		return nil
+	}
+	return fmt.Errorf("unknown UpstreamUsageDaily field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *UpstreamUsageDailyMutation) AddedFields() []string {
+	var fields []string
+	if m.addprovider_id != nil {
+		fields = append(fields, upstreamusagedaily.FieldProviderID)
+	}
+	if m.addrequests != nil {
+		fields = append(fields, upstreamusagedaily.FieldRequests)
+	}
+	if m.addtokens != nil {
+		fields = append(fields, upstreamusagedaily.FieldTokens)
+	}
+	if m.addcost_usd != nil {
+		fields = append(fields, upstreamusagedaily.FieldCostUsd)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *UpstreamUsageDailyMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case upstreamusagedaily.FieldProviderID:
+		return m.AddedProviderID()
+	case upstreamusagedaily.FieldRequests:
+		return m.AddedRequests()
+	case upstreamusagedaily.FieldTokens:
+		return m.AddedTokens()
+	case upstreamusagedaily.FieldCostUsd:
+		return m.AddedCostUsd()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *UpstreamUsageDailyMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case upstreamusagedaily.FieldProviderID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddProviderID(v)
+		return nil
+	case upstreamusagedaily.FieldRequests:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddRequests(v)
+		return nil
+	case upstreamusagedaily.FieldTokens:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddTokens(v)
+		return nil
+	case upstreamusagedaily.FieldCostUsd:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCostUsd(v)
+		return nil
+	}
+	return fmt.Errorf("unknown UpstreamUsageDaily numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *UpstreamUsageDailyMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *UpstreamUsageDailyMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *UpstreamUsageDailyMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown UpstreamUsageDaily nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *UpstreamUsageDailyMutation) ResetField(name string) error {
+	switch name {
+	case upstreamusagedaily.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case upstreamusagedaily.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case upstreamusagedaily.FieldProviderID:
+		m.ResetProviderID()
+		return nil
+	case upstreamusagedaily.FieldDay:
+		m.ResetDay()
+		return nil
+	case upstreamusagedaily.FieldScopeType:
+		m.ResetScopeType()
+		return nil
+	case upstreamusagedaily.FieldScopeKey:
+		m.ResetScopeKey()
+		return nil
+	case upstreamusagedaily.FieldScopeName:
+		m.ResetScopeName()
+		return nil
+	case upstreamusagedaily.FieldRequests:
+		m.ResetRequests()
+		return nil
+	case upstreamusagedaily.FieldTokens:
+		m.ResetTokens()
+		return nil
+	case upstreamusagedaily.FieldCostUsd:
+		m.ResetCostUsd()
+		return nil
+	}
+	return fmt.Errorf("unknown UpstreamUsageDaily field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *UpstreamUsageDailyMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *UpstreamUsageDailyMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *UpstreamUsageDailyMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *UpstreamUsageDailyMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *UpstreamUsageDailyMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *UpstreamUsageDailyMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *UpstreamUsageDailyMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown UpstreamUsageDaily unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *UpstreamUsageDailyMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown UpstreamUsageDaily edge %s", name)
 }
 
 // UsageCleanupTaskMutation represents an operation that mutates the UsageCleanupTask nodes in the graph.

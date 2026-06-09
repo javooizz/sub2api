@@ -33,6 +33,8 @@ const (
 	FieldBalanceThreshold = "balance_threshold"
 	// FieldNotifyOnPriceChange holds the string denoting the notify_on_price_change field in the database.
 	FieldNotifyOnPriceChange = "notify_on_price_change"
+	// FieldRechargeRatio holds the string denoting the recharge_ratio field in the database.
+	FieldRechargeRatio = "recharge_ratio"
 	// FieldRefreshIntervalMinutes holds the string denoting the refresh_interval_minutes field in the database.
 	FieldRefreshIntervalMinutes = "refresh_interval_minutes"
 	// FieldLatestSnapshot holds the string denoting the latest_snapshot field in the database.
@@ -66,6 +68,7 @@ var Columns = []string{
 	FieldCredentials,
 	FieldBalanceThreshold,
 	FieldNotifyOnPriceChange,
+	FieldRechargeRatio,
 	FieldRefreshIntervalMinutes,
 	FieldLatestSnapshot,
 	FieldLastRefreshedAt,
@@ -109,6 +112,8 @@ var (
 	StatusValidator func(string) error
 	// DefaultNotifyOnPriceChange holds the default value on creation for the "notify_on_price_change" field.
 	DefaultNotifyOnPriceChange bool
+	// DefaultRechargeRatio holds the default value on creation for the "recharge_ratio" field.
+	DefaultRechargeRatio float64
 	// DefaultRefreshIntervalMinutes holds the default value on creation for the "refresh_interval_minutes" field.
 	DefaultRefreshIntervalMinutes int
 	// DefaultLastError holds the default value on creation for the "last_error" field.
@@ -172,6 +177,11 @@ func ByBalanceThreshold(opts ...sql.OrderTermOption) OrderOption {
 // ByNotifyOnPriceChange orders the results by the notify_on_price_change field.
 func ByNotifyOnPriceChange(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldNotifyOnPriceChange, opts...).ToFunc()
+}
+
+// ByRechargeRatio orders the results by the recharge_ratio field.
+func ByRechargeRatio(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRechargeRatio, opts...).ToFunc()
 }
 
 // ByRefreshIntervalMinutes orders the results by the refresh_interval_minutes field.

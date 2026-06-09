@@ -39,6 +39,8 @@ type UpstreamProvider struct {
 	BalanceThreshold *float64 `json:"balance_threshold,omitempty"`
 	// NotifyOnPriceChange holds the value of the "notify_on_price_change" field.
 	NotifyOnPriceChange bool `json:"notify_on_price_change,omitempty"`
+	// RechargeRatio holds the value of the "recharge_ratio" field.
+	RechargeRatio float64 `json:"recharge_ratio,omitempty"`
 	// RefreshIntervalMinutes holds the value of the "refresh_interval_minutes" field.
 	RefreshIntervalMinutes int `json:"refresh_interval_minutes,omitempty"`
 	// LatestSnapshot holds the value of the "latest_snapshot" field.
@@ -67,7 +69,7 @@ func (*UpstreamProvider) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case upstreamprovider.FieldNotifyOnPriceChange, upstreamprovider.FieldBalanceAlerted:
 			values[i] = new(sql.NullBool)
-		case upstreamprovider.FieldBalanceThreshold:
+		case upstreamprovider.FieldBalanceThreshold, upstreamprovider.FieldRechargeRatio:
 			values[i] = new(sql.NullFloat64)
 		case upstreamprovider.FieldID, upstreamprovider.FieldRefreshIntervalMinutes, upstreamprovider.FieldConsecutiveFailures:
 			values[i] = new(sql.NullInt64)
@@ -158,6 +160,12 @@ func (_m *UpstreamProvider) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field notify_on_price_change", values[i])
 			} else if value.Valid {
 				_m.NotifyOnPriceChange = value.Bool
+			}
+		case upstreamprovider.FieldRechargeRatio:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field recharge_ratio", values[i])
+			} else if value.Valid {
+				_m.RechargeRatio = value.Float64
 			}
 		case upstreamprovider.FieldRefreshIntervalMinutes:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -277,6 +285,9 @@ func (_m *UpstreamProvider) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("notify_on_price_change=")
 	builder.WriteString(fmt.Sprintf("%v", _m.NotifyOnPriceChange))
+	builder.WriteString(", ")
+	builder.WriteString("recharge_ratio=")
+	builder.WriteString(fmt.Sprintf("%v", _m.RechargeRatio))
 	builder.WriteString(", ")
 	builder.WriteString("refresh_interval_minutes=")
 	builder.WriteString(fmt.Sprintf("%v", _m.RefreshIntervalMinutes))

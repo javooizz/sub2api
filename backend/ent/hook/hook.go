@@ -381,6 +381,30 @@ func (f UpstreamProviderFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.V
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.UpstreamProviderMutation", m)
 }
 
+// The UpstreamUsageCursorFunc type is an adapter to allow the use of ordinary
+// function as UpstreamUsageCursor mutator.
+type UpstreamUsageCursorFunc func(context.Context, *ent.UpstreamUsageCursorMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f UpstreamUsageCursorFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.UpstreamUsageCursorMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.UpstreamUsageCursorMutation", m)
+}
+
+// The UpstreamUsageDailyFunc type is an adapter to allow the use of ordinary
+// function as UpstreamUsageDaily mutator.
+type UpstreamUsageDailyFunc func(context.Context, *ent.UpstreamUsageDailyMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f UpstreamUsageDailyFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.UpstreamUsageDailyMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.UpstreamUsageDailyMutation", m)
+}
+
 // The UsageCleanupTaskFunc type is an adapter to allow the use of ordinary
 // function as UsageCleanupTask mutator.
 type UsageCleanupTaskFunc func(context.Context, *ent.UsageCleanupTaskMutation) (ent.Value, error)

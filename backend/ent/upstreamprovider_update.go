@@ -152,6 +152,27 @@ func (_u *UpstreamProviderUpdate) SetNillableNotifyOnPriceChange(v *bool) *Upstr
 	return _u
 }
 
+// SetRechargeRatio sets the "recharge_ratio" field.
+func (_u *UpstreamProviderUpdate) SetRechargeRatio(v float64) *UpstreamProviderUpdate {
+	_u.mutation.ResetRechargeRatio()
+	_u.mutation.SetRechargeRatio(v)
+	return _u
+}
+
+// SetNillableRechargeRatio sets the "recharge_ratio" field if the given value is not nil.
+func (_u *UpstreamProviderUpdate) SetNillableRechargeRatio(v *float64) *UpstreamProviderUpdate {
+	if v != nil {
+		_u.SetRechargeRatio(*v)
+	}
+	return _u
+}
+
+// AddRechargeRatio adds value to the "recharge_ratio" field.
+func (_u *UpstreamProviderUpdate) AddRechargeRatio(v float64) *UpstreamProviderUpdate {
+	_u.mutation.AddRechargeRatio(v)
+	return _u
+}
+
 // SetRefreshIntervalMinutes sets the "refresh_interval_minutes" field.
 func (_u *UpstreamProviderUpdate) SetRefreshIntervalMinutes(v int) *UpstreamProviderUpdate {
 	_u.mutation.ResetRefreshIntervalMinutes()
@@ -404,6 +425,12 @@ func (_u *UpstreamProviderUpdate) sqlSave(ctx context.Context) (_node int, err e
 	if value, ok := _u.mutation.NotifyOnPriceChange(); ok {
 		_spec.SetField(upstreamprovider.FieldNotifyOnPriceChange, field.TypeBool, value)
 	}
+	if value, ok := _u.mutation.RechargeRatio(); ok {
+		_spec.SetField(upstreamprovider.FieldRechargeRatio, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedRechargeRatio(); ok {
+		_spec.AddField(upstreamprovider.FieldRechargeRatio, field.TypeFloat64, value)
+	}
 	if value, ok := _u.mutation.RefreshIntervalMinutes(); ok {
 		_spec.SetField(upstreamprovider.FieldRefreshIntervalMinutes, field.TypeInt, value)
 	}
@@ -583,6 +610,27 @@ func (_u *UpstreamProviderUpdateOne) SetNillableNotifyOnPriceChange(v *bool) *Up
 	if v != nil {
 		_u.SetNotifyOnPriceChange(*v)
 	}
+	return _u
+}
+
+// SetRechargeRatio sets the "recharge_ratio" field.
+func (_u *UpstreamProviderUpdateOne) SetRechargeRatio(v float64) *UpstreamProviderUpdateOne {
+	_u.mutation.ResetRechargeRatio()
+	_u.mutation.SetRechargeRatio(v)
+	return _u
+}
+
+// SetNillableRechargeRatio sets the "recharge_ratio" field if the given value is not nil.
+func (_u *UpstreamProviderUpdateOne) SetNillableRechargeRatio(v *float64) *UpstreamProviderUpdateOne {
+	if v != nil {
+		_u.SetRechargeRatio(*v)
+	}
+	return _u
+}
+
+// AddRechargeRatio adds value to the "recharge_ratio" field.
+func (_u *UpstreamProviderUpdateOne) AddRechargeRatio(v float64) *UpstreamProviderUpdateOne {
+	_u.mutation.AddRechargeRatio(v)
 	return _u
 }
 
@@ -867,6 +915,12 @@ func (_u *UpstreamProviderUpdateOne) sqlSave(ctx context.Context) (_node *Upstre
 	}
 	if value, ok := _u.mutation.NotifyOnPriceChange(); ok {
 		_spec.SetField(upstreamprovider.FieldNotifyOnPriceChange, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.RechargeRatio(); ok {
+		_spec.SetField(upstreamprovider.FieldRechargeRatio, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedRechargeRatio(); ok {
+		_spec.AddField(upstreamprovider.FieldRechargeRatio, field.TypeFloat64, value)
 	}
 	if value, ok := _u.mutation.RefreshIntervalMinutes(); ok {
 		_spec.SetField(upstreamprovider.FieldRefreshIntervalMinutes, field.TypeInt, value)

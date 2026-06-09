@@ -40,6 +40,8 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/tlsfingerprintprofile"
 	"github.com/Wei-Shaw/sub2api/ent/upstreamchangeevent"
 	"github.com/Wei-Shaw/sub2api/ent/upstreamprovider"
+	"github.com/Wei-Shaw/sub2api/ent/upstreamusagecursor"
+	"github.com/Wei-Shaw/sub2api/ent/upstreamusagedaily"
 	"github.com/Wei-Shaw/sub2api/ent/usagecleanuptask"
 	"github.com/Wei-Shaw/sub2api/ent/usagelog"
 	"github.com/Wei-Shaw/sub2api/ent/user"
@@ -943,6 +945,60 @@ func (f TraverseUpstreamProvider) Traverse(ctx context.Context, q ent.Query) err
 	return fmt.Errorf("unexpected query type %T. expect *ent.UpstreamProviderQuery", q)
 }
 
+// The UpstreamUsageCursorFunc type is an adapter to allow the use of ordinary function as a Querier.
+type UpstreamUsageCursorFunc func(context.Context, *ent.UpstreamUsageCursorQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f UpstreamUsageCursorFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.UpstreamUsageCursorQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.UpstreamUsageCursorQuery", q)
+}
+
+// The TraverseUpstreamUsageCursor type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseUpstreamUsageCursor func(context.Context, *ent.UpstreamUsageCursorQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseUpstreamUsageCursor) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseUpstreamUsageCursor) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.UpstreamUsageCursorQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.UpstreamUsageCursorQuery", q)
+}
+
+// The UpstreamUsageDailyFunc type is an adapter to allow the use of ordinary function as a Querier.
+type UpstreamUsageDailyFunc func(context.Context, *ent.UpstreamUsageDailyQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f UpstreamUsageDailyFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.UpstreamUsageDailyQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.UpstreamUsageDailyQuery", q)
+}
+
+// The TraverseUpstreamUsageDaily type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseUpstreamUsageDaily func(context.Context, *ent.UpstreamUsageDailyQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseUpstreamUsageDaily) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseUpstreamUsageDaily) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.UpstreamUsageDailyQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.UpstreamUsageDailyQuery", q)
+}
+
 // The UsageCleanupTaskFunc type is an adapter to allow the use of ordinary function as a Querier.
 type UsageCleanupTaskFunc func(context.Context, *ent.UsageCleanupTaskQuery) (ent.Value, error)
 
@@ -1224,6 +1280,10 @@ func NewQuery(q ent.Query) (Query, error) {
 		return &query[*ent.UpstreamChangeEventQuery, predicate.UpstreamChangeEvent, upstreamchangeevent.OrderOption]{typ: ent.TypeUpstreamChangeEvent, tq: q}, nil
 	case *ent.UpstreamProviderQuery:
 		return &query[*ent.UpstreamProviderQuery, predicate.UpstreamProvider, upstreamprovider.OrderOption]{typ: ent.TypeUpstreamProvider, tq: q}, nil
+	case *ent.UpstreamUsageCursorQuery:
+		return &query[*ent.UpstreamUsageCursorQuery, predicate.UpstreamUsageCursor, upstreamusagecursor.OrderOption]{typ: ent.TypeUpstreamUsageCursor, tq: q}, nil
+	case *ent.UpstreamUsageDailyQuery:
+		return &query[*ent.UpstreamUsageDailyQuery, predicate.UpstreamUsageDaily, upstreamusagedaily.OrderOption]{typ: ent.TypeUpstreamUsageDaily, tq: q}, nil
 	case *ent.UsageCleanupTaskQuery:
 		return &query[*ent.UsageCleanupTaskQuery, predicate.UsageCleanupTask, usagecleanuptask.OrderOption]{typ: ent.TypeUsageCleanupTask, tq: q}, nil
 	case *ent.UsageLogQuery:

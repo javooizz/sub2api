@@ -131,6 +131,20 @@ func (_c *UpstreamProviderCreate) SetNillableNotifyOnPriceChange(v *bool) *Upstr
 	return _c
 }
 
+// SetRechargeRatio sets the "recharge_ratio" field.
+func (_c *UpstreamProviderCreate) SetRechargeRatio(v float64) *UpstreamProviderCreate {
+	_c.mutation.SetRechargeRatio(v)
+	return _c
+}
+
+// SetNillableRechargeRatio sets the "recharge_ratio" field if the given value is not nil.
+func (_c *UpstreamProviderCreate) SetNillableRechargeRatio(v *float64) *UpstreamProviderCreate {
+	if v != nil {
+		_c.SetRechargeRatio(*v)
+	}
+	return _c
+}
+
 // SetRefreshIntervalMinutes sets the "refresh_interval_minutes" field.
 func (_c *UpstreamProviderCreate) SetRefreshIntervalMinutes(v int) *UpstreamProviderCreate {
 	_c.mutation.SetRefreshIntervalMinutes(v)
@@ -290,6 +304,10 @@ func (_c *UpstreamProviderCreate) defaults() {
 		v := upstreamprovider.DefaultNotifyOnPriceChange
 		_c.mutation.SetNotifyOnPriceChange(v)
 	}
+	if _, ok := _c.mutation.RechargeRatio(); !ok {
+		v := upstreamprovider.DefaultRechargeRatio
+		_c.mutation.SetRechargeRatio(v)
+	}
 	if _, ok := _c.mutation.RefreshIntervalMinutes(); !ok {
 		v := upstreamprovider.DefaultRefreshIntervalMinutes
 		_c.mutation.SetRefreshIntervalMinutes(v)
@@ -365,6 +383,9 @@ func (_c *UpstreamProviderCreate) check() error {
 	}
 	if _, ok := _c.mutation.NotifyOnPriceChange(); !ok {
 		return &ValidationError{Name: "notify_on_price_change", err: errors.New(`ent: missing required field "UpstreamProvider.notify_on_price_change"`)}
+	}
+	if _, ok := _c.mutation.RechargeRatio(); !ok {
+		return &ValidationError{Name: "recharge_ratio", err: errors.New(`ent: missing required field "UpstreamProvider.recharge_ratio"`)}
 	}
 	if _, ok := _c.mutation.RefreshIntervalMinutes(); !ok {
 		return &ValidationError{Name: "refresh_interval_minutes", err: errors.New(`ent: missing required field "UpstreamProvider.refresh_interval_minutes"`)}
@@ -447,6 +468,10 @@ func (_c *UpstreamProviderCreate) createSpec() (*UpstreamProvider, *sqlgraph.Cre
 	if value, ok := _c.mutation.NotifyOnPriceChange(); ok {
 		_spec.SetField(upstreamprovider.FieldNotifyOnPriceChange, field.TypeBool, value)
 		_node.NotifyOnPriceChange = value
+	}
+	if value, ok := _c.mutation.RechargeRatio(); ok {
+		_spec.SetField(upstreamprovider.FieldRechargeRatio, field.TypeFloat64, value)
+		_node.RechargeRatio = value
 	}
 	if value, ok := _c.mutation.RefreshIntervalMinutes(); ok {
 		_spec.SetField(upstreamprovider.FieldRefreshIntervalMinutes, field.TypeInt, value)
@@ -649,6 +674,24 @@ func (u *UpstreamProviderUpsert) SetNotifyOnPriceChange(v bool) *UpstreamProvide
 // UpdateNotifyOnPriceChange sets the "notify_on_price_change" field to the value that was provided on create.
 func (u *UpstreamProviderUpsert) UpdateNotifyOnPriceChange() *UpstreamProviderUpsert {
 	u.SetExcluded(upstreamprovider.FieldNotifyOnPriceChange)
+	return u
+}
+
+// SetRechargeRatio sets the "recharge_ratio" field.
+func (u *UpstreamProviderUpsert) SetRechargeRatio(v float64) *UpstreamProviderUpsert {
+	u.Set(upstreamprovider.FieldRechargeRatio, v)
+	return u
+}
+
+// UpdateRechargeRatio sets the "recharge_ratio" field to the value that was provided on create.
+func (u *UpstreamProviderUpsert) UpdateRechargeRatio() *UpstreamProviderUpsert {
+	u.SetExcluded(upstreamprovider.FieldRechargeRatio)
+	return u
+}
+
+// AddRechargeRatio adds v to the "recharge_ratio" field.
+func (u *UpstreamProviderUpsert) AddRechargeRatio(v float64) *UpstreamProviderUpsert {
+	u.Add(upstreamprovider.FieldRechargeRatio, v)
 	return u
 }
 
@@ -960,6 +1003,27 @@ func (u *UpstreamProviderUpsertOne) SetNotifyOnPriceChange(v bool) *UpstreamProv
 func (u *UpstreamProviderUpsertOne) UpdateNotifyOnPriceChange() *UpstreamProviderUpsertOne {
 	return u.Update(func(s *UpstreamProviderUpsert) {
 		s.UpdateNotifyOnPriceChange()
+	})
+}
+
+// SetRechargeRatio sets the "recharge_ratio" field.
+func (u *UpstreamProviderUpsertOne) SetRechargeRatio(v float64) *UpstreamProviderUpsertOne {
+	return u.Update(func(s *UpstreamProviderUpsert) {
+		s.SetRechargeRatio(v)
+	})
+}
+
+// AddRechargeRatio adds v to the "recharge_ratio" field.
+func (u *UpstreamProviderUpsertOne) AddRechargeRatio(v float64) *UpstreamProviderUpsertOne {
+	return u.Update(func(s *UpstreamProviderUpsert) {
+		s.AddRechargeRatio(v)
+	})
+}
+
+// UpdateRechargeRatio sets the "recharge_ratio" field to the value that was provided on create.
+func (u *UpstreamProviderUpsertOne) UpdateRechargeRatio() *UpstreamProviderUpsertOne {
+	return u.Update(func(s *UpstreamProviderUpsert) {
+		s.UpdateRechargeRatio()
 	})
 }
 
@@ -1458,6 +1522,27 @@ func (u *UpstreamProviderUpsertBulk) SetNotifyOnPriceChange(v bool) *UpstreamPro
 func (u *UpstreamProviderUpsertBulk) UpdateNotifyOnPriceChange() *UpstreamProviderUpsertBulk {
 	return u.Update(func(s *UpstreamProviderUpsert) {
 		s.UpdateNotifyOnPriceChange()
+	})
+}
+
+// SetRechargeRatio sets the "recharge_ratio" field.
+func (u *UpstreamProviderUpsertBulk) SetRechargeRatio(v float64) *UpstreamProviderUpsertBulk {
+	return u.Update(func(s *UpstreamProviderUpsert) {
+		s.SetRechargeRatio(v)
+	})
+}
+
+// AddRechargeRatio adds v to the "recharge_ratio" field.
+func (u *UpstreamProviderUpsertBulk) AddRechargeRatio(v float64) *UpstreamProviderUpsertBulk {
+	return u.Update(func(s *UpstreamProviderUpsert) {
+		s.AddRechargeRatio(v)
+	})
+}
+
+// UpdateRechargeRatio sets the "recharge_ratio" field to the value that was provided on create.
+func (u *UpstreamProviderUpsertBulk) UpdateRechargeRatio() *UpstreamProviderUpsertBulk {
+	return u.Update(func(s *UpstreamProviderUpsert) {
+		s.UpdateRechargeRatio()
 	})
 }
 

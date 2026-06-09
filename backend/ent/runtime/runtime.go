@@ -37,6 +37,8 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/tlsfingerprintprofile"
 	"github.com/Wei-Shaw/sub2api/ent/upstreamchangeevent"
 	"github.com/Wei-Shaw/sub2api/ent/upstreamprovider"
+	"github.com/Wei-Shaw/sub2api/ent/upstreamusagecursor"
+	"github.com/Wei-Shaw/sub2api/ent/upstreamusagedaily"
 	"github.com/Wei-Shaw/sub2api/ent/usagecleanuptask"
 	"github.com/Wei-Shaw/sub2api/ent/usagelog"
 	"github.com/Wei-Shaw/sub2api/ent/user"
@@ -1808,26 +1810,106 @@ func init() {
 	upstreamproviderDescNotifyOnPriceChange := upstreamproviderFields[7].Descriptor()
 	// upstreamprovider.DefaultNotifyOnPriceChange holds the default value on creation for the notify_on_price_change field.
 	upstreamprovider.DefaultNotifyOnPriceChange = upstreamproviderDescNotifyOnPriceChange.Default.(bool)
+	// upstreamproviderDescRechargeRatio is the schema descriptor for recharge_ratio field.
+	upstreamproviderDescRechargeRatio := upstreamproviderFields[8].Descriptor()
+	// upstreamprovider.DefaultRechargeRatio holds the default value on creation for the recharge_ratio field.
+	upstreamprovider.DefaultRechargeRatio = upstreamproviderDescRechargeRatio.Default.(float64)
 	// upstreamproviderDescRefreshIntervalMinutes is the schema descriptor for refresh_interval_minutes field.
-	upstreamproviderDescRefreshIntervalMinutes := upstreamproviderFields[8].Descriptor()
+	upstreamproviderDescRefreshIntervalMinutes := upstreamproviderFields[9].Descriptor()
 	// upstreamprovider.DefaultRefreshIntervalMinutes holds the default value on creation for the refresh_interval_minutes field.
 	upstreamprovider.DefaultRefreshIntervalMinutes = upstreamproviderDescRefreshIntervalMinutes.Default.(int)
 	// upstreamproviderDescLastError is the schema descriptor for last_error field.
-	upstreamproviderDescLastError := upstreamproviderFields[11].Descriptor()
+	upstreamproviderDescLastError := upstreamproviderFields[12].Descriptor()
 	// upstreamprovider.DefaultLastError holds the default value on creation for the last_error field.
 	upstreamprovider.DefaultLastError = upstreamproviderDescLastError.Default.(string)
 	// upstreamproviderDescConsecutiveFailures is the schema descriptor for consecutive_failures field.
-	upstreamproviderDescConsecutiveFailures := upstreamproviderFields[12].Descriptor()
+	upstreamproviderDescConsecutiveFailures := upstreamproviderFields[13].Descriptor()
 	// upstreamprovider.DefaultConsecutiveFailures holds the default value on creation for the consecutive_failures field.
 	upstreamprovider.DefaultConsecutiveFailures = upstreamproviderDescConsecutiveFailures.Default.(int)
 	// upstreamproviderDescBalanceAlerted is the schema descriptor for balance_alerted field.
-	upstreamproviderDescBalanceAlerted := upstreamproviderFields[13].Descriptor()
+	upstreamproviderDescBalanceAlerted := upstreamproviderFields[14].Descriptor()
 	// upstreamprovider.DefaultBalanceAlerted holds the default value on creation for the balance_alerted field.
 	upstreamprovider.DefaultBalanceAlerted = upstreamproviderDescBalanceAlerted.Default.(bool)
 	// upstreamproviderDescRemark is the schema descriptor for remark field.
-	upstreamproviderDescRemark := upstreamproviderFields[15].Descriptor()
+	upstreamproviderDescRemark := upstreamproviderFields[16].Descriptor()
 	// upstreamprovider.DefaultRemark holds the default value on creation for the remark field.
 	upstreamprovider.DefaultRemark = upstreamproviderDescRemark.Default.(string)
+	upstreamusagecursorMixin := schema.UpstreamUsageCursor{}.Mixin()
+	upstreamusagecursorMixinFields0 := upstreamusagecursorMixin[0].Fields()
+	_ = upstreamusagecursorMixinFields0
+	upstreamusagecursorFields := schema.UpstreamUsageCursor{}.Fields()
+	_ = upstreamusagecursorFields
+	// upstreamusagecursorDescCreatedAt is the schema descriptor for created_at field.
+	upstreamusagecursorDescCreatedAt := upstreamusagecursorMixinFields0[0].Descriptor()
+	// upstreamusagecursor.DefaultCreatedAt holds the default value on creation for the created_at field.
+	upstreamusagecursor.DefaultCreatedAt = upstreamusagecursorDescCreatedAt.Default.(func() time.Time)
+	// upstreamusagecursorDescUpdatedAt is the schema descriptor for updated_at field.
+	upstreamusagecursorDescUpdatedAt := upstreamusagecursorMixinFields0[1].Descriptor()
+	// upstreamusagecursor.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	upstreamusagecursor.DefaultUpdatedAt = upstreamusagecursorDescUpdatedAt.Default.(func() time.Time)
+	// upstreamusagecursor.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	upstreamusagecursor.UpdateDefaultUpdatedAt = upstreamusagecursorDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// upstreamusagecursorDescBackfillDone is the schema descriptor for backfill_done field.
+	upstreamusagecursorDescBackfillDone := upstreamusagecursorFields[3].Descriptor()
+	// upstreamusagecursor.DefaultBackfillDone holds the default value on creation for the backfill_done field.
+	upstreamusagecursor.DefaultBackfillDone = upstreamusagecursorDescBackfillDone.Default.(bool)
+	// upstreamusagecursorDescLastError is the schema descriptor for last_error field.
+	upstreamusagecursorDescLastError := upstreamusagecursorFields[6].Descriptor()
+	// upstreamusagecursor.DefaultLastError holds the default value on creation for the last_error field.
+	upstreamusagecursor.DefaultLastError = upstreamusagecursorDescLastError.Default.(string)
+	// upstreamusagecursorDescLastPartial is the schema descriptor for last_partial field.
+	upstreamusagecursorDescLastPartial := upstreamusagecursorFields[7].Descriptor()
+	// upstreamusagecursor.DefaultLastPartial holds the default value on creation for the last_partial field.
+	upstreamusagecursor.DefaultLastPartial = upstreamusagecursorDescLastPartial.Default.(bool)
+	// upstreamusagecursorDescPartialReason is the schema descriptor for partial_reason field.
+	upstreamusagecursorDescPartialReason := upstreamusagecursorFields[8].Descriptor()
+	// upstreamusagecursor.DefaultPartialReason holds the default value on creation for the partial_reason field.
+	upstreamusagecursor.DefaultPartialReason = upstreamusagecursorDescPartialReason.Default.(string)
+	// upstreamusagecursor.PartialReasonValidator is a validator for the "partial_reason" field. It is called by the builders before save.
+	upstreamusagecursor.PartialReasonValidator = upstreamusagecursorDescPartialReason.Validators[0].(func(string) error)
+	upstreamusagedailyMixin := schema.UpstreamUsageDaily{}.Mixin()
+	upstreamusagedailyMixinFields0 := upstreamusagedailyMixin[0].Fields()
+	_ = upstreamusagedailyMixinFields0
+	upstreamusagedailyFields := schema.UpstreamUsageDaily{}.Fields()
+	_ = upstreamusagedailyFields
+	// upstreamusagedailyDescCreatedAt is the schema descriptor for created_at field.
+	upstreamusagedailyDescCreatedAt := upstreamusagedailyMixinFields0[0].Descriptor()
+	// upstreamusagedaily.DefaultCreatedAt holds the default value on creation for the created_at field.
+	upstreamusagedaily.DefaultCreatedAt = upstreamusagedailyDescCreatedAt.Default.(func() time.Time)
+	// upstreamusagedailyDescUpdatedAt is the schema descriptor for updated_at field.
+	upstreamusagedailyDescUpdatedAt := upstreamusagedailyMixinFields0[1].Descriptor()
+	// upstreamusagedaily.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	upstreamusagedaily.DefaultUpdatedAt = upstreamusagedailyDescUpdatedAt.Default.(func() time.Time)
+	// upstreamusagedaily.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	upstreamusagedaily.UpdateDefaultUpdatedAt = upstreamusagedailyDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// upstreamusagedailyDescScopeType is the schema descriptor for scope_type field.
+	upstreamusagedailyDescScopeType := upstreamusagedailyFields[2].Descriptor()
+	// upstreamusagedaily.ScopeTypeValidator is a validator for the "scope_type" field. It is called by the builders before save.
+	upstreamusagedaily.ScopeTypeValidator = upstreamusagedailyDescScopeType.Validators[0].(func(string) error)
+	// upstreamusagedailyDescScopeKey is the schema descriptor for scope_key field.
+	upstreamusagedailyDescScopeKey := upstreamusagedailyFields[3].Descriptor()
+	// upstreamusagedaily.DefaultScopeKey holds the default value on creation for the scope_key field.
+	upstreamusagedaily.DefaultScopeKey = upstreamusagedailyDescScopeKey.Default.(string)
+	// upstreamusagedaily.ScopeKeyValidator is a validator for the "scope_key" field. It is called by the builders before save.
+	upstreamusagedaily.ScopeKeyValidator = upstreamusagedailyDescScopeKey.Validators[0].(func(string) error)
+	// upstreamusagedailyDescScopeName is the schema descriptor for scope_name field.
+	upstreamusagedailyDescScopeName := upstreamusagedailyFields[4].Descriptor()
+	// upstreamusagedaily.DefaultScopeName holds the default value on creation for the scope_name field.
+	upstreamusagedaily.DefaultScopeName = upstreamusagedailyDescScopeName.Default.(string)
+	// upstreamusagedaily.ScopeNameValidator is a validator for the "scope_name" field. It is called by the builders before save.
+	upstreamusagedaily.ScopeNameValidator = upstreamusagedailyDescScopeName.Validators[0].(func(string) error)
+	// upstreamusagedailyDescRequests is the schema descriptor for requests field.
+	upstreamusagedailyDescRequests := upstreamusagedailyFields[5].Descriptor()
+	// upstreamusagedaily.DefaultRequests holds the default value on creation for the requests field.
+	upstreamusagedaily.DefaultRequests = upstreamusagedailyDescRequests.Default.(int)
+	// upstreamusagedailyDescTokens is the schema descriptor for tokens field.
+	upstreamusagedailyDescTokens := upstreamusagedailyFields[6].Descriptor()
+	// upstreamusagedaily.DefaultTokens holds the default value on creation for the tokens field.
+	upstreamusagedaily.DefaultTokens = upstreamusagedailyDescTokens.Default.(int64)
+	// upstreamusagedailyDescCostUsd is the schema descriptor for cost_usd field.
+	upstreamusagedailyDescCostUsd := upstreamusagedailyFields[7].Descriptor()
+	// upstreamusagedaily.DefaultCostUsd holds the default value on creation for the cost_usd field.
+	upstreamusagedaily.DefaultCostUsd = upstreamusagedailyDescCostUsd.Default.(float64)
 	usagecleanuptaskMixin := schema.UsageCleanupTask{}.Mixin()
 	usagecleanuptaskMixinFields0 := usagecleanuptaskMixin[0].Fields()
 	_ = usagecleanuptaskMixinFields0

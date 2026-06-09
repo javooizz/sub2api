@@ -76,6 +76,10 @@ type Tx struct {
 	UpstreamChangeEvent *UpstreamChangeEventClient
 	// UpstreamProvider is the client for interacting with the UpstreamProvider builders.
 	UpstreamProvider *UpstreamProviderClient
+	// UpstreamUsageCursor is the client for interacting with the UpstreamUsageCursor builders.
+	UpstreamUsageCursor *UpstreamUsageCursorClient
+	// UpstreamUsageDaily is the client for interacting with the UpstreamUsageDaily builders.
+	UpstreamUsageDaily *UpstreamUsageDailyClient
 	// UsageCleanupTask is the client for interacting with the UsageCleanupTask builders.
 	UsageCleanupTask *UsageCleanupTaskClient
 	// UsageLog is the client for interacting with the UsageLog builders.
@@ -254,6 +258,8 @@ func (tx *Tx) init() {
 	tx.TLSFingerprintProfile = NewTLSFingerprintProfileClient(tx.config)
 	tx.UpstreamChangeEvent = NewUpstreamChangeEventClient(tx.config)
 	tx.UpstreamProvider = NewUpstreamProviderClient(tx.config)
+	tx.UpstreamUsageCursor = NewUpstreamUsageCursorClient(tx.config)
+	tx.UpstreamUsageDaily = NewUpstreamUsageDailyClient(tx.config)
 	tx.UsageCleanupTask = NewUsageCleanupTaskClient(tx.config)
 	tx.UsageLog = NewUsageLogClient(tx.config)
 	tx.User = NewUserClient(tx.config)
