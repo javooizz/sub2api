@@ -53,6 +53,7 @@
               <th class="text-left">{{ t('admin.upstream.columns.status') }}</th>
               <th class="text-right">{{ t('admin.upstream.columns.groups') }}</th>
               <th class="text-right">{{ t('admin.upstream.columns.models') }}</th>
+              <th class="text-right">{{ t('admin.upstream.columns.usage') }}</th>
               <th class="text-left">{{ t('admin.upstream.columns.lastRefreshed') }}</th>
               <th class="text-left">{{ t('admin.upstream.columns.actions') }}</th>
             </tr>
@@ -101,6 +102,25 @@
               <!-- 模型数 -->
               <td class="text-right tabular-nums text-sm text-gray-700 dark:text-gray-300">
                 {{ modelCount(p) }}
+              </td>
+
+              <!-- 消耗(本月主显 + 小字今/周/史;无数据显 —) -->
+              <td class="text-right tabular-nums">
+                <template v-if="p.usage_summary">
+                  <div
+                    class="font-semibold text-gray-900 dark:text-gray-100"
+                    :title="usageHint(p)"
+                  >
+                    {{ formatCNY(p.usage_summary.month.cost_cny) }}
+                    <span class="text-[10px] font-normal text-gray-400">{{ t('admin.upstream.usage.month') }}</span>
+                  </div>
+                  <div class="text-[10px] text-gray-400">
+                    {{ t('admin.upstream.usage.today') }} {{ formatCNY(p.usage_summary.today.cost_cny) }} ·
+                    {{ t('admin.upstream.usage.week') }} {{ formatCNY(p.usage_summary.week.cost_cny) }} ·
+                    {{ t('admin.upstream.usage.total') }} {{ formatCNY(p.usage_summary.total.cost_cny) }}
+                  </div>
+                </template>
+                <span v-else class="text-gray-400">—</span>
               </td>
 
               <!-- 最后刷新 -->
@@ -214,6 +234,7 @@ import UpstreamProviderDetailDrawer from '@/components/admin/upstream/UpstreamPr
 import NotifyChannelsDialog from '@/components/admin/upstream/NotifyChannelsDialog.vue'
 import UpstreamSettingsDialog from '@/components/admin/upstream/UpstreamSettingsDialog.vue'
 import UpstreamStatusBadge from '@/components/admin/upstream/UpstreamStatusBadge.vue'
+import { formatCNY, formatUSD, formatRequests } from '@/components/admin/upstream/usageView'
 
 const { t } = useI18n()
 const appStore = useAppStore()
@@ -273,6 +294,13 @@ function modelCount(p: UpstreamProvider): string {
 // 时间格式化
 function formatTime(v: string | null): string {
   return v ? new Date(v).toLocaleString() : '—'
+}
+
+// 列表消耗格悬停提示:本月 $ 额度 + 请求数
+function usageHint(p: UpstreamProvider): string {
+  const m = p.usage_summary?.month
+  if (!m) return ''
+  return `${t('admin.upstream.usage.month')} ${formatUSD(m.cost_usd)} ${t('admin.upstream.usage.quota')} · ${formatRequests(m.requests)} ${t('admin.upstream.usage.requests')}`
 }
 
 // 打开创建
