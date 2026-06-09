@@ -129,13 +129,47 @@
             <div class="flex items-center justify-between">
               <UsageWindowSwitcher v-model="usageWindow" />
             </div>
-            <UsageBreakdownTable
-              :rows="groupRows"
-              :supported="groupSupported"
-              :loading="usageLoading"
-              :name-label="t('admin.upstream.detail.pricing.group')"
-            />
-            <p v-if="provider.type === 'newapi'" class="text-[10px] text-gray-400">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-gray-200 text-left dark:border-gray-700">
+                  <th class="py-2 pr-3 font-medium text-gray-500 dark:text-gray-400">{{ t('admin.upstream.detail.pricing.group') }}</th>
+                  <th class="py-2 pr-3 text-right font-medium text-gray-500 dark:text-gray-400">{{ t('admin.upstream.detail.pricing.ratio') }}</th>
+                  <th class="py-2 pr-3 text-right font-medium text-gray-500 dark:text-gray-400">{{ t('admin.upstream.detail.pricing.modelCount') }}</th>
+                  <th class="py-2 text-right font-medium text-gray-500 dark:text-gray-400">{{ t('admin.upstream.usage.spent') }}</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                <tr v-for="g in groups" :key="g.name">
+                  <td class="py-2 pr-3 text-gray-900 dark:text-gray-100">
+                    {{ g.name }}
+                    <span
+                      v-if="recentlyChangedGroups.has(g.name)"
+                      class="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-amber-500"
+                      :title="t('admin.upstream.detail.pricing.changedRecently')"
+                    />
+                  </td>
+                  <td class="py-2 pr-3 text-right tabular-nums text-gray-900 dark:text-gray-100">{{ g.ratio ?? '—' }}</td>
+                  <td class="py-2 pr-3 text-right tabular-nums text-gray-900 dark:text-gray-100">{{ g.models?.length ?? 0 }}</td>
+                  <td class="py-2 text-right tabular-nums">
+                    <span v-if="groupSupported" class="font-semibold text-gray-900 dark:text-gray-100">{{ formatCNY(groupUsageByName.get(g.name)?.cost_cny ?? 0) }}</span>
+                    <span v-else class="text-gray-400">—</span>
+                  </td>
+                </tr>
+                <tr v-if="!groups.length">
+                  <td colspan="4" class="py-8 text-center text-sm text-gray-400">—</td>
+                </tr>
+              </tbody>
+            </table>
+            <!-- sub2api 不支持分组消耗 -->
+            <div
+              v-if="!groupSupported"
+              class="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+              role="status"
+            >
+              {{ t('admin.upstream.usage.unsupportedGroup') }}
+            </div>
+            <!-- newapi 改名提示 -->
+            <p v-else-if="provider.type === 'newapi'" class="text-[10px] text-gray-400">
               {{ t('admin.upstream.usage.renamedGroupNote') }}
             </p>
           </div>
@@ -319,7 +353,7 @@ import UpstreamStatusBadge from './UpstreamStatusBadge.vue'
 import UsageSummaryCards from './UsageSummaryCards.vue'
 import UsageWindowSwitcher from './UsageWindowSwitcher.vue'
 import UsageBreakdownTable from './UsageBreakdownTable.vue'
-import { mergeUsageRows } from './usageView'
+import { mergeUsageRows, formatCNY } from './usageView'
 import type { UsageWindow, MergedUsageRow, LiveScopeItem } from './usageView'
 import { upstreamProvidersAPI } from '@/api/admin'
 import type {
@@ -370,7 +404,7 @@ const usageLoading = ref(false)
 
 const keyRows = ref<MergedUsageRow[]>([])
 const keySupported = ref(true)
-const groupRows = ref<MergedUsageRow[]>([])
+const groupUsageByName = ref(new Map<string, { cost_cny: number; cost_usd: number; requests: number }>())
 const groupSupported = ref(true)
 
 // ---- computed ----
@@ -384,6 +418,18 @@ const groupOptions = computed(() => [
 const balanceText = computed(() => {
   const b = props.provider?.latest_snapshot?.balance
   return b == null ? '—' : `$${b.toFixed(2)}`
+})
+
+// R2.4: snake_case — ev.detail?.group;近 7 天变更的分组高亮
+const recentlyChangedGroups = computed(() => {
+  const cutoff = Date.now() - 7 * 86_400_000
+  const set = new Set<string>()
+  for (const ev of events.value) {
+    if (new Date(ev.created_at).getTime() < cutoff) continue
+    const g = ev.detail?.group
+    if (typeof g === 'string') set.add(g)
+  }
+  return set
 })
 
 // R2.2: 截图文件名从 last_error 中提取
@@ -406,7 +452,7 @@ watch(
     breakdownCache.value = new Map()
     usageWindow.value = 'month'
     keyRows.value = []
-    groupRows.value = []
+    groupUsageByName.value = new Map()
     keySupported.value = true
     groupSupported.value = true
     // events 概览页就要（近 7 天高亮依赖），并行拉
@@ -496,18 +542,17 @@ async function loadKeyUsage(id: number, reloadTokens = false) {
   }
 }
 
-// 分组明细:实时 groups ∪ group breakdown(sub2api → supported:false)
+// 分组消耗:按组名取 breakdown 消耗(供价格表查;sub2api → supported:false)
 async function loadGroupUsage(id: number) {
   usageLoading.value = true
   try {
     const bd = await fetchBreakdown(id, 'group', usageWindow.value)
     groupSupported.value = bd?.supported ?? true
-    const live: LiveScopeItem[] = groups.value.map((g) => ({
-      scope_key: g.name,
-      scope_name: g.name,
-      meta: g.ratio != null ? `×${g.ratio}` : undefined,
-    }))
-    groupRows.value = groupSupported.value ? mergeUsageRows(live, bd?.items ?? []) : []
+    const m = new Map<string, { cost_cny: number; cost_usd: number; requests: number }>()
+    for (const it of bd?.items ?? []) {
+      m.set(it.scope_key, { cost_cny: it.cost_cny, cost_usd: it.cost_usd, requests: it.requests })
+    }
+    groupUsageByName.value = m
   } finally {
     usageLoading.value = false
   }
