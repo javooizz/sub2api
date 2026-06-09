@@ -6905,6 +6905,8 @@ export default {
         refreshInterval: '刷新间隔(分钟)',
         balanceThreshold: '余额告警阈值(USD)',
         balanceThresholdPlaceholder: '留空不告警',
+        rechargeRatio: '充值比例(1:N,¥1 充得 $N 额度)',
+        rechargeRatioPlaceholder: '默认 1(即 1:1)',
         notifyOnPriceChange: '价格/模型变动时通知',
         remark: '备注',
         testConnection: '测试连接',
@@ -6921,6 +6923,7 @@ export default {
           apiBaseUrlInvalid: 'API 地址需为合法的 http/https URL',
           credentialsRequired: '账密与 Access Token 至少填一组',
           intervalRange: '刷新间隔需在 5–1440 分钟之间',
+          rechargeRatioPositive: '充值比例需大于 0',
         },
       },
       detail: {

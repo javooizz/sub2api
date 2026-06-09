@@ -43,6 +43,8 @@ export interface UpstreamProvider {
   balance_threshold: number | null
   notify_on_price_change: boolean
   refresh_interval_minutes: number
+  recharge_ratio: number
+  usage_summary?: UsageSummary | null
   latest_snapshot?: UpstreamSnapshot | null
   last_refreshed_at: string | null
   last_error: string
@@ -60,6 +62,7 @@ export interface UpstreamProviderInput {
   balance_threshold?: number | null
   notify_on_price_change?: boolean
   refresh_interval_minutes?: number
+  recharge_ratio?: number
   remark?: string
 }
 
@@ -95,6 +98,36 @@ export interface UpstreamManagementSettings {
   browser_cdp_url: string
   proxy_url: string
   allow_private_webhook: boolean
+}
+
+export interface UsageWindowStat {
+  cost_usd: number
+  cost_cny: number
+  requests: number
+}
+export interface UsageSummary {
+  today: UsageWindowStat
+  week: UsageWindowStat
+  month: UsageWindowStat
+  total: UsageWindowStat
+  backfilled_from?: string | null
+  partial: boolean
+  partial_reason?: string
+}
+export interface UsageBreakdownRow {
+  scope_key: string
+  scope_name: string
+  deleted: boolean
+  cost_usd: number
+  cost_cny: number
+  requests: number
+  tokens: number
+}
+export interface UsageBreakdown {
+  scope: 'key' | 'group' | 'model'
+  window: string
+  supported: boolean
+  items: UsageBreakdownRow[]
 }
 
 // ---- API (R3.1 解包写法: const {data} = await ...; return data) ----
@@ -202,6 +235,14 @@ export async function updateSettings(
   return data
 }
 
+export async function usage(
+  id: number,
+  params: { scope: 'key' | 'group' | 'model'; window?: 'today' | 'week' | 'month' | 'total' },
+): Promise<UsageBreakdown> {
+  const { data } = await apiClient.get<UsageBreakdown>(`/admin/upstream-providers/${id}/usage`, { params })
+  return data
+}
+
 const upstreamProvidersAPI = {
   list,
   getById,
@@ -218,6 +259,7 @@ const upstreamProvidersAPI = {
   fetchDiagnostics,
   getSettings,
   updateSettings,
+  usage,
 }
 
 export { upstreamProvidersAPI }

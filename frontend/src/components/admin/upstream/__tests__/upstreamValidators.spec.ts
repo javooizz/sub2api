@@ -17,7 +17,7 @@ describe('validateProviderForm', () => {
   const base = {
     name: 'demo', type: 'newapi' as const, site_url: 'https://a.com',
     api_base_url: '', username: '', password: '', access_token: 'tok',
-    refresh_interval_minutes: 60,
+    refresh_interval_minutes: 60, recharge_ratio: 1,
   }
   it('合法表单通过', () => {
     expect(validateProviderForm(base, false)).toEqual({})
@@ -44,5 +44,9 @@ describe('validateProviderForm', () => {
   it('刷新间隔范围 5–1440', () => {
     expect(validateProviderForm({ ...base, refresh_interval_minutes: 1 }, false).refresh_interval_minutes).toBe('intervalRange')
     expect(validateProviderForm({ ...base, refresh_interval_minutes: 2000 }, false).refresh_interval_minutes).toBe('intervalRange')
+  })
+  it('rejects non-positive recharge_ratio', () => {
+    const errs = validateProviderForm({ ...base, recharge_ratio: 0 }, false)
+    expect(errs.recharge_ratio).toBe('rechargeRatioPositive')
   })
 })

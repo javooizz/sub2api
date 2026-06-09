@@ -6750,6 +6750,8 @@ export default {
         refreshInterval: 'Refresh interval (minutes)',
         balanceThreshold: 'Balance alert threshold (USD)',
         balanceThresholdPlaceholder: 'Leave blank to disable',
+        rechargeRatio: 'Recharge ratio (1:N, ¥1 buys $N credit)',
+        rechargeRatioPlaceholder: 'Default 1 (i.e. 1:1)',
         notifyOnPriceChange: 'Notify on price / model changes',
         remark: 'Remark',
         testConnection: 'Test Connection',
@@ -6766,6 +6768,7 @@ export default {
           apiBaseUrlInvalid: 'API base URL must be a valid http/https URL',
           credentialsRequired: 'At least one of password or access token is required',
           intervalRange: 'Refresh interval must be between 5 and 1440 minutes',
+          rechargeRatioPositive: 'Recharge ratio must be greater than 0',
         },
       },
       detail: {

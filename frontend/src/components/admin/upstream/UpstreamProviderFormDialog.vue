@@ -118,6 +118,25 @@
             class="input"
           />
         </div>
+        <div>
+          <label class="input-label">{{ t('admin.upstream.form.rechargeRatio') }}</label>
+          <input
+            v-model.number="form.recharge_ratio"
+            type="number"
+            step="0.01"
+            min="0.01"
+            :placeholder="t('admin.upstream.form.rechargeRatioPlaceholder')"
+            class="input"
+            :class="{ 'border-red-500': errors.recharge_ratio }"
+          />
+          <p
+            v-if="errors.recharge_ratio"
+            class="mt-1 text-xs text-red-600 dark:text-red-400"
+            role="alert"
+          >
+            {{ errText(errors.recharge_ratio) }}
+          </p>
+        </div>
       </div>
 
       <div class="flex items-center gap-2">
@@ -206,6 +225,7 @@ const form = reactive({
   balance_threshold: null as number | null,
   notify_on_price_change: true,
   refresh_interval_minutes: 60,
+  recharge_ratio: 1,
   remark: '',
 })
 
@@ -244,6 +264,7 @@ watch(
     form.balance_threshold = p?.balance_threshold ?? null
     form.notify_on_price_change = p?.notify_on_price_change ?? true
     form.refresh_interval_minutes = p?.refresh_interval_minutes ?? 60
+    form.recharge_ratio = p?.recharge_ratio ?? 1
     form.remark = p?.remark ?? ''
   }
 )
@@ -271,6 +292,7 @@ function buildInput(): UpstreamProviderInput {
     balance_threshold: form.balance_threshold,
     notify_on_price_change: form.notify_on_price_change,
     refresh_interval_minutes: form.refresh_interval_minutes,
+    recharge_ratio: form.recharge_ratio,
     remark: form.remark,
   }
 }

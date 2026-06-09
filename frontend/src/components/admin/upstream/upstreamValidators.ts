@@ -10,10 +10,11 @@ export interface ProviderFormShape {
   password: string
   access_token: string
   refresh_interval_minutes: number
+  recharge_ratio: number
 }
 
 export type ProviderFormErrors = Partial<
-  Record<'name' | 'site_url' | 'api_base_url' | 'credentials' | 'refresh_interval_minutes', string>
+  Record<'name' | 'site_url' | 'api_base_url' | 'credentials' | 'refresh_interval_minutes' | 'recharge_ratio', string>
 >
 
 export function isValidHttpURL(value: string): boolean {
@@ -41,6 +42,9 @@ export function validateProviderForm(form: ProviderFormShape, isEdit: boolean): 
   if (!isEdit && !hasPasswordPair && !hasToken) errors.credentials = 'credentialsRequired'
   if (form.refresh_interval_minutes < 5 || form.refresh_interval_minutes > 1440) {
     errors.refresh_interval_minutes = 'intervalRange'
+  }
+  if (!(form.recharge_ratio > 0)) {
+    errors.recharge_ratio = 'rechargeRatioPositive'
   }
   return errors
 }
