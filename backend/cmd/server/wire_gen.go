@@ -257,7 +257,11 @@ func initializeApplication(buildInfo handler.BuildInfo) (*Application, error) {
 	notifyDispatcher := service.NewNotifyDispatcher(notifyChannelRepository, v)
 	browserSolver := service.ProvideBrowserSolver(settingService, configConfig)
 	upstreamMonitorService := service.ProvideUpstreamMonitor(upstreamProviderRepository, v2, notifyDispatcher, browserSolver, settingService)
-	upstreamProviderHandler := admin.NewUpstreamProviderHandler(upstreamProviderService, upstreamMonitorService, settingService, configConfig)
+	upstreamUsageRepository := repository.NewUpstreamUsageRepository(client)
+	upstreamUsageService := service.ProvideUpstreamUsageService(upstreamUsageRepository, upstreamProviderRepository, v2)
+	v3 := service.ProvideUpstreamUsageFetchers()
+	upstreamUsageCollector := service.ProvideUpstreamUsageCollector(upstreamUsageRepository, upstreamProviderRepository, v3)
+	upstreamProviderHandler := admin.NewUpstreamProviderHandler(upstreamProviderService, upstreamMonitorService, settingService, configConfig, upstreamUsageService, upstreamUsageCollector)
 	adminHandlers := handler.ProvideAdminHandlers(dashboardHandler, adminUserHandler, groupHandler, accountHandler, adminAnnouncementHandler, dataManagementHandler, backupHandler, oAuthHandler, openAIOAuthHandler, geminiOAuthHandler, antigravityOAuthHandler, proxyHandler, adminRedeemHandler, promoHandler, settingHandler, opsHandler, systemHandler, adminSubscriptionHandler, adminUsageHandler, userAttributeHandler, errorPassthroughHandler, tlsFingerprintProfileHandler, adminAPIKeyHandler, scheduledTestHandler, channelHandler, channelMonitorHandler, channelMonitorRequestTemplateHandler, contentModerationHandler, paymentHandler, affiliateHandler, extensionConfigHandler, modelPlazaHandler, notifyChannelHandler, upstreamProviderHandler)
 	usageRecordWorkerPool := service.NewUsageRecordWorkerPool(configConfig)
 	userMsgQueueCache := repository.NewUserMsgQueueCache(redisClient)
@@ -291,10 +295,10 @@ func initializeApplication(buildInfo handler.BuildInfo) (*Application, error) {
 	paymentOrderExpiryService := service.ProvidePaymentOrderExpiryService(paymentService, leaderLockCache, db)
 	channelMonitorRunner := service.ProvideChannelMonitorRunner(channelMonitorService, settingService)
 	userPlatformQuotaUsageFlusher := service.ProvideUserPlatformQuotaUsageFlusher(configConfig, billingCache, serviceUserPlatformQuotaRepository, timingWheelService)
-	v3 := provideCleanup(client, redisClient, opsMetricsCollector, opsAggregationService, opsAlertEvaluatorService, opsCleanupService, opsScheduledReportService, opsSystemLogSink, schedulerSnapshotService, tokenRefreshService, accountExpiryService, subscriptionExpiryService, usageCleanupService, idempotencyCleanupService, pricingService, emailQueueService, billingCacheService, usageRecordWorkerPool, subscriptionService, oAuthService, openAIOAuthService, geminiOAuthService, antigravityOAuthService, openAIGatewayService, scheduledTestRunnerService, backupService, paymentOrderExpiryService, channelMonitorRunner, userPlatformQuotaUsageFlusher)
+	v4 := provideCleanup(client, redisClient, opsMetricsCollector, opsAggregationService, opsAlertEvaluatorService, opsCleanupService, opsScheduledReportService, opsSystemLogSink, schedulerSnapshotService, tokenRefreshService, accountExpiryService, subscriptionExpiryService, usageCleanupService, idempotencyCleanupService, pricingService, emailQueueService, billingCacheService, usageRecordWorkerPool, subscriptionService, oAuthService, openAIOAuthService, geminiOAuthService, antigravityOAuthService, openAIGatewayService, scheduledTestRunnerService, backupService, paymentOrderExpiryService, channelMonitorRunner, userPlatformQuotaUsageFlusher)
 	application := &Application{
 		Server:  httpServer,
-		Cleanup: v3,
+		Cleanup: v4,
 	}
 	return application, nil
 }

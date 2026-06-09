@@ -2,6 +2,7 @@ package admin
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"path/filepath"
 	"regexp"
@@ -22,6 +23,8 @@ type UpstreamProviderHandler struct {
 	monitor        *service.UpstreamMonitorService
 	settingService *service.SettingService
 	dataDir        string
+	usage          *service.UpstreamUsageService
+	collector      *service.UpstreamUsageCollector
 }
 
 // NewUpstreamProviderHandler 构造函数，wire 注入。
@@ -30,12 +33,16 @@ func NewUpstreamProviderHandler(
 	monitor *service.UpstreamMonitorService,
 	settingService *service.SettingService,
 	cfg *config.Config,
+	usage *service.UpstreamUsageService,
+	collector *service.UpstreamUsageCollector,
 ) *UpstreamProviderHandler {
 	return &UpstreamProviderHandler{
 		svc:            svc,
 		monitor:        monitor,
 		settingService: settingService,
 		dataDir:        cfg.Pricing.DataDir,
+		usage:          usage,
+		collector:      collector,
 	}
 }
 
@@ -50,6 +57,7 @@ type upstreamProviderRequest struct {
 	BalanceThreshold       *float64       `json:"balance_threshold"`
 	NotifyOnPriceChange    *bool          `json:"notify_on_price_change"`
 	RefreshIntervalMinutes int            `json:"refresh_interval_minutes"`
+	RechargeRatio          *float64       `json:"recharge_ratio"`
 	Remark                 string         `json:"remark"`
 }
 
@@ -57,6 +65,10 @@ func (r *upstreamProviderRequest) toService() *service.UpstreamProvider {
 	notifyPrice := true
 	if r.NotifyOnPriceChange != nil {
 		notifyPrice = *r.NotifyOnPriceChange
+	}
+	ratio := 1.0
+	if r.RechargeRatio != nil {
+		ratio = *r.RechargeRatio
 	}
 	creds := r.Credentials
 	if creds == nil {
@@ -69,6 +81,7 @@ func (r *upstreamProviderRequest) toService() *service.UpstreamProvider {
 		BalanceThreshold:       r.BalanceThreshold,
 		NotifyOnPriceChange:    notifyPrice,
 		RefreshIntervalMinutes: r.RefreshIntervalMinutes,
+		RechargeRatio:          ratio,
 		Remark:                 r.Remark,
 	}
 }
@@ -91,6 +104,8 @@ type upstreamProviderResponse struct {
 	LastError              string                           `json:"last_error"`
 	ConsecutiveFailures    int                              `json:"consecutive_failures"`
 	Remark                 string                           `json:"remark"`
+	RechargeRatio          float64                          `json:"recharge_ratio"`
+	UsageSummary           *service.UsageSummary            `json:"usage_summary,omitempty"`
 	CreatedAt              time.Time                        `json:"created_at"`
 }
 
@@ -116,6 +131,7 @@ func toUpstreamProviderResponse(p *service.UpstreamProvider, withSnapshot bool) 
 		LastError:              p.LastError,
 		ConsecutiveFailures:    p.ConsecutiveFailures,
 		Remark:                 p.Remark,
+		RechargeRatio:          p.RechargeRatio,
 		CreatedAt:              p.CreatedAt,
 	}
 	if withSnapshot {
@@ -169,9 +185,15 @@ func (h *UpstreamProviderHandler) List(c *gin.Context) {
 		response.ErrorFrom(c, err)
 		return
 	}
+	summaries, _ := h.usage.SummariesBatch(c.Request.Context(), providers)
 	out := make([]upstreamProviderResponse, 0, len(providers))
 	for _, p := range providers {
-		out = append(out, toUpstreamProviderResponse(p, false))
+		r := toUpstreamProviderResponse(p, false)
+		if s, ok := summaries[p.ID]; ok {
+			sc := s
+			r.UsageSummary = &sc
+		}
+		out = append(out, r)
 	}
 	response.Success(c, out)
 }
@@ -187,7 +209,14 @@ func (h *UpstreamProviderHandler) Get(c *gin.Context) {
 		response.ErrorFrom(c, err)
 		return
 	}
-	response.Success(c, toUpstreamProviderResponse(p, true))
+	r := toUpstreamProviderResponse(p, true)
+	if summaries, err := h.usage.SummariesBatch(c.Request.Context(), []*service.UpstreamProvider{p}); err == nil {
+		if s, ok := summaries[p.ID]; ok {
+			sc := s
+			r.UsageSummary = &sc
+		}
+	}
+	response.Success(c, r)
 }
 
 // Create POST /admin/upstream-providers
@@ -195,6 +224,10 @@ func (h *UpstreamProviderHandler) Create(c *gin.Context) {
 	var req upstreamProviderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
+		return
+	}
+	if req.RechargeRatio != nil && *req.RechargeRatio <= 0 {
+		response.BadRequest(c, "recharge_ratio must be > 0")
 		return
 	}
 	created, err := h.svc.Create(c.Request.Context(), req.toService())
@@ -214,6 +247,10 @@ func (h *UpstreamProviderHandler) Update(c *gin.Context) {
 	var req upstreamProviderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
+		return
+	}
+	if req.RechargeRatio != nil && *req.RechargeRatio <= 0 {
+		response.BadRequest(c, "recharge_ratio must be > 0")
 		return
 	}
 	updated, err := h.svc.Update(c.Request.Context(), id, req.toService())
@@ -259,6 +296,11 @@ func (h *UpstreamProviderHandler) Refresh(c *gin.Context) {
 		}
 		response.BadRequest(c, err.Error())
 		return
+	}
+	if h.collector != nil {
+		if err := h.collector.CollectProvider(c.Request.Context(), id); err != nil {
+			slog.Warn("upstream: 手动刷新后采集消耗失败", "provider_id", id, "error", err)
+		}
 	}
 	p, gerr := h.svc.Get(c.Request.Context(), id)
 	if gerr != nil {
@@ -380,6 +422,28 @@ func (h *UpstreamProviderHandler) Events(c *gin.Context) {
 		dtos = append(dtos, toEventDTO(e))
 	}
 	response.Success(c, dtos)
+}
+
+// Usage GET /admin/upstream-providers/:id/usage?scope=&window=
+func (h *UpstreamProviderHandler) Usage(c *gin.Context) {
+	id, ok := parseIDParam(c, "id")
+	if !ok {
+		return
+	}
+	scope := c.DefaultQuery("scope", service.UsageScopeKey)
+	window := c.DefaultQuery("window", "month")
+	switch scope {
+	case service.UsageScopeKey, service.UsageScopeGroup, service.UsageScopeModel:
+	default:
+		response.BadRequest(c, "invalid scope")
+		return
+	}
+	bd, err := h.usage.Breakdown(c.Request.Context(), id, scope, window)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, bd)
 }
 
 // ─────────────────── 诊断截图 ───────────────────
