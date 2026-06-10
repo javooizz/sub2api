@@ -40,6 +40,7 @@ type AdminHandlers struct {
 	ModelPlaza             *admin.ModelPlazaHandler
 	NotifyChannel          *admin.NotifyChannelHandler
 	UpstreamProvider       *admin.UpstreamProviderHandler
+	Compliance             *admin.ComplianceHandler
 }
 
 // Handlers contains all HTTP handlers

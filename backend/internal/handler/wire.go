@@ -43,6 +43,7 @@ func ProvideAdminHandlers(
 	modelPlazaHandler *admin.ModelPlazaHandler,
 	notifyChannel *admin.NotifyChannelHandler,
 	upstreamProvider *admin.UpstreamProviderHandler,
+	complianceHandler *admin.ComplianceHandler,
 ) *AdminHandlers {
 	return &AdminHandlers{
 		Dashboard:              dashboardHandler,
@@ -79,6 +80,7 @@ func ProvideAdminHandlers(
 		ModelPlaza:             modelPlazaHandler,
 		NotifyChannel:          notifyChannel,
 		UpstreamProvider:       upstreamProvider,
+		Compliance:             complianceHandler,
 	}
 }
 
@@ -201,6 +203,7 @@ var ProviderSet = wire.NewSet(
 	admin.NewPaymentHandler,
 	admin.NewAffiliateHandler,
 	admin.NewExtensionConfigHandler,
+	admin.NewComplianceHandler,
 
 	// AdminHandlers and Handlers constructors
 	ProvideAdminHandlers,

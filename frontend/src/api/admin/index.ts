@@ -33,6 +33,7 @@ import affiliatesAPI from './affiliates'
 import riskControlAPI from './riskControl'
 import upstreamProvidersAPI from './upstreamProviders'
 import notifyChannelsAPI from './notifyChannels'
+import adminComplianceAPI from './compliance'
 
 /**
  * Unified admin API object for convenient access
@@ -67,7 +68,8 @@ export const adminAPI = {
   affiliates: affiliatesAPI,
   riskControl: riskControlAPI,
   upstreamProviders: upstreamProvidersAPI,
-  notifyChannels: notifyChannelsAPI
+  notifyChannels: notifyChannelsAPI,
+  compliance: adminComplianceAPI
 }
 
 export {
@@ -100,7 +102,8 @@ export {
   affiliatesAPI,
   riskControlAPI,
   upstreamProvidersAPI,
-  notifyChannelsAPI
+  notifyChannelsAPI,
+  adminComplianceAPI
 }
 
 export default adminAPI

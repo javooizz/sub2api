@@ -137,6 +137,8 @@ docs/*
 !docs/ADMIN_PAYMENT_INTEGRATION_API.md
 !docs/上游管理/
 !docs/上游管理/**
+!docs/legal/
+!docs/legal/*.md
 .serena/
 .codex/
 frontend/coverage/
