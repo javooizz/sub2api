@@ -11,8 +11,12 @@ import (
 )
 
 const (
-	newapiUsagePageSize = 100
-	newapiUsageMaxPages = 200
+	newapiUsagePageSize       = 100
+	newapiUsageMaxPages       = 200
+	newapiUsagePageTimeout    = 30 * time.Second // 单次日志/状态请求超时(每页独立,替代整次共用)
+	newapiUsageOverallTimeout = 5 * time.Minute  // 整次采集安全上限(防翻页失控)
+	newapiLogTypeConsume      = 2                // 消费日志
+	newapiLogTypeRefund       = 6                // 退款日志
 )
 
 // newapiLogEntry 对应 new-api model.Log 的采集所需字段。
@@ -60,11 +64,11 @@ func normalizeNewapiUsage(logs []newapiLogEntry, quotaPerUnit float64) []Upstrea
 		a.tokens += toks
 	}
 	for _, l := range logs {
-		if l.Type != 2 && l.Type != 6 {
+		if l.Type != newapiLogTypeConsume && l.Type != newapiLogTypeRefund {
 			continue
 		}
 		sign := 1.0
-		if l.Type == 6 {
+		if l.Type == newapiLogTypeRefund {
 			sign = -1.0
 		}
 		cost := sign * l.Quota / quotaPerUnit
@@ -91,9 +95,12 @@ func normalizeNewapiUsage(logs []newapiLogEntry, quotaPerUnit float64) []Upstrea
 	return out
 }
 
-// FetchUsageDaily 翻 /api/log/self(type∈{2,6})→ 归一化。
+// FetchUsageDaily 翻 /api/log/self(仅消费 type=2 与退款 type=6)→ 归一化。
+// 每个 HTTP 请求独立超时(newapiUsagePageTimeout),不再整次共用一个超时:
+// 日志量大的上游单查很慢,整次 60s 易在 p=1 就 awaiting headers 超时致一条都采不到;
+// 改为每页独立超时 + 整次安全上限,并按 type 精确拉取(只消费/退款),缩小上游扫描面。
 func (a *NewAPIAdapter) FetchUsageDaily(ctx context.Context, p *UpstreamProvider, sinceDay time.Time) (UpstreamUsageResult, error) {
-	ctx, cancel := context.WithTimeout(ctx, upstreamSnapshotTimeout)
+	ctx, cancel := context.WithTimeout(ctx, newapiUsageOverallTimeout)
 	defer cancel()
 	client, err := newUpstreamHTTPClient(p)
 	if err != nil {
@@ -102,9 +109,13 @@ func (a *NewAPIAdapter) FetchUsageDaily(ctx context.Context, p *UpstreamProvider
 	today := timezone.Today()
 	res := UpstreamUsageResult{CoveredDays: DayRange{From: sinceDay, To: today}}
 
+	// quota_per_unit 探测(独立超时,不与翻页互相挤占)
 	quotaPerUnit := newapiDefaultQuotaPerUnit
+	sctx, scancel := context.WithTimeout(ctx, newapiUsagePageTimeout)
 	var statusEnv newapiEnvelope
-	if _, err := client.doJSON(ctx, http.MethodGet, "/api/status", nil, nil, &statusEnv); err == nil && statusEnv.Success {
+	_, statusErr := client.doJSON(sctx, http.MethodGet, "/api/status", nil, nil, &statusEnv)
+	scancel()
+	if statusErr == nil && statusEnv.Success {
 		var st struct {
 			QuotaPerUnit float64 `json:"quota_per_unit"`
 		}
@@ -119,29 +130,36 @@ func (a *NewAPIAdapter) FetchUsageDaily(ctx context.Context, p *UpstreamProvider
 
 	startTs := sinceDay.Unix()
 	var all []newapiLogEntry
-	for page := 1; page <= newapiUsageMaxPages; page++ {
-		var env newapiEnvelope
-		path := "/api/log/self?type=0&start_timestamp=" + strconv.FormatInt(startTs, 10) +
-			"&p=" + strconv.Itoa(page) + "&page_size=" + strconv.Itoa(newapiUsagePageSize)
-		if _, err := client.doJSON(ctx, http.MethodGet, path, nil, a.authHeaders(p), &env); err != nil {
-			return UpstreamUsageResult{}, err
-		}
-		if !env.Success {
-			res.Partial, res.Reason = true, "日志分页失败"
-			break
-		}
-		var wrap struct {
-			Items []newapiLogEntry `json:"items"`
-		}
-		var batch []newapiLogEntry
-		if json.Unmarshal(env.Data, &wrap) == nil && wrap.Items != nil {
-			batch = wrap.Items
-		} else {
-			_ = json.Unmarshal(env.Data, &batch)
-		}
-		all = append(all, batch...)
-		if len(batch) < newapiUsagePageSize {
-			break
+	// 仅采消费(2)与退款(6):缩小上游扫描面、降低单查超时概率(消耗口径取 type∈{2,6})。
+	for _, logType := range []int{newapiLogTypeConsume, newapiLogTypeRefund} {
+		for page := 1; page <= newapiUsageMaxPages; page++ {
+			pctx, pcancel := context.WithTimeout(ctx, newapiUsagePageTimeout)
+			var env newapiEnvelope
+			path := "/api/log/self?type=" + strconv.Itoa(logType) +
+				"&start_timestamp=" + strconv.FormatInt(startTs, 10) +
+				"&p=" + strconv.Itoa(page) + "&page_size=" + strconv.Itoa(newapiUsagePageSize)
+			_, perr := client.doJSON(pctx, http.MethodGet, path, nil, a.authHeaders(p), &env)
+			pcancel()
+			if perr != nil {
+				return UpstreamUsageResult{}, perr
+			}
+			if !env.Success {
+				res.Partial, res.Reason = true, "日志分页失败"
+				break
+			}
+			var wrap struct {
+				Items []newapiLogEntry `json:"items"`
+			}
+			var batch []newapiLogEntry
+			if json.Unmarshal(env.Data, &wrap) == nil && wrap.Items != nil {
+				batch = wrap.Items
+			} else {
+				_ = json.Unmarshal(env.Data, &batch)
+			}
+			all = append(all, batch...)
+			if len(batch) < newapiUsagePageSize {
+				break
+			}
 		}
 	}
 	res.Entries = normalizeNewapiUsage(all, quotaPerUnit)

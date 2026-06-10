@@ -2,10 +2,10 @@ package repository
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
-	"github.com/Wei-Shaw/sub2api/ent/account"
 	"github.com/Wei-Shaw/sub2api/ent/upstreamchangeevent"
 	"github.com/Wei-Shaw/sub2api/ent/upstreamprovider"
 	upstreamusagecursor "github.com/Wei-Shaw/sub2api/ent/upstreamusagecursor"
@@ -300,7 +300,7 @@ func (r *upstreamProviderRepository) MarkEventsNotified(ctx context.Context, eve
 
 // ─────────────────────────── UpstreamAccountLister ───────────────────────────
 
-// upstreamAccountListerImpl 列出 type=upstream 的账号(关联帐号匹配用,spec §9)。
+// upstreamAccountListerImpl 列出"配了 base_url"的账号(关联帐号匹配用)。
 type upstreamAccountListerImpl struct {
 	client *dbent.Client
 }
@@ -310,17 +310,19 @@ func NewUpstreamAccountLister(client *dbent.Client) service.UpstreamAccountListe
 	return &upstreamAccountListerImpl{client: client}
 }
 
-// ListUpstreamTypeAccounts 返回所有 type=upstream 的账号，credentials["base_url"] 映射为 BaseURL。
-func (r *upstreamAccountListerImpl) ListUpstreamTypeAccounts(ctx context.Context) ([]service.UpstreamLinkedAccount, error) {
-	rows, err := r.client.Account.Query().
-		Where(account.TypeEQ(domain.AccountTypeUpstream)).
-		All(ctx)
+// ListLinkableAccounts 返回所有配置了 credentials["base_url"] 的账号(不限类型:apikey/upstream/oauth 等)。
+// 凡 base_url 指向某上游的账号都是关联候选,由 service 层按 URL 精确规则(scheme/host/路径段,含 www 归一)筛出实际关联者。
+func (r *upstreamAccountListerImpl) ListLinkableAccounts(ctx context.Context) ([]service.UpstreamLinkedAccount, error) {
+	rows, err := r.client.Account.Query().All(ctx)
 	if err != nil {
 		return nil, err
 	}
 	out := make([]service.UpstreamLinkedAccount, 0, len(rows))
 	for _, a := range rows {
 		baseURL, _ := a.Credentials["base_url"].(string)
+		if strings.TrimSpace(baseURL) == "" {
+			continue // 无 base_url 的账号不可能关联到任何上游
+		}
 		out = append(out, service.UpstreamLinkedAccount{
 			ID:       a.ID,
 			Name:     a.Name,

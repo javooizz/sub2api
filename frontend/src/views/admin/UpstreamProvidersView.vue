@@ -43,8 +43,9 @@
           <p class="text-sm">{{ t('admin.upstream.empty') }}</p>
         </div>
 
-        <!-- 表格 -->
-        <table v-else class="data-table w-full">
+        <!-- 表格（.table-wrapper 提供横向滚动，避免被 .table-scroll-container 的 overflow-hidden 裁掉操作列） -->
+        <div v-else class="table-wrapper">
+          <table class="data-table w-full">
           <thead>
             <tr>
               <th class="text-left">{{ t('admin.upstream.columns.name') }}</th>
@@ -104,20 +105,20 @@
                 {{ modelCount(p) }}
               </td>
 
-              <!-- 消耗(本月主显 + 小字今/周/史;无数据显 —) -->
+              <!-- 消耗(本月 $ 主显 + 小字今/周/史 $;hover 看 ¥实付与请求;无数据显 —) -->
               <td class="text-right tabular-nums">
                 <template v-if="p.usage_summary">
                   <div
                     class="font-semibold text-gray-900 dark:text-gray-100"
                     :title="usageHint(p)"
                   >
-                    {{ formatCNY(p.usage_summary.month.cost_cny) }}
+                    {{ formatUSD(p.usage_summary.month.cost_usd) }}
                     <span class="text-[10px] font-normal text-gray-400">{{ t('admin.upstream.usage.month') }}</span>
                   </div>
                   <div class="text-[10px] text-gray-400">
-                    {{ t('admin.upstream.usage.today') }} {{ formatCNY(p.usage_summary.today.cost_cny) }} ·
-                    {{ t('admin.upstream.usage.week') }} {{ formatCNY(p.usage_summary.week.cost_cny) }} ·
-                    {{ t('admin.upstream.usage.total') }} {{ formatCNY(p.usage_summary.total.cost_cny) }}
+                    {{ t('admin.upstream.usage.today') }} {{ formatUSD(p.usage_summary.today.cost_usd) }} ·
+                    {{ t('admin.upstream.usage.week') }} {{ formatUSD(p.usage_summary.week.cost_usd) }} ·
+                    {{ t('admin.upstream.usage.total') }} {{ formatUSD(p.usage_summary.total.cost_usd) }}
                   </div>
                 </template>
                 <span v-else class="text-gray-400">—</span>
@@ -175,7 +176,8 @@
               </td>
             </tr>
           </tbody>
-        </table>
+          </table>
+        </div>
       </template>
     </TablePageLayout>
   </AppLayout>
@@ -296,11 +298,11 @@ function formatTime(v: string | null): string {
   return v ? new Date(v).toLocaleString() : '—'
 }
 
-// 列表消耗格悬停提示:本月 $ 额度 + 请求数
+// 列表消耗格悬停提示:本月 ¥ 实付 + 请求数
 function usageHint(p: UpstreamProvider): string {
   const m = p.usage_summary?.month
   if (!m) return ''
-  return `${t('admin.upstream.usage.month')} ${formatUSD(m.cost_usd)} ${t('admin.upstream.usage.quota')} · ${formatRequests(m.requests)} ${t('admin.upstream.usage.requests')}`
+  return `${t('admin.upstream.usage.month')} ${formatCNY(m.cost_cny)} ${t('admin.upstream.usage.paid')} · ${formatRequests(m.requests)} ${t('admin.upstream.usage.requests')}`
 }
 
 // 打开创建

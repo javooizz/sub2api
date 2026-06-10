@@ -19,8 +19,10 @@ func ProvideUpstreamUsageFetchers() map[string]UpstreamUsageFetcher {
 }
 
 const (
-	usageMutableWindowDays = 2  // K:可变窗天数(today, today-1)
-	usageBackfillDays      = 90 // 回填窗口
+	usageMutableWindowDays = 2 // K:可变窗天数(today, today-1)
+	// 回填窗口:首次只回填最近 N 天。曾为 90,但日志量大的上游 /api/log/self 单查 90 天
+	// 易整体超时致一条都采不到;收窄到 7 天让首采快速成功(更早历史以 backfill_oldest_day 标注)。
+	usageBackfillDays      = 7
 	usageCollectStaleAfter = 10 * time.Minute
 )
 

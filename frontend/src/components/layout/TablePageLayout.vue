@@ -84,7 +84,13 @@ onUnmounted(() => {
 }
 
 .table-scroll-container :deep(th) {
-  @apply px-5 py-4 text-left text-sm font-medium text-gray-600 dark:text-dark-300 border-b border-gray-200 dark:border-dark-700;
+  @apply px-5 py-4 text-sm font-medium text-gray-600 dark:text-dark-300 border-b border-gray-200 dark:border-dark-700;
+}
+
+/* 仅未显式指定对齐的表头才默认左对齐，避免覆盖模板里的 text-right/text-center（修复表头与数据列错位）。
+   用原生 text-align 而非 @apply：选择器里的 :not(.text-left) 已引用 text-left，再 @apply 会被 Tailwind 判为循环依赖。 */
+.table-scroll-container :deep(th:not(.text-left):not(.text-center):not(.text-right)) {
+  text-align: left;
 }
 
 .table-scroll-container :deep(td) {

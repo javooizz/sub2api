@@ -19,9 +19,9 @@ type UpstreamLinkedAccount struct {
 	BaseURL  string `json:"base_url"`
 }
 
-// UpstreamAccountLister 对账号体系的窄依赖(R2.3:导出接口):列出 type=upstream 的账号及其 base_url。
+// UpstreamAccountLister 对账号体系的窄依赖(R2.3:导出接口):列出配了 base_url 的账号及其 base_url。
 type UpstreamAccountLister interface {
-	ListUpstreamTypeAccounts(ctx context.Context) ([]UpstreamLinkedAccount, error)
+	ListLinkableAccounts(ctx context.Context) ([]UpstreamLinkedAccount, error)
 }
 
 // UpstreamProviderService 上游站点管理(spec §9 除刷新外的全部端点)。
@@ -191,13 +191,13 @@ func (s *UpstreamProviderService) Delete(ctx context.Context, id int64) error {
 
 // ────────────────────────────── 关联帐号 ──────────────────────────────
 
-// LinkedAccounts 关联帐号：有效 API 地址按 §9 精确规则匹配。
+// LinkedAccounts 关联帐号：凡 base_url 指向本上游有效 API 地址的账号(任意类型)按 §9 精确规则(含 www 归一)匹配。
 func (s *UpstreamProviderService) LinkedAccounts(ctx context.Context, id int64) ([]UpstreamLinkedAccount, error) {
 	p, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	all, err := s.accounts.ListUpstreamTypeAccounts(ctx)
+	all, err := s.accounts.ListLinkableAccounts(ctx)
 	if err != nil {
 		return nil, err
 	}

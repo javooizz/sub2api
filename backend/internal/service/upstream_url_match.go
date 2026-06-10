@@ -67,6 +67,12 @@ func pathSegments(p string) []string {
 	return out
 }
 
+// stripWWWHost 剥离 host 的精确 "www." 前缀,使 www.example.com 与 example.com 视为同站。
+// 仅剥精确前缀,不影响 wwwx.example.com / evil-www.example.com 等(防误匹配)。
+func stripWWWHost(host string) string {
+	return strings.TrimPrefix(host, "www.")
+}
+
 // UpstreamURLMatches 关联帐号匹配(spec §9 精确规则):
 // scheme 相等 + host 小写精确相等 + 默认端口归一后相等 + 路径段边界前缀。
 func UpstreamURLMatches(providerURL, accountURL string) bool {
@@ -83,7 +89,7 @@ func UpstreamURLMatches(providerURL, accountURL string) bool {
 		return false
 	}
 
-	if pu.Scheme != au.Scheme || pu.Host != au.Host {
+	if pu.Scheme != au.Scheme || stripWWWHost(pu.Host) != stripWWWHost(au.Host) {
 		return false
 	}
 	pSegs := pathSegments(pu.Path)

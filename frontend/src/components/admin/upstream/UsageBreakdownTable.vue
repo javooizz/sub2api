@@ -20,12 +20,13 @@
       {{ t('admin.upstream.usage.empty') }}
     </p>
 
-    <!-- 明细表 -->
+    <!-- 明细表:消耗($)为主、实付(¥)为辅 -->
     <table v-else class="w-full text-sm">
       <thead>
         <tr class="border-b border-gray-200 text-left dark:border-gray-700">
           <th class="py-2 pr-3 font-medium text-gray-500 dark:text-gray-400">{{ nameLabel }}</th>
           <th class="py-2 pr-3 text-right font-medium text-gray-500 dark:text-gray-400">{{ t('admin.upstream.usage.spent') }}</th>
+          <th class="py-2 pr-3 text-right font-medium text-gray-500 dark:text-gray-400">{{ t('admin.upstream.usage.paid') }}</th>
           <th class="py-2 text-right font-medium text-gray-500 dark:text-gray-400">{{ t('admin.upstream.usage.requests') }}</th>
         </tr>
       </thead>
@@ -40,9 +41,9 @@
             <span v-if="r.meta" class="ml-1.5 text-xs text-gray-400">{{ r.meta }}</span>
           </td>
           <td class="py-2 pr-3 text-right tabular-nums">
-            <span class="font-semibold" :class="r.deleted ? '' : 'text-gray-900 dark:text-gray-100'">{{ formatCNY(r.cost_cny) }}</span>
-            <span class="ml-1 text-[10px] text-gray-400">/ {{ formatUSD(r.cost_usd) }} {{ t('admin.upstream.usage.quota') }}</span>
+            <span class="font-semibold" :class="r.deleted ? '' : 'text-gray-900 dark:text-gray-100'">{{ formatUSD(r.cost_usd) }}</span>
           </td>
+          <td class="py-2 pr-3 text-right tabular-nums text-gray-500 dark:text-gray-400">{{ formatCNY(r.cost_cny) }}</td>
           <td class="py-2 text-right tabular-nums text-gray-700 dark:text-gray-300">{{ formatRequests(r.requests) }}</td>
         </tr>
       </tbody>

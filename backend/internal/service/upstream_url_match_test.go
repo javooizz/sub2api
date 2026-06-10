@@ -42,6 +42,11 @@ func TestUpstreamURLMatches(t *testing.T) {
 		{"https://example.com/api", "https://example.com/api/v1", true, "路径段前缀"},
 		{"https://example.com/api", "https://example.com/api2", false, "段边界:/api 不匹配 /api2"},
 		{"https://example.com/api", "https://example.com", false, "账号路径短于 provider 前缀"},
+		{"https://codexapis.com", "https://www.codexapis.com", true, "www 子域归一为同站"},
+		{"https://www.codexapis.com", "https://codexapis.com", true, "www 反向归一为同站"},
+		{"https://codexapis.com/v1", "https://www.codexapis.com/v1/key1", true, "www 归一 + 路径段前缀"},
+		{"https://example.com", "https://wwwx.example.com", false, "wwwx 非精确 www. 前缀,不归一"},
+		{"https://example.com", "https://evil-www.example.com", false, "evil-www 非 www. 前缀,不归一"},
 	}
 	for _, c := range cases {
 		got := UpstreamURLMatches(c.provider, c.account)

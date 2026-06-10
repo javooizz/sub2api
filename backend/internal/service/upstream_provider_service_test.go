@@ -61,7 +61,7 @@ type fakeAccountLister struct {
 	accounts []UpstreamLinkedAccount
 }
 
-func (f *fakeAccountLister) ListUpstreamTypeAccounts(ctx context.Context) ([]UpstreamLinkedAccount, error) {
+func (f *fakeAccountLister) ListLinkableAccounts(ctx context.Context) ([]UpstreamLinkedAccount, error) {
 	return f.accounts, nil
 }
 

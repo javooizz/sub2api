@@ -135,7 +135,8 @@
                   <th class="py-2 pr-3 font-medium text-gray-500 dark:text-gray-400">{{ t('admin.upstream.detail.pricing.group') }}</th>
                   <th class="py-2 pr-3 text-right font-medium text-gray-500 dark:text-gray-400">{{ t('admin.upstream.detail.pricing.ratio') }}</th>
                   <th class="py-2 pr-3 text-right font-medium text-gray-500 dark:text-gray-400">{{ t('admin.upstream.detail.pricing.modelCount') }}</th>
-                  <th class="py-2 text-right font-medium text-gray-500 dark:text-gray-400">{{ t('admin.upstream.usage.spent') }}</th>
+                  <th class="py-2 pr-3 text-right font-medium text-gray-500 dark:text-gray-400">{{ t('admin.upstream.usage.spent') }}</th>
+                  <th class="py-2 text-right font-medium text-gray-500 dark:text-gray-400">{{ t('admin.upstream.usage.paid') }}</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -150,13 +151,17 @@
                   </td>
                   <td class="py-2 pr-3 text-right tabular-nums text-gray-900 dark:text-gray-100">{{ g.ratio ?? '—' }}</td>
                   <td class="py-2 pr-3 text-right tabular-nums text-gray-900 dark:text-gray-100">{{ g.models?.length ?? 0 }}</td>
+                  <td class="py-2 pr-3 text-right tabular-nums">
+                    <span v-if="groupSupported" class="font-semibold text-gray-900 dark:text-gray-100">{{ formatUSD(groupUsageByName.get(g.name)?.cost_usd ?? 0) }}</span>
+                    <span v-else class="text-gray-400">—</span>
+                  </td>
                   <td class="py-2 text-right tabular-nums">
-                    <span v-if="groupSupported" class="font-semibold text-gray-900 dark:text-gray-100">{{ formatCNY(groupUsageByName.get(g.name)?.cost_cny ?? 0) }}</span>
+                    <span v-if="groupSupported" class="text-gray-500 dark:text-gray-400">{{ formatCNY(groupUsageByName.get(g.name)?.cost_cny ?? 0) }}</span>
                     <span v-else class="text-gray-400">—</span>
                   </td>
                 </tr>
                 <tr v-if="!groups.length">
-                  <td colspan="4" class="py-8 text-center text-sm text-gray-400">—</td>
+                  <td colspan="5" class="py-8 text-center text-sm text-gray-400">—</td>
                 </tr>
               </tbody>
             </table>
@@ -174,23 +179,9 @@
             </p>
           </div>
 
-          <!-- ===== 可用模型 ===== -->
-          <div v-else-if="activeTab === 'models'" class="space-y-4">
-            <div v-for="g in groups" :key="g.name">
-              <h3 class="mb-2 text-sm font-medium text-gray-900 dark:text-gray-100">
-                {{ g.name }}
-                <span class="ml-1 font-normal text-gray-400">({{ g.models?.length ?? 0 }})</span>
-              </h3>
-              <div class="flex flex-wrap gap-1.5">
-                <span
-                  v-for="m in g.models"
-                  :key="m"
-                  class="rounded bg-gray-100 px-2 py-0.5 font-mono text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-300"
-                >{{ m }}</span>
-                <span v-if="!g.models?.length" class="text-xs text-gray-400">—</span>
-              </div>
-            </div>
-            <p v-if="!groups.length" class="py-8 text-center text-sm text-gray-400">—</p>
+          <!-- ===== 可用模型(搜索 + 分组/模型双视图) ===== -->
+          <div v-else-if="activeTab === 'models'">
+            <UpstreamModelsPanel :groups="groups" />
           </div>
 
           <!-- ===== Token ===== -->
@@ -353,7 +344,8 @@ import UpstreamStatusBadge from './UpstreamStatusBadge.vue'
 import UsageSummaryCards from './UsageSummaryCards.vue'
 import UsageWindowSwitcher from './UsageWindowSwitcher.vue'
 import UsageBreakdownTable from './UsageBreakdownTable.vue'
-import { mergeUsageRows, formatCNY } from './usageView'
+import UpstreamModelsPanel from './UpstreamModelsPanel.vue'
+import { mergeUsageRows, formatCNY, formatUSD } from './usageView'
 import type { UsageWindow, MergedUsageRow, LiveScopeItem } from './usageView'
 import { upstreamProvidersAPI } from '@/api/admin'
 import type {
@@ -396,7 +388,8 @@ const EVENTS_PAGE = 20
 const relogining = ref(false)
 
 // ---- 消耗(密钥/分组 breakdown) ----
-const usageWindow = ref<UsageWindow>('month')
+// 默认窗口=今日(打开密钥管理/分组价格即看当日数据)
+const usageWindow = ref<UsageWindow>('today')
 // 缓存键 `${scope}:${window}` → 该 scope+window 的 breakdown(含 supported)
 const breakdownCache = ref(new Map<string, UsageBreakdown>())
 const usageLoading = ref(false)
@@ -447,9 +440,9 @@ watch(
     accounts.value = []
     events.value = []
     hasMoreEvents.value = false
-    // 消耗:换 provider 必清缓存与行,窗口回默认,杜绝串数据
+    // 消耗:换 provider 必清缓存与行,窗口回默认(今日),杜绝串数据
     breakdownCache.value = new Map()
-    usageWindow.value = 'month'
+    usageWindow.value = 'today'
     keyRows.value = []
     groupUsageByName.value = new Map()
     keySupported.value = true

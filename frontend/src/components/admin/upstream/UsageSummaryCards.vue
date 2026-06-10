@@ -30,7 +30,8 @@
         "
       >
         <div class="text-[10px] text-gray-500 dark:text-gray-400">{{ t(`admin.upstream.usage.${w.key}`) }}</div>
-        <div class="mt-0.5 font-semibold tabular-nums text-gray-900 dark:text-gray-100">{{ formatCNY(w.stat.cost_cny) }}</div>
+        <div class="mt-0.5 font-semibold tabular-nums text-gray-900 dark:text-gray-100">{{ formatUSD(w.stat.cost_usd) }}</div>
+        <div class="tabular-nums text-[10px] text-gray-400">{{ formatCNY(w.stat.cost_cny) }} {{ t('admin.upstream.usage.paid') }}</div>
         <div
           v-if="w.key === 'total' && summary.backfilled_from"
           class="mt-0.5 text-[10px] text-gray-400"
@@ -46,7 +47,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { UsageSummary, UsageWindowStat } from '@/api/admin/upstreamProviders'
-import { formatCNY } from './usageView'
+import { formatCNY, formatUSD } from './usageView'
 import type { UsageWindow } from './usageView'
 
 const props = defineProps<{ summary: UsageSummary | null | undefined }>()
