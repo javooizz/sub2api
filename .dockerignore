@@ -10,7 +10,11 @@
 # Documentation
 *.md
 !deploy/DOCKER.md
-docs/
+# fork: docs/ 整体不入镜像;但合规文档需进前端构建上下文
+# (LegalDocumentView 以 ?raw 导入 ../../../../docs/legal/*.md),与 .gitignore 对齐
+docs/*
+!docs/legal/
+!docs/legal/*.md
 
 # IDE
 .idea/
