@@ -84,9 +84,11 @@ temp/
 *.log
 *.bak
 .cache/
+.prod-dump/
 .dev/
 .serena/
 .superpowers/
+.playwright-mcp/
 
 # ===================
 # 构建产物
