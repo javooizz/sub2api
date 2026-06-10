@@ -6878,7 +6878,7 @@ export default {
         cdpUrl: 'CloakBrowser CDP URL',
         cdpUrlPlaceholder: 'e.g. ws://127.0.0.1:9222 — leave blank to disable browser bypass',
         proxyUrl: 'Collection proxy URL',
-        proxyUrlPlaceholder: 'e.g. http://user:pass@host:port or socks5://host:port — leave blank for direct',
+        proxyUrlPlaceholder: "e.g. http://user:pass{'@'}host:port or socks5://host:port — leave blank for direct",
         proxyUrlHint: 'Shared by HTTP collection and CloakBrowser bypass. Password shown as ***; keep *** to leave unchanged, clear to remove.',
         allowPrivateWebhook: 'Allow private network Webhooks (for intranet deployments)',
         browserDisabledHint: 'CloakBrowser not configured: paste tokens manually when hitting CAPTCHA or CF shield.',

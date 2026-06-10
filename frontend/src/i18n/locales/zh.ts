@@ -7033,7 +7033,7 @@ export default {
         cdpUrl: 'CloakBrowser CDP 地址',
         cdpUrlPlaceholder: '如 ws://127.0.0.1:9222,留空禁用浏览器过盾',
         proxyUrl: '采集代理 URL',
-        proxyUrlPlaceholder: '如 http://user:pass@host:port 或 socks5://host:port,留空直连',
+        proxyUrlPlaceholder: "如 http://user:pass{'@'}host:port 或 socks5://host:port,留空直连",
         proxyUrlHint: 'HTTP 采集与 CloakBrowser 过盾共用此代理。密码显示为 ***;保留 *** 即不修改,清空即移除。',
         allowPrivateWebhook: '允许私网 Webhook(内网部署时开启)',
         browserDisabledHint: '未配置 CloakBrowser:遇验证码/CF 盾时需手动粘贴 Token',
