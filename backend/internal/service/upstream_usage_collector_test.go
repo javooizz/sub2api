@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/pkg/timezone"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,7 +31,7 @@ func TestBuildIncrementWrites_ZonesAndZeroing(t *testing.T) {
 		{Day: collDay(2026, 6, 9), ScopeType: UsageScopeTotal, CostUSD: 1},
 		{Day: collDay(2026, 6, 7), ScopeType: UsageScopeTotal, CostUSD: 2},
 	}
-	writes := buildIncrementWrites(covered, today, 2, entries)
+	writes := buildIncrementWrites(covered, today, 2, entries, false)
 	modeByDay := map[string]DayWriteMode{}
 	for _, w := range writes {
 		modeByDay[w.Day.Format("2006-01-02")] = w.Mode
@@ -40,6 +41,24 @@ func TestBuildIncrementWrites_ZonesAndZeroing(t *testing.T) {
 	require.Equal(t, DayWriteFillIfAbsent, modeByDay["2026-06-07"])
 	_, has := modeByDay["2026-06-08"]
 	require.False(t, has)
+}
+
+func TestBuildIncrementWrites_PartialSkipsFillIfAbsent(t *testing.T) {
+	today := collDay(2026, 6, 10)
+	covered := DayRange{From: collDay(2026, 6, 7), To: today}
+	entries := []UpstreamUsageDailyEntry{
+		{Day: collDay(2026, 6, 9), ScopeType: UsageScopeTotal, CostUSD: 1},
+		{Day: collDay(2026, 6, 7), ScopeType: UsageScopeTotal, CostUSD: 2}, // 窗外:partial 时跳过
+	}
+	writes := buildIncrementWrites(covered, today, 2, entries, true)
+	modeByDay := map[string]DayWriteMode{}
+	for _, w := range writes {
+		modeByDay[w.Day.Format("2006-01-02")] = w.Mode
+	}
+	require.Equal(t, DayWriteReplace, modeByDay["2026-06-10"])
+	require.Equal(t, DayWriteReplace, modeByDay["2026-06-09"])
+	_, has := modeByDay["2026-06-07"]
+	require.False(t, has, "partial 时窗外 FillIfAbsent 不应写入(否则永久偏小)")
 }
 
 type collFakeUsageRepo struct {
@@ -112,4 +131,20 @@ func TestCollectProvider_LeaseHeldSkips(t *testing.T) {
 	require.NoError(t, c.CollectProvider(context.Background(), 1))
 	require.Nil(t, repo.released, "租约被占应直接跳过,不释放")
 	require.Empty(t, repo.written)
+}
+
+func TestCollectProvider_PartialDoesNotAdvanceCursor(t *testing.T) {
+	repo := &collFakeUsageRepo{claimOK: true}
+	fetcher := collFakeFetcher{res: UpstreamUsageResult{
+		CoveredDays: DayRange{From: timezone.Today().AddDate(0, 0, -1), To: timezone.Today()},
+		Partial:     true,
+		Reason:      "日志分页中断",
+	}}
+	c := NewUpstreamUsageCollector(repo, collFakeProviderRepo{p: &UpstreamProvider{ID: 1, Type: "newapi"}},
+		map[string]UpstreamUsageFetcher{"newapi": fetcher})
+	require.NoError(t, c.CollectProvider(context.Background(), 1))
+	require.NotNil(t, repo.released)
+	require.Nil(t, repo.released.CollectedThroughDay, "partial 不应推进游标")
+	require.Nil(t, repo.released.BackfillDone, "partial 回填不应标记完成")
+	require.True(t, repo.released.LastPartial)
 }

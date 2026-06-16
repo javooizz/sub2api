@@ -73,6 +73,8 @@ func (a *Sub2APIAdapter) FetchUsageDaily(ctx context.Context, p *UpstreamProvide
 	if err != nil {
 		return UpstreamUsageResult{}, err
 	}
+	// 单请求超时交由整体 ctx 控制(同 newapi 采集:Client.Timeout 15s 会抢先掐断慢接口)。
+	client.client.Timeout = 0
 	today := timezone.Today()
 	res := UpstreamUsageResult{CoveredDays: DayRange{From: sinceDay, To: today}}
 

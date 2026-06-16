@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -64,14 +65,16 @@ func groupEntriesByDay(entries []UpstreamUsageDailyEntry) map[string][]UpstreamU
 }
 
 // buildIncrementWrites 遍历 covered 范围每一天,产出 DayWrite(空日也产出以便 Replace 删空)。
-func buildIncrementWrites(covered DayRange, today time.Time, k int, entries []UpstreamUsageDailyEntry) []DayWrite {
+// partial=true 表示本次采集数据不完整:只写可变窗内(Replace)的天——这些天下一轮会被
+// 重新 Replace 修正;窗外 FillIfAbsent 一旦写入不完整数据就不会再被覆盖(永久偏小),跳过。
+func buildIncrementWrites(covered DayRange, today time.Time, k int, entries []UpstreamUsageDailyEntry, partial bool) []DayWrite {
 	byDay := groupEntriesByDay(entries)
 	var writes []DayWrite
 	for d := covered.From; !d.After(today); d = d.AddDate(0, 0, 1) {
 		mode := dayWriteMode(d, today, k)
 		dayKey := d.Format("2006-01-02")
 		es := byDay[dayKey]
-		if mode == DayWriteFillIfAbsent && len(es) == 0 {
+		if mode == DayWriteFillIfAbsent && (partial || len(es) == 0) {
 			continue
 		}
 		writes = append(writes, DayWrite{Day: d, Mode: mode, Entries: es})
@@ -123,17 +126,20 @@ func (c *UpstreamUsageCollector) CollectProvider(ctx context.Context, providerID
 	res, ferr := fetcher.FetchUsageDaily(ctx, p, since)
 	if ferr != nil {
 		upd.LastError = ferr.Error()
-		_ = c.repo.ReleaseCollect(ctx, providerID, upd)
+		_ = c.releaseCollect(providerID, upd)
 		return ferr
 	}
-	writes := buildIncrementWrites(res.CoveredDays, today, usageMutableWindowDays, res.Entries)
+	writes := buildIncrementWrites(res.CoveredDays, today, usageMutableWindowDays, res.Entries, res.Partial)
 	if err := c.repo.WriteDays(ctx, providerID, writes); err != nil {
 		upd.LastError = err.Error()
-		_ = c.repo.ReleaseCollect(ctx, providerID, upd)
+		_ = c.releaseCollect(providerID, upd)
 		return err
 	}
-	ct := today
-	upd.CollectedThroughDay = &ct
+	// partial 时不推进游标:窗外天被跳过未写,推进会导致缺口永远不补。
+	if !res.Partial {
+		ct := today
+		upd.CollectedThroughDay = &ct
+	}
 	upd.LastCollectedAt = &now
 	upd.LastPartial = res.Partial
 	upd.PartialReason = res.Reason
@@ -152,7 +158,16 @@ func (c *UpstreamUsageCollector) CollectProvider(ctx context.Context, providerID
 		}
 	}
 
-	return c.repo.ReleaseCollect(ctx, providerID, upd)
+	return c.releaseCollect(providerID, upd)
+}
+
+// releaseCollect 用独立 ctx 释放租约并落错误状态:调用方 ctx 可能已超时/取消
+// (手动刷新的异步采集到达上限时),复用它会导致租约清不掉、错误状态丢失,
+// 后续采集在 stale 窗口(10min)内被全部跳过。
+func (c *UpstreamUsageCollector) releaseCollect(providerID int64, upd CollectStateUpdate) error {
+	rctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	return c.repo.ReleaseCollect(rctx, providerID, upd)
 }
 
 // backfill 回填 [today-90, today-K] 区间(FillIfAbsent),返回实际最早日。
@@ -161,6 +176,10 @@ func (c *UpstreamUsageCollector) backfill(ctx context.Context, p *UpstreamProvid
 	res, err := fetcher.FetchUsageDaily(ctx, p, since)
 	if err != nil {
 		return nil, err
+	}
+	// 回填全部走 FillIfAbsent,不完整数据写入即永久偏小 → partial 视为本轮回填失败,下轮重试。
+	if res.Partial {
+		return nil, fmt.Errorf("采集不完整: %s", res.Reason)
 	}
 	cutoff := today.AddDate(0, 0, -(usageMutableWindowDays - 1))
 	byDay := groupEntriesByDay(res.Entries)

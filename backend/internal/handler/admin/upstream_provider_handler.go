@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -298,9 +299,15 @@ func (h *UpstreamProviderHandler) Refresh(c *gin.Context) {
 		return
 	}
 	if h.collector != nil {
-		if err := h.collector.CollectProvider(c.Request.Context(), id); err != nil {
-			slog.Warn("upstream: 手动刷新后采集消耗失败", "provider_id", id, "error", err)
-		}
+		// 异步采集消耗:挂在请求 ctx 上会被前端超时/断开连带取消,且大日志量站点
+		// 翻页可达数分钟,不应阻塞刷新响应。CollectProvider 自带租约抢占,并发安全。
+		go func(pid int64) {
+			cctx, cancel := context.WithTimeout(context.Background(), 6*time.Minute)
+			defer cancel()
+			if err := h.collector.CollectProvider(cctx, pid); err != nil {
+				slog.Warn("upstream: 手动刷新后采集消耗失败", "provider_id", pid, "error", err)
+			}
+		}(id)
 	}
 	p, gerr := h.svc.Get(c.Request.Context(), id)
 	if gerr != nil {

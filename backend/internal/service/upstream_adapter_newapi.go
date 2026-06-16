@@ -267,11 +267,48 @@ func (a *NewAPIAdapter) CreateToken(ctx context.Context, p *UpstreamProvider, re
 	if !env.Success {
 		return nil, fmt.Errorf("上游创建 token 失败: %s", env.Message)
 	}
+	// 多数 new-api 版本创建接口 data 为空(不返回 token 对象),需回查列表按名称取明文 key。
 	var data map[string]any
-	if err := json.Unmarshal(env.Data, &data); err != nil {
-		return nil, fmt.Errorf("解析创建响应失败")
+	if len(env.Data) > 0 && json.Unmarshal(env.Data, &data) == nil && data["key"] != nil {
+		tok := newapiTokenFromMap(data, true)
+		return &tok, nil
 	}
-	tok := newapiTokenFromMap(data, true)
+	return a.findTokenByName(ctx, client, p, req.Name)
+}
+
+// findTokenByName 创建后回查:翻 token 列表按 name 匹配,同名取 id 最大(最新创建)。
+func (a *NewAPIAdapter) findTokenByName(ctx context.Context, client *upstreamHTTPClient, p *UpstreamProvider, name string) (*UpstreamToken, error) {
+	var env newapiEnvelope
+	if _, err := client.doJSON(ctx, http.MethodGet, "/api/token/?p=1&size=100", nil, a.authHeaders(p), &env); err != nil {
+		return nil, err
+	}
+	if !env.Success {
+		return nil, fmt.Errorf("创建成功但回查 token 列表失败")
+	}
+	var wrapper struct {
+		Items []map[string]any `json:"items"`
+	}
+	var list []map[string]any
+	if json.Unmarshal(env.Data, &wrapper) == nil && wrapper.Items != nil {
+		list = wrapper.Items
+	} else if err := json.Unmarshal(env.Data, &list); err != nil {
+		return nil, fmt.Errorf("创建成功但解析 token 列表失败")
+	}
+	var best map[string]any
+	var bestID float64 = -1
+	for _, item := range list {
+		if n, _ := item["name"].(string); n != name {
+			continue
+		}
+		id, _ := item["id"].(float64)
+		if id > bestID {
+			best, bestID = item, id
+		}
+	}
+	if best == nil {
+		return nil, fmt.Errorf("创建成功但未在列表中找到 token: %s", name)
+	}
+	tok := newapiTokenFromMap(best, true)
 	return &tok, nil
 }
 

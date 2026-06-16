@@ -157,20 +157,33 @@ export async function remove(id: number): Promise<{ deleted: boolean }> {
   return data
 }
 
+// 刷新/重登/测试连接为同步采集(后端快照上限 60s),超时需大于默认 30s
+const SNAPSHOT_TIMEOUT_MS = 90_000
+
 export async function refresh(id: number): Promise<UpstreamProvider> {
-  const { data } = await apiClient.post<UpstreamProvider>(`/admin/upstream-providers/${id}/refresh`)
+  const { data } = await apiClient.post<UpstreamProvider>(
+    `/admin/upstream-providers/${id}/refresh`,
+    undefined,
+    { timeout: SNAPSHOT_TIMEOUT_MS }
+  )
   return data
 }
 
 export async function relogin(id: number): Promise<UpstreamProvider> {
-  const { data } = await apiClient.post<UpstreamProvider>(`/admin/upstream-providers/${id}/relogin`)
+  const { data } = await apiClient.post<UpstreamProvider>(
+    `/admin/upstream-providers/${id}/relogin`,
+    undefined,
+    { timeout: SNAPSHOT_TIMEOUT_MS }
+  )
   return data
 }
 
 export async function testConnection(
   input: UpstreamProviderInput & { provider_id?: number }
 ): Promise<UpstreamSnapshot> {
-  const { data } = await apiClient.post<UpstreamSnapshot>('/admin/upstream-providers/test', input)
+  const { data } = await apiClient.post<UpstreamSnapshot>('/admin/upstream-providers/test', input, {
+    timeout: SNAPSHOT_TIMEOUT_MS
+  })
   return data
 }
 

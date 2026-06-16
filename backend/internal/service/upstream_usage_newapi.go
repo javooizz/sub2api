@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
@@ -15,8 +16,10 @@ const (
 	newapiUsageMaxPages       = 200
 	newapiUsagePageTimeout    = 30 * time.Second // 单次日志/状态请求超时(每页独立,替代整次共用)
 	newapiUsageOverallTimeout = 5 * time.Minute  // 整次采集安全上限(防翻页失控)
-	newapiLogTypeConsume      = 2                // 消费日志
-	newapiLogTypeRefund       = 6                // 退款日志
+	newapiUsagePageRetries    = 2                // 单页失败重试次数(慢页/抖动给机会)
+	newapiUsagePageInterval   = 300 * time.Millisecond // 页间间隔(降低上游压力与限流概率)
+	newapiLogTypeConsume      = 2 // 消费日志
+	newapiLogTypeRefund       = 6 // 退款日志
 )
 
 // newapiLogEntry 对应 new-api model.Log 的采集所需字段。
@@ -106,6 +109,9 @@ func (a *NewAPIAdapter) FetchUsageDaily(ctx context.Context, p *UpstreamProvider
 	if err != nil {
 		return UpstreamUsageResult{}, err
 	}
+	// 翻页超时由每页 ctx(newapiUsagePageTimeout)控制;清掉 http.Client 自带的 15s
+	// 单接口超时,否则它先于 30s 页超时触发,慢分页站点永远采不到数据。
+	client.client.Timeout = 0
 	today := timezone.Today()
 	res := UpstreamUsageResult{CoveredDays: DayRange{From: sinceDay, To: today}}
 
@@ -131,17 +137,44 @@ func (a *NewAPIAdapter) FetchUsageDaily(ctx context.Context, p *UpstreamProvider
 	startTs := sinceDay.Unix()
 	var all []newapiLogEntry
 	// 仅采消费(2)与退款(6):缩小上游扫描面、降低单查超时概率(消耗口径取 type∈{2,6})。
+	// 单页失败不再整次失败:保留已拉到的页并标记 Partial(由 collector 决定可写范围),
+	// 否则慢分页站点一次超时就丢掉全部已采数据、永远出不了数。
+	pageErr := false
 	for _, logType := range []int{newapiLogTypeConsume, newapiLogTypeRefund} {
+		if pageErr {
+			break
+		}
 		for page := 1; page <= newapiUsageMaxPages; page++ {
-			pctx, pcancel := context.WithTimeout(ctx, newapiUsagePageTimeout)
-			var env newapiEnvelope
+			if page > 1 {
+				time.Sleep(newapiUsagePageInterval)
+			}
 			path := "/api/log/self?type=" + strconv.Itoa(logType) +
 				"&start_timestamp=" + strconv.FormatInt(startTs, 10) +
 				"&p=" + strconv.Itoa(page) + "&page_size=" + strconv.Itoa(newapiUsagePageSize)
-			_, perr := client.doJSON(pctx, http.MethodGet, path, nil, a.authHeaders(p), &env)
-			pcancel()
+			var env newapiEnvelope
+			var perr error
+			for attempt := 0; attempt <= newapiUsagePageRetries; attempt++ {
+				pctx, pcancel := context.WithTimeout(ctx, newapiUsagePageTimeout)
+				env = newapiEnvelope{}
+				t0 := time.Now()
+				_, perr = client.doJSON(pctx, http.MethodGet, path, nil, a.authHeaders(p), &env)
+				pcancel()
+				if perr != nil || time.Since(t0) > 10*time.Second {
+					slog.Debug("upstream usage: 日志页采集慢/失败",
+						"provider_id", p.ID, "type", logType, "page", page,
+						"attempt", attempt, "elapsed_ms", time.Since(t0).Milliseconds(), "err", perr)
+				}
+				if perr == nil || ctx.Err() != nil { // 整次超时则不再重试
+					break
+				}
+			}
 			if perr != nil {
-				return UpstreamUsageResult{}, perr
+				if len(all) == 0 {
+					return UpstreamUsageResult{}, perr
+				}
+				res.Partial, res.Reason = true, "日志分页中断: "+perr.Error()
+				pageErr = true
+				break
 			}
 			if !env.Success {
 				res.Partial, res.Reason = true, "日志分页失败"

@@ -33,7 +33,15 @@ func newUpstreamHTTPClient(p *UpstreamProvider) (*upstreamHTTPClient, error) {
 	if err != nil {
 		return nil, fmt.Errorf("site_url 非法: %w", err)
 	}
-	transport := &http.Transport{}
+	// 基于 DefaultTransport 克隆而非零值 Transport:零值会丢失 TLS 握手超时(10s)、
+	// dial 超时/keep-alive、空闲连接回收与环境代理(http_proxy/https_proxy)。
+	// 其中"TLS 握手无超时"在出口拥挤/直连受限网络下会让单页请求挂满整个页超时,
+	// 是日志翻页偶发卡死的主因;环境代理则保证本地开发走系统代理(生产无代理不受影响)。
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	// 强制 HTTP/1.1:Go h2 客户端经代理/CF 偶发流挂死(项目内 GATEWAY_OPENAI_HTTP2
+	// 已有同类 fallback 机制),低频轮询场景 h1 足够且行为可预期。
+	transport.ForceAttemptHTTP2 = false
+	transport.TLSNextProto = map[string]func(string, *tls.Conn) http.RoundTripper{}
 	if p.ProxyURL != "" {
 		// 统一经 proxyurl.Parse 校验(scheme 白名单 + socks5→socks5h 防 DNS 泄漏);
 		// 额外把用户常写的 socks:// 当作 socks5:// 别名(见 normalizeProxyAlias)。
