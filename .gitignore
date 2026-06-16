@@ -115,6 +115,9 @@ backend/config.yaml
 deploy/config.yaml
 backend/.installed
 
+# 退款审计 CSV(本地脚本产物,含用户 PII,勿入库)
+refund_*.csv
+
 # ===================
 # 其他
 # ===================
