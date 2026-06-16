@@ -27,12 +27,13 @@ RUN corepack enable && corepack prepare pnpm@9 --activate
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
-# fork: 合规文档(LegalDocumentView 以 ?raw 导入,相对路径解析到 /app/docs/legal),
-# 不随 frontend/ 一起 COPY,需单独带入构建阶段,否则 vite build 无法解析
-COPY docs/legal/ /app/docs/legal/
-
-# Copy frontend source and build
+# Copy frontend source and build.
+# LegalDocumentView.vue (admin-compliance gate) build-time imports
+# ../../../../docs/legal/*.md?raw, so docs/legal/ must sit beside frontend/
+# in the image (WORKDIR /app/frontend -> resolves to /app/docs/legal/*.md).
+# Copy only that subtree to keep the build dependency minimal.
 COPY frontend/ ./
+COPY docs/legal/ /app/docs/legal/
 RUN pnpm run build
 
 # -----------------------------------------------------------------------------
