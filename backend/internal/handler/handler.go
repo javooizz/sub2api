@@ -64,6 +64,7 @@ type Handlers struct {
 	AvailableChannel *AvailableChannelHandler
 	ExtensionConfig  *ExtensionConfigHandler
 	ModelPlaza       *ModelPlazaHandler
+	BatchImage       *BatchImageHandler
 }
 
 // BuildInfo contains build-time information
