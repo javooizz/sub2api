@@ -40,7 +40,7 @@ type AdminHandlers struct {
 	Payment                *admin.PaymentHandler
 	Affiliate              *admin.AffiliateHandler
 	ExtensionConfig        *admin.ExtensionConfigHandler
-	ModelPlaza             *admin.ModelPlazaHandler
+	ModelCatalog           *admin.ModelCatalogHandler
 	NotifyChannel          *admin.NotifyChannelHandler
 	UpstreamProvider       *admin.UpstreamProviderHandler
 	Compliance             *admin.ComplianceHandler
@@ -62,11 +62,13 @@ type Handlers struct {
 	OpenAIGateway    *OpenAIGatewayHandler
 	Setting          *SettingHandler
 	Totp             *TotpHandler
+	Passkey          *PasskeyHandler
 	Payment          *PaymentHandler
 	PaymentWebhook   *PaymentWebhookHandler
 	AvailableChannel *AvailableChannelHandler
 	ExtensionConfig  *ExtensionConfigHandler
 	ModelPlaza       *ModelPlazaHandler
+	ModelCatalog     *ModelCatalogHandler
 	AsyncImage       *AsyncImageHandler
 	BatchImage       *BatchImageHandler
 }

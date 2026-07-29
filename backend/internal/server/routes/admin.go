@@ -121,7 +121,7 @@ func RegisterAdminRoutes(
 		registerExtensionConfigRoutes(admin, h)
 
 		// 模型广场（模型清单聚合端点）
-		registerModelPlazaRoutes(admin, h)
+		registerModelCatalogRoutes(admin, h)
 
 		// 通知渠道管理（上游变更通知，fork 新增）
 		registerNotifyChannelRoutes(admin, h)
@@ -156,12 +156,12 @@ func registerExtensionConfigRoutes(admin *gin.RouterGroup, h *handler.Handlers) 
 	}
 }
 
-// registerModelPlazaRoutes 注册"模型广场"管理员路由（模型清单聚合，
-// 供扩展配置页"模型描述"编辑器使用）。开关端点在 adminSettings 组（/settings/model-plaza）。
-func registerModelPlazaRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
-	mp := admin.Group("/model-plaza")
+// registerModelCatalogRoutes 注册"模型目录"管理员路由（模型清单聚合，
+// 供扩展配置页"模型描述"编辑器使用）。开关端点在 adminSettings 组（/settings/model-catalog）。
+func registerModelCatalogRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
+	mp := admin.Group("/model-catalog")
 	{
-		mp.GET("/models", h.Admin.ModelPlaza.ListModels)
+		mp.GET("/models", h.Admin.ModelCatalog.ListModels)
 	}
 }
 
@@ -601,8 +601,8 @@ func registerSettingsRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 		adminSettings.GET("/beta-policy", h.Admin.Setting.GetBetaPolicySettings)
 		adminSettings.PUT("/beta-policy", h.Admin.Setting.UpdateBetaPolicySettings)
 		// 模型广场功能开关（专项端点：该 key 不走全量 settings PUT）
-		adminSettings.GET("/model-plaza", h.Admin.Setting.GetModelPlazaSettings)
-		adminSettings.PUT("/model-plaza", h.Admin.Setting.UpdateModelPlazaSettings)
+		adminSettings.GET("/model-catalog", h.Admin.Setting.GetModelCatalogSettings)
+		adminSettings.PUT("/model-catalog", h.Admin.Setting.UpdateModelCatalogSettings)
 		// Web Search 模拟配置
 		adminSettings.GET("/web-search-emulation", h.Admin.Setting.GetWebSearchEmulationConfig)
 		adminSettings.PUT("/web-search-emulation", h.Admin.Setting.UpdateWebSearchEmulationConfig)

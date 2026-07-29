@@ -164,6 +164,7 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		SettingKeyPasswordResetEnabled,
 		SettingKeyInvitationCodeEnabled,
 		SettingKeyTotpEnabled,
+		SettingKeyPasskeyEnabled,
 		SettingKeyLoginAgreementEnabled,
 		SettingKeyLoginAgreementMode,
 		SettingKeyLoginAgreementUpdatedAt,
@@ -221,6 +222,8 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		SettingKeyChannelMonitorDefaultIntervalSeconds,
 		SettingKeyAvailableChannelsEnabled,
 		SettingKeyModelPlazaEnabled,
+		SettingKeyModelPlazaRequireAuth,
+		SettingKeyModelCatalogEnabled,
 		SettingKeyAffiliateEnabled,
 		SettingKeyRiskControlEnabled,
 		SettingKeyAllowUserViewErrorRequests,
@@ -290,6 +293,7 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		PasswordResetEnabled:             passwordResetEnabled,
 		InvitationCodeEnabled:            settings[SettingKeyInvitationCodeEnabled] == "true",
 		TotpEnabled:                      settings[SettingKeyTotpEnabled] == "true",
+		PasskeyEnabled:                   s.passkeyConfigured() && s.passkeySettingEnabled(settings),
 		LoginAgreementEnabled:            settings[SettingKeyLoginAgreementEnabled] == "true" && len(loginAgreementDocuments) > 0,
 		LoginAgreementMode:               normalizeLoginAgreementMode(settings[SettingKeyLoginAgreementMode]),
 		LoginAgreementUpdatedAt:          loginAgreementUpdatedAt,
@@ -333,7 +337,10 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 
 		AvailableChannelsEnabled: settings[SettingKeyAvailableChannelsEnabled] == "true",
 
-		ModelPlazaEnabled: settings[SettingKeyModelPlazaEnabled] == "true",
+		ModelPlazaEnabled:     settings[SettingKeyModelPlazaEnabled] == "true",
+		ModelPlazaRequireAuth: settings[SettingKeyModelPlazaRequireAuth] == "true",
+
+		ModelCatalogEnabled: settings[SettingKeyModelCatalogEnabled] == "true",
 
 		AffiliateEnabled: settings[SettingKeyAffiliateEnabled] == "true",
 
@@ -417,35 +424,62 @@ func (s *SettingService) GetAvailableChannelsRuntime(ctx context.Context) Availa
 	}
 }
 
-// ModelPlazaRuntime is the lightweight view of the model-plaza feature switch
-// consumed by the user-facing handler.
+// ModelPlazaRuntime is the lightweight view of the model-plaza feature consumed
+// by the public plaza handler.
 type ModelPlazaRuntime struct {
-	Enabled bool
+	Enabled     bool
+	RequireAuth bool
+	Description string
 }
 
-// GetModelPlazaRuntime reads the model-plaza feature switch directly from the
+// GetModelPlazaRuntime reads the model-plaza feature switches directly from the
 // settings store. Fail-closed: on error returns Enabled=false, matching the
 // opt-in default (unknown ↔ disabled).
 func (s *SettingService) GetModelPlazaRuntime(ctx context.Context) ModelPlazaRuntime {
-	vals, err := s.settingRepo.GetMultiple(ctx, []string{SettingKeyModelPlazaEnabled})
+	vals, err := s.settingRepo.GetMultiple(ctx, []string{
+		SettingKeyModelPlazaEnabled,
+		SettingKeyModelPlazaRequireAuth,
+		SettingKeyModelPlazaDescription,
+	})
 	if err != nil {
 		return ModelPlazaRuntime{Enabled: false}
 	}
 	return ModelPlazaRuntime{
-		Enabled: vals[SettingKeyModelPlazaEnabled] == "true",
+		Enabled:     vals[SettingKeyModelPlazaEnabled] == "true",
+		RequireAuth: vals[SettingKeyModelPlazaRequireAuth] == "true",
+		Description: vals[SettingKeyModelPlazaDescription],
 	}
 }
 
-// SetModelPlazaEnabled persists the model-plaza feature switch.
-// 专项端点（PUT /admin/settings/model-plaza）是唯一写入口——该 key 故意不进
+// ModelCatalogRuntime is the lightweight view of the fork's model-catalog
+// feature switch consumed by the user-facing catalog handler.
+type ModelCatalogRuntime struct {
+	Enabled bool
+}
+
+// GetModelCatalogRuntime reads the model-catalog feature switch directly from the
+// settings store. Fail-closed: on error returns Enabled=false, matching the
+// opt-in default (unknown ↔ disabled).
+func (s *SettingService) GetModelCatalogRuntime(ctx context.Context) ModelCatalogRuntime {
+	vals, err := s.settingRepo.GetMultiple(ctx, []string{SettingKeyModelCatalogEnabled})
+	if err != nil {
+		return ModelCatalogRuntime{Enabled: false}
+	}
+	return ModelCatalogRuntime{
+		Enabled: vals[SettingKeyModelCatalogEnabled] == "true",
+	}
+}
+
+// SetModelCatalogEnabled persists the model-catalog feature switch.
+// 专项端点（PUT /admin/settings/model-catalog）是唯一写入口——该 key 故意不进
 // SystemSettings/UpdateSettings 全量链路，避免被系统设置页全量保存意外覆盖。
 //
 // 但该 key 同时是 public settings 注入（window.__APP_CONFIG__）的字段，会被渲染并
 // 缓存进 index.html。因此写库成功后必须像 UpdateSettings 一样触发 onUpdate 回调
 // （在 router.go 中绑定了 frontendServer.InvalidateCache()），否则缓存的注入快照会
 // 冻结在切换前的旧值，导致"开关已开却前端永不展示"。
-func (s *SettingService) SetModelPlazaEnabled(ctx context.Context, enabled bool) error {
-	if err := s.settingRepo.Set(ctx, SettingKeyModelPlazaEnabled, strconv.FormatBool(enabled)); err != nil {
+func (s *SettingService) SetModelCatalogEnabled(ctx context.Context, enabled bool) error {
+	if err := s.settingRepo.Set(ctx, SettingKeyModelCatalogEnabled, strconv.FormatBool(enabled)); err != nil {
 		return err
 	}
 	if s.onUpdate != nil {
@@ -453,6 +487,7 @@ func (s *SettingService) SetModelPlazaEnabled(ctx context.Context, enabled bool)
 	}
 	return nil
 }
+
 
 // IsUserErrorViewAllowed reads the user-facing error-requests visibility switch
 // directly from the settings store. Fail-closed: on error returns false (opt-in default).
@@ -486,6 +521,7 @@ type PublicSettingsInjectionPayload struct {
 	PasswordResetEnabled             bool                     `json:"password_reset_enabled"`
 	InvitationCodeEnabled            bool                     `json:"invitation_code_enabled"`
 	TotpEnabled                      bool                     `json:"totp_enabled"`
+	PasskeyEnabled                   bool                     `json:"passkey_enabled"`
 	LoginAgreementEnabled            bool                     `json:"login_agreement_enabled"`
 	LoginAgreementMode               string                   `json:"login_agreement_mode"`
 	LoginAgreementUpdatedAt          string                   `json:"login_agreement_updated_at"`
@@ -535,6 +571,8 @@ type PublicSettingsInjectionPayload struct {
 	ChannelMonitorDefaultIntervalSeconds int  `json:"channel_monitor_default_interval_seconds"`
 	AvailableChannelsEnabled             bool `json:"available_channels_enabled"`
 	ModelPlazaEnabled                    bool `json:"model_plaza_enabled"`
+	ModelPlazaRequireAuth                bool `json:"model_plaza_require_auth"`
+	ModelCatalogEnabled                  bool `json:"model_catalog_enabled"`
 	AffiliateEnabled                     bool `json:"affiliate_enabled"`
 	RiskControlEnabled                   bool `json:"risk_control_enabled"`
 	AllowUserViewErrorRequests           bool `json:"allow_user_view_error_requests"`
@@ -556,6 +594,7 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 		PasswordResetEnabled:             settings.PasswordResetEnabled,
 		InvitationCodeEnabled:            settings.InvitationCodeEnabled,
 		TotpEnabled:                      settings.TotpEnabled,
+		PasskeyEnabled:                   settings.PasskeyEnabled,
 		LoginAgreementEnabled:            settings.LoginAgreementEnabled,
 		LoginAgreementMode:               settings.LoginAgreementMode,
 		LoginAgreementUpdatedAt:          settings.LoginAgreementUpdatedAt,
@@ -601,6 +640,8 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 		ChannelMonitorDefaultIntervalSeconds: settings.ChannelMonitorDefaultIntervalSeconds,
 		AvailableChannelsEnabled:             settings.AvailableChannelsEnabled,
 		ModelPlazaEnabled:                    settings.ModelPlazaEnabled,
+		ModelPlazaRequireAuth:                settings.ModelPlazaRequireAuth,
+		ModelCatalogEnabled:                  settings.ModelCatalogEnabled,
 		AffiliateEnabled:                     settings.AffiliateEnabled,
 		RiskControlEnabled:                   settings.RiskControlEnabled,
 		AllowUserViewErrorRequests:           settings.AllowUserViewErrorRequests,

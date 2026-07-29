@@ -874,7 +874,7 @@ const BriefcaseIcon = {
 const flagChannelMonitor = makeSidebarFlag(FeatureFlags.channelMonitor)
 const flagPayment = makeSidebarFlag(FeatureFlags.payment)
 const flagAvailableChannels = makeSidebarFlag(FeatureFlags.availableChannels)
-const flagModelPlaza = makeSidebarFlag(FeatureFlags.modelPlaza)
+const flagModelCatalog = makeSidebarFlag(FeatureFlags.modelCatalog)
 const flagAffiliate = makeSidebarFlag(FeatureFlags.affiliate)
 const flagRiskControl = makeSidebarFlag(FeatureFlags.riskControl)
 const flagOpsMonitoring = () => adminSettingsStore.opsMonitoringEnabled
@@ -907,7 +907,7 @@ function buildSelfNavItems(withDashboard: boolean): NavItem[] {
     { path: '/keys', label: t('nav.apiKeys'), icon: KeyIcon },
     { path: '/batch-image', label: t('nav.batchImage'), icon: BatchImageIcon, hideInSimpleMode: true, featureFlag: flagBatchImageAccess },
     { path: '/usage', label: t('nav.usage'), icon: ChartIcon, hideInSimpleMode: true },
-    { path: '/model-plaza', label: t('nav.modelPlaza'), icon: PlazaIcon, featureFlag: flagModelPlaza },
+    { path: '/model-catalog', label: t('nav.modelCatalog'), icon: PlazaIcon, featureFlag: flagModelCatalog },
     { path: '/available-channels', label: t('nav.availableChannels'), icon: ChannelIcon, hideInSimpleMode: true, featureFlag: flagAvailableChannels },
     { path: '/monitor', label: t('nav.channelStatus'), icon: SignalIcon, featureFlag: flagChannelMonitor },
     { path: '/subscriptions', label: t('nav.mySubscriptions'), icon: CreditCardIcon, hideInSimpleMode: true },
@@ -1033,7 +1033,7 @@ const adminNavItems = computed((): NavItem[] => {
     expandOnly: true,
     children: [
       { path: '/admin/extension-configs/workbench', label: t('nav.workbench'), icon: BriefcaseIcon },
-      { path: '/admin/extension-configs/model-plaza', label: t('nav.modelPlaza'), icon: PlazaIcon },
+      { path: '/admin/extension-configs/model-catalog', label: t('nav.modelCatalog'), icon: PlazaIcon },
     ],
   }
 

@@ -37,11 +37,11 @@ export default {
       discardConfirm: '放弃未保存的修改？',
       discarded: '已恢复到上次保存的配置',
     },
-    modelPlaza: {
-      title: '扩展配置 / 模型广场',
-      description: '配置模型广场的开关、展示黑名单、模型描述与公告',
+    modelCatalog: {
+      title: '扩展配置 / 模型目录',
+      description: '配置模型目录的开关、展示黑名单、模型描述与公告',
       enableSection: '功能开关',
-      enableLabel: '启用模型广场',
+      enableLabel: '启用模型目录',
       enableHint: '关闭时用户菜单隐藏、接口返回空。开关独立存储，不受系统设置全量保存影响。',
       exclusionSection: '展示排除',
       excludedChannels: '排除的渠道',

@@ -61,6 +61,15 @@ func RegisterUserRoutes(
 				// 敏感操作二次验证：授予当前会话一段时间的 step-up 权限
 				totp.POST("/step-up", h.Totp.StepUp)
 			}
+
+			passkeys := user.Group("/passkeys")
+			{
+				passkeys.GET("", h.Passkey.List)
+				passkeys.POST("/register/begin", h.Passkey.BeginRegistration)
+				passkeys.POST("/register/finish", h.Passkey.FinishRegistration)
+				passkeys.PATCH("/:id", h.Passkey.Rename)
+				passkeys.DELETE("/:id", h.Passkey.Delete)
+			}
 		}
 
 		// API Key管理
@@ -140,7 +149,7 @@ func RegisterUserRoutes(
 			extCfg.POST("/:agent_id/ensure-key", h.ExtensionConfig.EnsureKey)
 		}
 
-		// 模型广场（用户视角：以模型为中心的定价目录；开关关闭时返回 enabled=false）
-		authenticated.GET("/model-plaza", h.ModelPlaza.Get)
+		// 模型目录（fork：以模型为中心的定价目录；开关关闭时返回 enabled=false）
+		authenticated.GET("/model-catalog", h.ModelCatalog.Get)
 	}
 }

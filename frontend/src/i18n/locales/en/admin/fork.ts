@@ -37,7 +37,7 @@ export default {
       discardConfirm: 'Discard unsaved changes?',
       discarded: 'Reverted to last saved configuration',
     },
-    modelPlaza: {
+    modelCatalog: {
       title: 'Extension Configs / Model Plaza',
       description: 'Configure the Model Plaza switch, exclusions, model descriptions and announcement',
       enableSection: 'Feature Switch',

@@ -18,7 +18,7 @@ export interface ImageGenConfig {
 }
 
 /** 模型广场扩展配置（agent_id = 'model-plaza'）。只影响广场展示，不影响绑定/计费权限。 */
-export interface ModelPlazaConfig {
+export interface ModelCatalogConfig {
   excluded_channel_ids: number[]
   excluded_group_ids: number[]
   /** 模型名 → 展示描述（≤500 字符）。 */
@@ -36,7 +36,7 @@ export interface ExtensionConfigPayload {
    */
   onebool_origin?: string
   image_gen?: ImageGenConfig
-  model_plaza?: ModelPlazaConfig
+  model_plaza?: ModelCatalogConfig
 }
 
 export interface ExtensionConfigRecord {

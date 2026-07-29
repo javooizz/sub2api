@@ -12,7 +12,7 @@ import (
 //
 // 约定：fork 新增的 Service Provider 一律加到这里，不要直接写进 wire.go 的 ProviderSet。
 var ForkProviderSet = wire.NewSet(
-	NewModelPlazaService,            // 模型广场聚合
+	NewModelCatalogService,            // 模型目录聚合
 	ProvideNotifySenders,            // 通知渠道 sender 聚合(email/webhook)
 	NewNotifyDispatcher,             // 通知分发器(Task 15 消费)
 	ProvideUpstreamAdapters,         // 上游适配器 map(newapi/sub2api)

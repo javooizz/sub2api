@@ -155,7 +155,7 @@ export default {
     apiKeys: 'API 密钥',
     batchImage: '批量生图',
     usage: '使用记录',
-    modelPlaza: '模型广场',
+    modelCatalog: '模型目录',
     redeem: '兑换',
     affiliate: '邀请返利',
     affiliateManagement: '邀请返利',
@@ -167,6 +167,7 @@ export default {
     groups: '分组管理',
     channels: '渠道管理',
     availableChannels: '可用渠道',
+    modelPlaza: '模型广场',
     subscriptions: '订阅管理',
     accounts: '账号管理',
     proxies: 'IP管理',
@@ -250,7 +251,7 @@ export default {
     },
   },
 
-  modelPlaza: {
+  modelCatalog: {
     title: '模型广场',
     description: '浏览可用模型与各分组价格',
     searchPlaceholder: '搜索模型名称或描述...',
@@ -332,6 +333,10 @@ export default {
     signInToAccount: '登录您的账户以继续',
     signIn: '登录',
     signingIn: '登录中...',
+    passkeySignIn: '使用 Passkey 登录',
+    passkeySigningIn: '正在等待 Passkey...',
+    passkeyCancelled: '已取消 Passkey 登录。',
+    passkeyFailed: 'Passkey 登录失败，请重试。',
     createAccount: '创建账户',
     signUpToStart: '注册以开始使用 {siteName}',
     signUp: '注册',
