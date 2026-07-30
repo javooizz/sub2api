@@ -1,18 +1,22 @@
 package repository
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"path"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/servertiming"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 )
+
+// uploadPartSize 是 multipart 分片大小。16MiB 可支撑最大 ~160GiB 的备份
+// （S3 分片数上限 10000），且并发 5 片时内存占用仅 ~80MiB。
+const uploadPartSize = 16 * 1024 * 1024
 
 // S3BackupStore implements service.BackupObjectStore using AWS S3 compatible storage
 type S3BackupStore struct {
@@ -38,25 +42,39 @@ func NewS3BackupStoreFactory() service.BackupObjectStoreFactory {
 }
 
 func (s *S3BackupStore) Upload(ctx context.Context, key string, body io.Reader, contentType string) (int64, error) {
-	// 读取全部内容以获取大小（S3 PutObject 需要知道内容长度）
-	// 注意：阿里云 OSS 不兼容 s3manager 分片上传的签名方式，因此使用 PutObject
-	data, err := io.ReadAll(body)
-	if err != nil {
-		return 0, fmt.Errorf("read body: %w", err)
-	}
+	// 流式 multipart 上传：单次 PutObject 有 5GiB 上限（S3/R2 均如此），
+	// 备份超过后全部报 EntityTooLarge。manager 对小于分片大小的输入仍走单次
+	// PutObject，行为与各家 S3 兼容存储一致；s3_client.go 的 unsigned-payload
+	// 中间件已规避阿里云 OSS 的分片签名兼容问题。
+	uploader := manager.NewUploader(s.client, func(u *manager.Uploader) {
+		u.PartSize = uploadPartSize
+	})
 
+	counter := &countingReader{r: body}
 	finish := servertiming.ObserveDependency(ctx, "s3")
-	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
+	_, err := uploader.Upload(ctx, &s3.PutObjectInput{
 		Bucket:      &s.bucket,
 		Key:         &key,
-		Body:        bytes.NewReader(data),
+		Body:        counter,
 		ContentType: &contentType,
 	})
 	finish()
 	if err != nil {
-		return 0, fmt.Errorf("S3 PutObject: %w", err)
+		return 0, fmt.Errorf("S3 multipart upload: %w", err)
 	}
-	return int64(len(data)), nil
+	return counter.n, nil
+}
+
+// countingReader 统计流式上传的总字节数（manager 不返回上传大小）。
+type countingReader struct {
+	r io.Reader
+	n int64
+}
+
+func (c *countingReader) Read(p []byte) (int, error) {
+	n, err := c.r.Read(p)
+	c.n += int64(n)
+	return n, err
 }
 
 func (s *S3BackupStore) Download(ctx context.Context, key string) (io.ReadCloser, error) {
