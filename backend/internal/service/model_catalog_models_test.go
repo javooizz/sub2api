@@ -68,30 +68,6 @@ func TestAccountUsableModelEntries_OpenAIPassthrough(t *testing.T) {
 	require.Equal(t, defaultModelsListCandidateIDs(PlatformOpenAI), accountUsableModelEntries(&acc))
 }
 
-// TestCatalogFilterModelsByCustomList 钉住与 gateway_handler.go filterModelsByCustomList
-// 的等价语义（规格 §4.2：结果=圈定清单中被 available 模式允许的项，保序去重去空；
-// * 尾缀前缀通配；available 空时回落 fallback 作 source）。
-func TestCatalogFilterModelsByCustomList(t *testing.T) {
-	cases := []struct {
-		name                          string
-		available, fallback, selected []string
-		want                          []string
-	}{
-		{"未配圈定 → 原样返回 available", []string{"a", "b"}, nil, nil, []string{"a", "b"}},
-		{"结果取圈定清单且保序", []string{"m1", "m2", "m3"}, nil, []string{"m3", "m1"}, []string{"m3", "m1"}},
-		{"圈定含 available 没有的 → 剔除", []string{"m1"}, nil, []string{"m1", "mx"}, []string{"m1"}},
-		{"通配 allow：available 含 claude-* 放行前缀匹配", []string{"claude-*"}, nil, []string{"claude-opus-4-6", "gpt-5.2"}, []string{"claude-opus-4-6"}},
-		{"圈定去重去空", []string{"m1"}, nil, []string{" m1 ", "m1", ""}, []string{"m1"}},
-		{"available 空 → fallback 作 source", nil, []string{"d1"}, []string{"d1", "d2"}, []string{"d1"}},
-		{"available 与 fallback 均空 → nil", nil, nil, []string{"x"}, nil},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, tc.want, catalogFilterModelsByCustomList(tc.available, tc.fallback, tc.selected))
-		})
-	}
-}
-
 // ===== Task 3: groupUsableModels + TTL 缓存 测试 =====
 
 type fakePlazaAccounts struct {
@@ -149,11 +125,11 @@ func TestGroupUsableModels_WildcardSkippedFromDisplay(t *testing.T) {
 	require.Equal(t, []string{"exact-model"}, got) // 通配键不进展示集
 }
 
-func TestGroupUsableModels_CustomListFilter(t *testing.T) {
+func TestGroupUsableModels_ModelAllowlistFilter(t *testing.T) {
 	acc := mkPlazaAccount(PlatformAnthropic, AccountTypeAPIKey, map[string]string{"claude-*": "x", "other": "y"})
 	svc, _ := newUsableFixture(map[int64][]Account{1: {acc}}, nil, nil)
 	g := &Group{ID: 1, Platform: PlatformAnthropic,
-		ModelsListConfig: GroupModelsListConfig{Enabled: true, Models: []string{"claude-opus-4-6", "not-allowed"}}}
+		ModelAllowlist: GroupModelAllowlist{Enabled: true, Models: []string{"claude-opus-4-6", "not-allowed"}}}
 
 	got, err := svc.groupUsableModels(context.Background(), g)
 	require.NoError(t, err)
@@ -162,11 +138,52 @@ func TestGroupUsableModels_CustomListFilter(t *testing.T) {
 	require.Equal(t, []string{"claude-opus-4-6"}, got)
 }
 
+func TestGroupUsableModels_ModelAllowlistModes(t *testing.T) {
+	acc := mkPlazaAccount(PlatformAnthropic, AccountTypeAPIKey, map[string]string{
+		"claude-opus-4-6": "x", "claude-sonnet-4-6": "y", "other": "z",
+	})
+	for _, tc := range []struct {
+		name      string
+		allowlist GroupModelAllowlist
+		want      []string
+	}{
+		{
+			name:      "disabled allowlist leaves available models visible",
+			allowlist: GroupModelAllowlist{Models: []string{"other"}},
+			want:      []string{"claude-opus-4-6", "claude-sonnet-4-6", "other"},
+		},
+		{
+			name:      "wildcard expands case-insensitively in allowlist order without duplicates",
+			allowlist: GroupModelAllowlist{Enabled: true, Models: []string{"other", "CLAUDE-*", "claude-opus-4-6"}},
+			want:      []string{"other", "claude-opus-4-6", "claude-sonnet-4-6"},
+		},
+		{
+			name:      "enabled empty allowlist hides all models",
+			allowlist: GroupModelAllowlist{Enabled: true},
+			want:      []string{},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			svc, _ := newUsableFixture(map[int64][]Account{1: {acc}}, nil, nil)
+			got, err := svc.groupUsableModels(context.Background(), &Group{
+				ID: 1, Platform: PlatformAnthropic, ModelAllowlist: tc.allowlist,
+			})
+			require.NoError(t, err)
+			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
 func TestGroupUsableModels_EmptyAccounts(t *testing.T) {
-	svc, _ := newUsableFixture(map[int64][]Account{}, nil, nil)
-	got, err := svc.groupUsableModels(context.Background(), &Group{ID: 9, Platform: PlatformAnthropic})
-	require.NoError(t, err)
-	require.Empty(t, got)
+	for _, enabled := range []bool{false, true} {
+		svc, _ := newUsableFixture(map[int64][]Account{}, nil, nil)
+		got, err := svc.groupUsableModels(context.Background(), &Group{
+			ID: 9, Platform: PlatformAnthropic,
+			ModelAllowlist: GroupModelAllowlist{Enabled: enabled, Models: []string{"claude-opus-4-6"}},
+		})
+		require.NoError(t, err)
+		require.Empty(t, got, "groups without accounts must not display default models, allowlist enabled=%t", enabled)
+	}
 }
 
 func TestGroupUsableModels_TTLCache(t *testing.T) {

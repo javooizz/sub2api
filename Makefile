@@ -2,6 +2,7 @@
         dev-deps dev-deps-down dev-deps-logs dev-backend dev-frontend
 
 FRONTEND_CRITICAL_VITEST := \
+	src/i18n/__tests__/localeKeyCompleteness.spec.ts \
 	src/api/__tests__/client.spec.ts \
 	src/api/__tests__/tokenRefresh.spec.ts \
 	src/api/__tests__/channelMonitorV2.spec.ts \

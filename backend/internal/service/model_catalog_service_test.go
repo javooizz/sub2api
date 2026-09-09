@@ -30,7 +30,9 @@ func (f *fakePlazaChannelsRaw) ListAll(context.Context) ([]Channel, error) {
 	return f.channels, f.err
 }
 
-type fakePlazaPricing struct{ byModel map[string]*LiteLLMModelPricing }
+type fakePlazaPricing struct {
+	byModel map[string]*LiteLLMModelPricing
+}
 
 func (f *fakePlazaPricing) GetModelPricing(model string) *LiteLLMModelPricing {
 	return f.byModel[model]
@@ -66,7 +68,7 @@ type plazaFixture struct {
 	now        func() time.Time
 }
 
-func newPlazaService(f plazaFixture) *ModelCatalogService {
+func newCatalogService(f plazaFixture) *ModelCatalogService {
 	var rec *ExtensionConfigRecord
 	if f.cfg != nil {
 		rec = &ExtensionConfigRecord{
@@ -118,7 +120,7 @@ func mappedAccount(models ...string) Account {
 // ===== 可见性 =====
 
 func TestGetPlazaForUser_PublicStandardGroupVisible(t *testing.T) {
-	svc := newPlazaService(plazaFixture{
+	svc := newCatalogService(plazaFixture{
 		allGroups:  []Group{anthropicGroup(10, "cc_max")},
 		accounts:   map[int64][]Account{10: {mappedAccount("claude-sonnet-4-6")}},
 		channels:   []Channel{pricedChannel(1, "cc_max", PlatformAnthropic, []string{"claude-sonnet-4-6"}, 9e-7, 4.5e-6)},
@@ -144,12 +146,12 @@ func TestGetPlazaForUser_ExclusiveGroupOnlyForAuthorized(t *testing.T) {
 		accounts:  map[int64][]Account{20: {mappedAccount("claude-opus-4-6")}},
 	}
 	// 未授权：不可见
-	data, err := newPlazaService(fix).GetCatalogForUser(context.Background(), 1)
+	data, err := newCatalogService(fix).GetCatalogForUser(context.Background(), 1)
 	require.NoError(t, err)
 	require.Empty(t, data.Models)
 	// 已授权：可见且 accessible=true
 	fix.userGroups = []Group{{ID: 20}}
-	data, err = newPlazaService(fix).GetCatalogForUser(context.Background(), 1)
+	data, err = newCatalogService(fix).GetCatalogForUser(context.Background(), 1)
 	require.NoError(t, err)
 	require.Len(t, data.Models, 1)
 	require.True(t, data.Models[0].Groups[0].Accessible)
@@ -163,13 +165,13 @@ func TestGetPlazaForUser_PublicSubscriptionShowcase(t *testing.T) {
 		accounts:  map[int64][]Account{30: {mappedAccount("claude-opus-4-6")}},
 	}
 	// 未订阅：可见（橱窗）但 accessible=false
-	data, err := newPlazaService(fix).GetCatalogForUser(context.Background(), 1)
+	data, err := newCatalogService(fix).GetCatalogForUser(context.Background(), 1)
 	require.NoError(t, err)
 	require.Len(t, data.Models, 1)
 	require.False(t, data.Models[0].Groups[0].Accessible)
 	// 已订阅（∈ GetAvailableGroups）：accessible=true
 	fix.userGroups = []Group{{ID: 30}}
-	data, err = newPlazaService(fix).GetCatalogForUser(context.Background(), 1)
+	data, err = newCatalogService(fix).GetCatalogForUser(context.Background(), 1)
 	require.NoError(t, err)
 	require.True(t, data.Models[0].Groups[0].Accessible)
 }
@@ -178,7 +180,7 @@ func TestGetPlazaForUser_ExclusiveSubscriptionHiddenWithoutAuth(t *testing.T) {
 	g := anthropicGroup(40, "vip_sub")
 	g.SubscriptionType = SubscriptionTypeSubscription
 	g.IsExclusive = true
-	data, err := newPlazaService(plazaFixture{
+	data, err := newCatalogService(plazaFixture{
 		allGroups: []Group{g},
 		accounts:  map[int64][]Account{40: {mappedAccount("claude-opus-4-6")}},
 	}).GetCatalogForUser(context.Background(), 1)
@@ -187,7 +189,7 @@ func TestGetPlazaForUser_ExclusiveSubscriptionHiddenWithoutAuth(t *testing.T) {
 }
 
 func TestGetPlazaForUser_ExcludedGroup(t *testing.T) {
-	data, err := newPlazaService(plazaFixture{
+	data, err := newCatalogService(plazaFixture{
 		allGroups:  []Group{anthropicGroup(10, "g")},
 		accounts:   map[int64][]Account{10: {mappedAccount("m1")}},
 		userGroups: []Group{{ID: 10}},
@@ -199,7 +201,7 @@ func TestGetPlazaForUser_ExcludedGroup(t *testing.T) {
 
 func TestGetPlazaForUser_EmptyAccountGroupDisappears(t *testing.T) {
 	// 账号真相源核心语义：分组无账号 → 即使渠道定价里有模型，也不展示。
-	data, err := newPlazaService(plazaFixture{
+	data, err := newCatalogService(plazaFixture{
 		allGroups:  []Group{anthropicGroup(10, "g")},
 		accounts:   map[int64][]Account{},
 		channels:   []Channel{pricedChannel(1, "ch", PlatformAnthropic, []string{"claude-opus-4-6"}, 1e-6, 5e-6)},
@@ -211,7 +213,7 @@ func TestGetPlazaForUser_EmptyAccountGroupDisappears(t *testing.T) {
 
 func TestGetPlazaForUser_GroupAccountErrorSkipped(t *testing.T) {
 	// 单分组查账号失败：跳过该分组，其余正常（规格 §6）。
-	data, err := newPlazaService(plazaFixture{
+	data, err := newCatalogService(plazaFixture{
 		allGroups:  []Group{anthropicGroup(10, "ok"), anthropicGroup(11, "bad")},
 		accounts:   map[int64][]Account{10: {mappedAccount("m1")}},
 		accountErr: map[int64]error{11: context.DeadlineExceeded},
@@ -228,7 +230,7 @@ func TestGetPlazaForUser_ModelGroupsFromAccountsOnly(t *testing.T) {
 	// 两个分组各自账号能力不同：模型的分组列表只反映账号推导，
 	// 渠道 group_ids 不参与（旧实现的"合并渠道传染"问题在此杜绝）。
 	g1, g2 := anthropicGroup(10, "g1"), anthropicGroup(11, "g2")
-	data, err := newPlazaService(plazaFixture{
+	data, err := newCatalogService(plazaFixture{
 		allGroups: []Group{g1, g2},
 		accounts: map[int64][]Account{
 			10: {mappedAccount("shared-model", "only-g1")},
@@ -252,7 +254,7 @@ func TestGetPlazaForUser_CrossPlatformSameNameNotMerged(t *testing.T) {
 	gb := Group{ID: 11, Name: "gb", Platform: PlatformOpenAI, SubscriptionType: SubscriptionTypeStandard, RateMultiplier: 1}
 	accA := mappedAccount("same-name")
 	accB := mkPlazaAccount(PlatformOpenAI, AccountTypeAPIKey, map[string]string{"same-name": "x"})
-	data, err := newPlazaService(plazaFixture{
+	data, err := newCatalogService(plazaFixture{
 		allGroups:  []Group{ga, gb},
 		accounts:   map[int64][]Account{10: {accA}, 11: {accB}},
 		userGroups: []Group{{ID: 10}, {ID: 11}},
@@ -272,7 +274,7 @@ func TestGetPlazaForUser_ExplicitPriceNotShadowedByEarlierChannelWithoutPrice(t 
 	noPriceCh := Channel{ID: 1, Name: "a-ch", Status: StatusActive, ModelPricing: []ChannelModelPricing{{
 		Platform: PlatformAnthropic, Models: []string{"claude-opus-4-6"}, BillingMode: BillingModeToken,
 	}}}
-	data, err := newPlazaService(plazaFixture{
+	data, err := newCatalogService(plazaFixture{
 		allGroups:  []Group{anthropicGroup(10, "g")},
 		accounts:   map[int64][]Account{10: {mappedAccount("claude-opus-4-6")}},
 		channels:   []Channel{noPriceCh, pricedChannel(2, "b-ch", PlatformAnthropic, []string{"claude-opus-4-6"}, 5e-6, 2.5e-5)},
@@ -285,7 +287,7 @@ func TestGetPlazaForUser_ExplicitPriceNotShadowedByEarlierChannelWithoutPrice(t 
 }
 
 func TestGetPlazaForUser_ExcludedChannelPricingIgnored(t *testing.T) {
-	data, err := newPlazaService(plazaFixture{
+	data, err := newCatalogService(plazaFixture{
 		allGroups:  []Group{anthropicGroup(10, "g")},
 		accounts:   map[int64][]Account{10: {mappedAccount("claude-opus-4-6")}},
 		channels:   []Channel{pricedChannel(7, "ch", PlatformAnthropic, []string{"claude-opus-4-6"}, 5e-6, 2.5e-5)},
@@ -298,7 +300,7 @@ func TestGetPlazaForUser_ExcludedChannelPricingIgnored(t *testing.T) {
 }
 
 func TestGetPlazaForUser_LiteLLMFallback(t *testing.T) {
-	data, err := newPlazaService(plazaFixture{
+	data, err := newCatalogService(plazaFixture{
 		allGroups:  []Group{anthropicGroup(10, "g")},
 		accounts:   map[int64][]Account{10: {mappedAccount("claude-opus-4-6")}},
 		litellm:    map[string]*LiteLLMModelPricing{"claude-opus-4-6": {InputCostPerToken: 5e-6, OutputCostPerToken: 2.5e-5}},
@@ -311,7 +313,7 @@ func TestGetPlazaForUser_LiteLLMFallback(t *testing.T) {
 }
 
 func TestGetPlazaForUser_NoPricingAnywhere(t *testing.T) {
-	data, err := newPlazaService(plazaFixture{
+	data, err := newCatalogService(plazaFixture{
 		allGroups:  []Group{anthropicGroup(10, "g")},
 		accounts:   map[int64][]Account{10: {mappedAccount("unknown-model")}},
 		userGroups: []Group{{ID: 10}},
@@ -324,7 +326,7 @@ func TestGetPlazaForUser_NoPricingAnywhere(t *testing.T) {
 
 func TestGetPlazaForUser_DisplayNameFromPricingCase(t *testing.T) {
 	// 账号写法 CLAUDE-OPUS-4-6，定价目录存 claude-opus-4-6 → 显示名用定价原始大小写。
-	data, err := newPlazaService(plazaFixture{
+	data, err := newCatalogService(plazaFixture{
 		allGroups:  []Group{anthropicGroup(10, "g")},
 		accounts:   map[int64][]Account{10: {mappedAccount("CLAUDE-OPUS-4-6")}},
 		channels:   []Channel{pricedChannel(1, "ch", PlatformAnthropic, []string{"claude-opus-4-6"}, 1e-6, 5e-6)},
@@ -337,7 +339,7 @@ func TestGetPlazaForUser_DisplayNameFromPricingCase(t *testing.T) {
 // ===== 描述注入（复合键）=====
 
 func TestGetPlazaForUser_DescriptionCompositeKey(t *testing.T) {
-	data, err := newPlazaService(plazaFixture{
+	data, err := newCatalogService(plazaFixture{
 		allGroups:  []Group{anthropicGroup(10, "g")},
 		accounts:   map[int64][]Account{10: {mappedAccount("claude-opus-4-6")}},
 		userGroups: []Group{{ID: 10}},
@@ -356,7 +358,7 @@ func TestGetPlazaForUser_DescriptionCompositeKey(t *testing.T) {
 func TestListAllModelIdentities_AllGroupsNoUserFilterNoBlacklist(t *testing.T) {
 	exclusive := anthropicGroup(20, "vip")
 	exclusive.IsExclusive = true
-	svc := newPlazaService(plazaFixture{
+	svc := newCatalogService(plazaFixture{
 		allGroups: []Group{anthropicGroup(10, "pub"), exclusive},
 		accounts: map[int64][]Account{
 			10: {mappedAccount("model-a")},
@@ -376,9 +378,9 @@ func TestListAllModelIdentities_AllGroupsNoUserFilterNoBlacklist(t *testing.T) {
 
 func TestGetPlazaForUser_ImageModeFallbackWithPerImagePriceKeepsImage(t *testing.T) {
 	// gemini image 系：LiteLLM 有 output_cost_per_image（真按张）→ 保持 image 模式。
-	data, err := newPlazaService(plazaFixture{
+	data, err := newCatalogService(plazaFixture{
 		allGroups: []Group{{ID: 11, Name: "gi", Platform: PlatformGemini, SubscriptionType: SubscriptionTypeStandard, RateMultiplier: 1}},
-		accounts: map[int64][]Account{11: {mkPlazaAccount(PlatformGemini, AccountTypeAPIKey, map[string]string{"gemini-3-pro-image-preview": "x"})}},
+		accounts:  map[int64][]Account{11: {mkPlazaAccount(PlatformGemini, AccountTypeAPIKey, map[string]string{"gemini-3-pro-image-preview": "x"})}},
 		litellm: map[string]*LiteLLMModelPricing{"gemini-3-pro-image-preview": {
 			Mode: "image_generation", OutputCostPerImage: 0.00012,
 		}},
@@ -473,7 +475,7 @@ func requireTierPrices(t *testing.T, p *ChannelModelPricing, p1k, p2k, p4k float
 // 配价分组:模型级合成 + 分组 ImagePricing 三档(规格 §7 用例 1)
 func TestGetPlazaForUser_ImageModelGroupPricing(t *testing.T) {
 	g := imageGroup(23, "gpt-image", fp(0.6), fp(0.6), fp(0.8))
-	svc := newPlazaService(plazaFixture{
+	svc := newCatalogService(plazaFixture{
 		allGroups:  []Group{g},
 		accounts:   map[int64][]Account{23: {openaiMappedAccount("gpt-image-2")}},
 		litellm:    map[string]*LiteLLMModelPricing{"gpt-image-2": imageGenLiteLLM()},
@@ -499,7 +501,7 @@ func TestGetPlazaForUser_ImageModelGroupPricing(t *testing.T) {
 func TestGetPlazaForUser_ImageModelFallbackTiers(t *testing.T) {
 	// 分支 1:LiteLLM 无按张价 → $0.134/$0.201/$0.268
 	g := imageGroup(23, "gpt-image", nil, nil, nil)
-	svc := newPlazaService(plazaFixture{
+	svc := newCatalogService(plazaFixture{
 		allGroups:  []Group{g},
 		accounts:   map[int64][]Account{23: {openaiMappedAccount("gpt-image-2")}},
 		litellm:    map[string]*LiteLLMModelPricing{"gpt-image-2": imageGenLiteLLM()},
@@ -514,7 +516,7 @@ func TestGetPlazaForUser_ImageModelFallbackTiers(t *testing.T) {
 	// 分支 2:LiteLLM 有按张价 0.2 → 0.2/0.3/0.4
 	lp := imageGenLiteLLM()
 	lp.OutputCostPerImage = 0.2
-	svc = newPlazaService(plazaFixture{
+	svc = newCatalogService(plazaFixture{
 		allGroups:  []Group{g},
 		accounts:   map[int64][]Account{23: {openaiMappedAccount("gemini-image-x")}},
 		litellm:    map[string]*LiteLLMModelPricing{"gemini-image-x": lp},
@@ -528,7 +530,7 @@ func TestGetPlazaForUser_ImageModelFallbackTiers(t *testing.T) {
 // 部分档位配价:逐档 分组价 ?? fallback(规格 §3 ② 逐档语义)
 func TestGetPlazaForUser_ImageModelPartialTierConfig(t *testing.T) {
 	g := imageGroup(23, "gpt-image", fp(0.6), nil, nil) // 仅 1K 配价
-	svc := newPlazaService(plazaFixture{
+	svc := newCatalogService(plazaFixture{
 		allGroups:  []Group{g},
 		accounts:   map[int64][]Account{23: {openaiMappedAccount("gpt-image-2")}},
 		litellm:    map[string]*LiteLLMModelPricing{"gpt-image-2": imageGenLiteLLM()},
@@ -543,7 +545,7 @@ func TestGetPlazaForUser_ImageModelPartialTierConfig(t *testing.T) {
 func TestGetPlazaForUser_ImageModelDisallowedGroup(t *testing.T) {
 	g := imageGroup(23, "gpt-image", fp(0.6), fp(0.6), fp(0.8))
 	g.AllowImageGeneration = false
-	svc := newPlazaService(plazaFixture{
+	svc := newCatalogService(plazaFixture{
 		allGroups:  []Group{g},
 		accounts:   map[int64][]Account{23: {openaiMappedAccount("gpt-image-2")}},
 		litellm:    map[string]*LiteLLMModelPricing{"gpt-image-2": imageGenLiteLLM()},
@@ -563,7 +565,7 @@ func TestGetPlazaForUser_ImageModelChannelPerRequestWins(t *testing.T) {
 		Platform: PlatformOpenAI, Models: []string{"gpt-image-2"},
 		BillingMode: BillingModeImage, PerRequestPrice: fp(0.5),
 	}}}
-	svc := newPlazaService(plazaFixture{
+	svc := newCatalogService(plazaFixture{
 		allGroups:  []Group{g},
 		accounts:   map[int64][]Account{23: {openaiMappedAccount("gpt-image-2")}},
 		channels:   []Channel{ch},
@@ -592,7 +594,7 @@ func TestGetPlazaForUser_ImageModelOverridesChannelTokenPricing(t *testing.T) {
 		BillingMode: BillingModeToken, InputPrice: fp(5e-6), OutputPrice: fp(1e-5),
 		ImageOutputPrice: fp(3e-5),
 	}}}
-	svc := newPlazaService(plazaFixture{
+	svc := newCatalogService(plazaFixture{
 		allGroups: []Group{g},
 		accounts:  map[int64][]Account{23: {openaiMappedAccount("gpt-image-2")}},
 		channels:  []Channel{ch},
@@ -612,7 +614,7 @@ func TestGetPlazaForUser_ImageModelOverridesChannelTokenPricing(t *testing.T) {
 
 // 非图像模型:ImagePricing nil、行为与现状全等(规格 §7 用例 6)
 func TestGetPlazaForUser_NonImageModelNoImagePricing(t *testing.T) {
-	svc := newPlazaService(plazaFixture{
+	svc := newCatalogService(plazaFixture{
 		allGroups:  []Group{anthropicGroup(10, "cc_max")},
 		accounts:   map[int64][]Account{10: {mappedAccount("claude-sonnet-4-6")}},
 		channels:   []Channel{pricedChannel(1, "cc_max", PlatformAnthropic, []string{"claude-sonnet-4-6"}, 9e-7, 4.5e-6)},
@@ -630,7 +632,7 @@ func TestGetPlazaForUser_ImageRateIndependentOverride(t *testing.T) {
 	g := imageGroup(34, "gpt-image-official", nil, nil, nil)
 	g.ImageRateIndependent = true
 	g.ImageRateMultiplier = 1.0
-	svc := newPlazaService(plazaFixture{
+	svc := newCatalogService(plazaFixture{
 		allGroups:  []Group{g},
 		accounts:   map[int64][]Account{34: {openaiMappedAccount("gpt-image-2")}},
 		litellm:    map[string]*LiteLLMModelPricing{"gpt-image-2": imageGenLiteLLM()},
@@ -648,7 +650,7 @@ func TestGetPlazaForUser_ImageFallbackPerModel(t *testing.T) {
 	g := imageGroup(23, "gpt-image", nil, nil, nil)
 	lpWithPerImage := imageGenLiteLLM()
 	lpWithPerImage.OutputCostPerImage = 0.2
-	svc := newPlazaService(plazaFixture{
+	svc := newCatalogService(plazaFixture{
 		allGroups: []Group{g},
 		accounts:  map[int64][]Account{23: {openaiMappedAccount("gpt-image-2", "gemini-image-x")}},
 		litellm: map[string]*LiteLLMModelPricing{
@@ -674,7 +676,7 @@ func TestGetPlazaForUser_GroupPricingBeatsLiteLLMPerImage(t *testing.T) {
 	g := imageGroup(23, "gpt-image", fp(0.6), fp(0.6), fp(0.8))
 	lp := imageGenLiteLLM()
 	lp.OutputCostPerImage = 0.2 // 回落合成物将自带 PerRequestPrice=0.2
-	svc := newPlazaService(plazaFixture{
+	svc := newCatalogService(plazaFixture{
 		allGroups:  []Group{g},
 		accounts:   map[int64][]Account{23: {openaiMappedAccount("gemini-image-x")}},
 		litellm:    map[string]*LiteLLMModelPricing{"gemini-image-x": lp},

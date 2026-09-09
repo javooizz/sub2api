@@ -63,62 +63,6 @@ func sortedStringKeys(m map[string]string) []string {
 	return out
 }
 
-// catalogFilterModelsByCustomList 复刻 gateway_handler.go filterModelsByCustomList。
-// service 不能反向 import handler（会成环），等价性由 TestCatalogFilterModelsByCustomList 钉住。
-// 注意"available 为空回落 fallback"分支在广场推导下实际不可达（无账号分组已提前消失），
-// 保留只为函数级等价（规格 §4.2）。
-func catalogFilterModelsByCustomList(availableModels, fallbackModels, selectedModels []string) []string {
-	if len(selectedModels) == 0 {
-		return availableModels
-	}
-	source := availableModels
-	if len(source) == 0 {
-		source = fallbackModels
-	}
-	if len(source) == 0 {
-		return nil
-	}
-
-	allowed := make([]string, 0, len(source))
-	for _, model := range source {
-		model = strings.TrimSpace(model)
-		if model != "" {
-			allowed = append(allowed, model)
-		}
-	}
-
-	seen := make(map[string]struct{}, len(selectedModels))
-	filtered := make([]string, 0, len(selectedModels))
-	for _, model := range selectedModels {
-		model = strings.TrimSpace(model)
-		if model == "" {
-			continue
-		}
-		if !catalogCustomListAllowsModel(allowed, model) {
-			continue
-		}
-		if _, ok := seen[model]; ok {
-			continue
-		}
-		seen[model] = struct{}{}
-		filtered = append(filtered, model)
-	}
-	return filtered
-}
-
-// catalogCustomListAllowsModel 复刻 gateway_handler.go customModelsListAllowsModel。
-func catalogCustomListAllowsModel(availablePatterns []string, model string) bool {
-	for _, pattern := range availablePatterns {
-		if pattern == model {
-			return true
-		}
-		if strings.HasSuffix(pattern, "*") && strings.HasPrefix(model, strings.TrimSuffix(pattern, "*")) {
-			return true
-		}
-	}
-	return false
-}
-
 // ===== Task 3: 分组可用模型集推导 + TTL 缓存 =====
 
 // catalogUsableTTL 分组可用模型集缓存时长（规格 §4.2：~60s，配置/账号变更最迟一个 TTL 生效，
@@ -130,7 +74,7 @@ type catalogUsableCacheEntry struct {
 	expiresAt time.Time
 }
 
-// groupUsableModels 计算分组实际可用模型集（最终集：含 ModelsListConfig 过滤、剔除通配条目）。
+// groupUsableModels 计算分组实际可用模型集（最终集：含 ModelAllowlist 过滤、剔除通配条目）。
 // 取样口径"配置上可提供"（规格 §2）：ListByGroup（仓储已过滤 status=active、无时态谓词）
 // + 内存过滤 Schedulable 标志与平台匹配——过载/限流窗口中的账号仍计入，目录不抖动。
 // 缓存键 = 分组 ID，值 = 最终可用集；失败不写缓存（规格 §6）。
@@ -163,10 +107,7 @@ func (s *ModelCatalogService) groupUsableModels(ctx context.Context, g *Group) (
 	}
 	sort.Strings(entries)
 
-	usable := entries
-	if g.CustomModelsListEnabled() {
-		usable = catalogFilterModelsByCustomList(entries, defaultModelsListCandidateIDs(g.Platform), g.ModelsListConfig.Models)
-	}
+	usable := g.ModelAllowlist.FilterForListing(entries)
 
 	// 通配条目不进展示集：无法枚举为具体模型（规格 §4.2；作为 allow 模式已在过滤中生效）。
 	out := make([]string, 0, len(usable))
