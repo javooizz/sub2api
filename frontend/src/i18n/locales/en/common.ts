@@ -17,6 +17,7 @@ export default {
     creating: 'Creating...',
     required: 'Required',
     sending: 'Sending...',
+    retry: 'Retry',
     tryAgain: 'Please try again',
     update: 'Update',
     confirm: 'Confirm',
