@@ -42,11 +42,9 @@ const (
 	// package is already gated the same way; the scheduled backup was the last
 	// one that still fanned out across every instance.
 	backupScheduledLeaderLockKey = "backup:scheduled:leader"
-	// backupScheduledLeaderLockTTL bounds crash recovery only; the lock is
-	// released as soon as the backup finishes. It must exceed the job's
-	// worst-case runtime (the scheduled backup context is bounded at 30m) so the
-	// lock cannot expire mid-dump and let a peer start a second backup.
-	backupScheduledLeaderLockTTL = 35 * time.Minute
+	// Keep the lock beyond the configured job deadline, including final record
+	// persistence and cleanup, so long backups do not lose leadership mid-dump.
+	backupScheduledLeaderLockGrace = 5 * time.Minute
 )
 
 var (
@@ -190,6 +188,7 @@ type BackupService struct {
 	bgCtx         context.Context    // 所有后台操作的 parent context
 	bgCancel      context.CancelFunc // 取消所有活跃后台操作
 	partSizeBytes int64              // 分卷阈值；生产使用 4 GiB，测试可注入更小值
+	backupTimeout time.Duration      // 导出、压缩和上传共用的超时预算
 }
 
 func NewBackupService(
@@ -210,6 +209,7 @@ func NewBackupService(
 		bgCtx:                   bgCtx,
 		bgCancel:                bgCancel,
 		partSizeBytes:           defaultBackupPartSizeBytes,
+		backupTimeout:           cfg.Backup.Timeout(),
 		instanceID:              uuid.NewString(),
 	}
 }
@@ -500,13 +500,13 @@ func (s *BackupService) runScheduledBackup() {
 	s.wg.Add(1)
 	defer s.wg.Done()
 
-	ctx, cancel := context.WithTimeout(s.bgCtx, 30*time.Minute)
+	ctx, cancel := context.WithTimeout(s.bgCtx, s.backupTimeout)
 	defer cancel()
 
 	// 多实例保护: 集群部署时只让 leader 执行定时备份, 避免每个实例各自对同一个
 	// 数据库跑一次全量 dump、上传时峰值内存翻倍、以及多份同名对象互相覆盖。
 	// 手动触发的备份 (CreateBackup/StartBackup) 不受此限, 运维仍可随时在任一节点强制备份。
-	release, ok := tryAcquireSingletonLeaderLock(ctx, s.lockCache, s.db, backupScheduledLeaderLockKey, s.instanceID, backupScheduledLeaderLockTTL)
+	release, ok := tryAcquireSingletonLeaderLock(ctx, s.lockCache, s.db, backupScheduledLeaderLockKey, s.instanceID, s.backupTimeout+backupScheduledLeaderLockGrace)
 	if !ok {
 		logger.LegacyPrintf("service.backup", "[Backup] 定时备份跳过: 本实例非 leader")
 		return
@@ -595,32 +595,33 @@ func (s *BackupService) CreateBackup(ctx context.Context, triggeredBy string, ex
 		TriggeredBy: triggeredBy,
 		StartedAt:   now.Format(time.RFC3339),
 		ExpiresAt:   expiresAt,
+		Progress:    "dumping",
+	}
+
+	// Persist before pg_dump: long scheduled jobs must be visible while running,
+	// even if their execution context expires before compression completes.
+	if err := s.saveRecord(ctx, record); err != nil {
+		return nil, fmt.Errorf("save initial record: %w", err)
 	}
 
 	archivePath, sizeBytes, err := s.createCompressedBackupFile(ctx)
 	if err != nil {
-		record.Status = "failed"
-		record.ErrorMsg = err.Error()
-		record.FinishedAt = time.Now().Format(time.RFC3339)
-		_ = s.saveRecord(ctx, record)
-		return record, err
+		return record, s.failBackup(ctx, record, err)
 	}
 	defer func() { _ = cleanupBackupFiles(archivePath) }()
 	record.SizeBytes = sizeBytes
+	record.Progress = "uploading"
 	if err := s.saveRecord(ctx, record); err != nil {
-		return nil, fmt.Errorf("save initial record: %w", err)
+		return record, s.failBackup(ctx, record, fmt.Errorf("save upload progress: %w", err))
 	}
 	if err := s.uploadBackupArchive(ctx, record, objectStore, s3Cfg, archivePath); err != nil {
-		record.Status = "failed"
-		record.ErrorMsg = err.Error()
-		record.FinishedAt = time.Now().Format(time.RFC3339)
-		_ = s.saveRecord(ctx, record)
-		return record, err
+		return record, s.failBackup(ctx, record, err)
 	}
 
 	record.Status = "completed"
+	record.Progress = ""
 	record.FinishedAt = time.Now().Format(time.RFC3339)
-	if err := s.saveRecord(ctx, record); err != nil {
+	if err := s.saveBackupFinalRecord(ctx, record); err != nil {
 		logger.LegacyPrintf("service.backup", "[Backup] 保存备份记录失败: %v", err)
 	}
 
@@ -721,7 +722,7 @@ func (s *BackupService) StartBackup(ctx context.Context, triggeredBy string, exp
 
 // executeBackup 后台执行备份（独立于 HTTP context）
 func (s *BackupService) executeBackup(record *BackupRecord, objectStore BackupObjectStore, s3Cfg *BackupS3Config) {
-	ctx, cancel := context.WithTimeout(s.bgCtx, 30*time.Minute)
+	ctx, cancel := context.WithTimeout(s.bgCtx, s.backupTimeout)
 	defer cancel()
 
 	// 阶段1: pg_dump -> gzip 临时文件
@@ -729,11 +730,7 @@ func (s *BackupService) executeBackup(record *BackupRecord, objectStore BackupOb
 	_ = s.saveRecord(ctx, record)
 	archivePath, sizeBytes, err := s.createCompressedBackupFile(ctx)
 	if err != nil {
-		record.Status = "failed"
-		record.ErrorMsg = err.Error()
-		record.Progress = ""
-		record.FinishedAt = time.Now().Format(time.RFC3339)
-		_ = s.saveRecord(context.Background(), record)
+		_ = s.failBackup(ctx, record, err)
 		return
 	}
 	defer func() { _ = cleanupBackupFiles(archivePath) }()
@@ -743,11 +740,7 @@ func (s *BackupService) executeBackup(record *BackupRecord, objectStore BackupOb
 	record.Progress = "uploading"
 	_ = s.saveRecord(ctx, record)
 	if err := s.uploadBackupArchive(ctx, record, objectStore, s3Cfg, archivePath); err != nil {
-		record.Status = "failed"
-		record.ErrorMsg = err.Error()
-		record.Progress = ""
-		record.FinishedAt = time.Now().Format(time.RFC3339)
-		_ = s.saveRecord(context.Background(), record)
+		_ = s.failBackup(ctx, record, err)
 		return
 	}
 
@@ -755,9 +748,32 @@ func (s *BackupService) executeBackup(record *BackupRecord, objectStore BackupOb
 	record.Status = "completed"
 	record.Progress = ""
 	record.FinishedAt = time.Now().Format(time.RFC3339)
-	if err := s.saveRecord(context.Background(), record); err != nil {
+	if err := s.saveBackupFinalRecord(ctx, record); err != nil {
 		logger.LegacyPrintf("service.backup", "[Backup] 保存备份记录失败: %v", err)
 	}
+}
+
+// saveBackupFinalRecord must outlive a failed job's deadline, while retaining a
+// bounded database write so shutdown cannot hang indefinitely.
+func (s *BackupService) saveBackupFinalRecord(ctx context.Context, record *BackupRecord) error {
+	writeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+	defer cancel()
+	return s.saveRecord(writeCtx, record)
+}
+
+func (s *BackupService) failBackup(ctx context.Context, record *BackupRecord, err error) error {
+	if ctx.Err() != nil && !errors.Is(err, ctx.Err()) {
+		err = errors.Join(err, ctx.Err())
+	}
+	record.Status = "failed"
+	record.ErrorMsg = err.Error()
+	record.Progress = ""
+	record.FinishedAt = time.Now().Format(time.RFC3339)
+	if saveErr := s.saveBackupFinalRecord(ctx, record); saveErr != nil {
+		logger.LegacyPrintf("service.backup", "[Backup] 保存失败记录失败: id=%s error=%v", record.ID, saveErr)
+		return errors.Join(err, fmt.Errorf("save failed backup record: %w", saveErr))
+	}
+	return err
 }
 
 func (s *BackupService) createCompressedBackupFile(ctx context.Context) (string, int64, error) {
@@ -1301,7 +1317,13 @@ func (s *BackupService) loadRecords(ctx context.Context) ([]BackupRecord, error)
 // loadRecordsLocked 在已持有 recordsMu 锁的情况下加载记录
 func (s *BackupService) loadRecordsLocked(ctx context.Context) ([]BackupRecord, error) {
 	raw, err := s.settingRepo.GetValue(ctx, settingKeyBackupRecords)
-	if err != nil || raw == "" {
+	if errors.Is(err, ErrSettingNotFound) {
+		return nil, nil //nolint:nilnil // no records is a valid state
+	}
+	if err != nil {
+		return nil, fmt.Errorf("load backup records: %w", err)
+	}
+	if raw == "" {
 		return nil, nil //nolint:nilnil // no records is a valid state
 	}
 	var records []BackupRecord
@@ -1325,7 +1347,10 @@ func (s *BackupService) saveRecord(ctx context.Context, record *BackupRecord) er
 	s.recordsMu.Lock()
 	defer s.recordsMu.Unlock()
 
-	records, _ := s.loadRecordsLocked(ctx)
+	records, err := s.loadRecordsLocked(ctx)
+	if err != nil {
+		return err
+	}
 
 	// 更新已有记录或追加
 	found := false
